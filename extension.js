@@ -8,28 +8,28 @@ const GLib      = imports.gi.GLib;
 const Mainloop  = imports.mainloop;
 
 // Commands to run
-const CMD_VPNSTATUS = "nordvpn status";
-const CMD_CONNECT = "nordvpn c";
+const CMD_VPNSTATUS  = "nordvpn status";
+const CMD_CONNECT    = "nordvpn c";
 const CMD_DISCONNECT = "nordvpn d";
 // Command messages to search for
-const CMD_MSG_CONNECTED = "Status: Connected";
-const CMD_MSG_CONNECTING = "Status: Connecting";
-const CMD_MSG_DISCONNECTED = "Status: Disconnected";
+const CMD_MSG_CONNECTED     = "Status: Connected";
+const CMD_MSG_CONNECTING    = "Status: Connecting";
+const CMD_MSG_DISCONNECTED  = "Status: Disconnected";
 const CMD_MSG_DISCONNECTING = "Status: Disconnecting";
 // Panel display text
-const PANEL_CONNECTING = "CONNECTING...";
-const PANEL_DISCONNECTING = "DISCONNECTING...";
-const PANEL_DISCONNECTED = "UNPROTECTED";
-const PANEL_CLASS_CONNECTING = "connecting";
+const PANEL_CONNECTING          = "CONNECTING...";
+const PANEL_DISCONNECTING       = "DISCONNECTING...";
+const PANEL_DISCONNECTED        = "UNPROTECTED";
+const PANEL_CLASS_CONNECTING    = "connecting";
 const PANEL_CLASS_DISCONNECTING = "connecting";
-const PANEL_CLASS_CONNECTED = "connected";
-const PANEL_CLASS_DISCONNECTED = "unprotected";
+const PANEL_CLASS_CONNECTED     = "connected";
+const PANEL_CLASS_DISCONNECTED  = "unprotected";
 // Menu display text
-const MENU_CONNECT = "Connect";
-const MENU_CONNECTING = "Connecting...";
-const MENU_DISCONNECT = "Disconnect";
+const MENU_CONNECT       = "Connect";
+const MENU_CONNECTING    = "Connecting...";
+const MENU_DISCONNECT    = "Disconnect";
 const MENU_DISCONNECTING = "Disconnecting...";
-const MENU_UNKNOWN = "Unknown status returned";
+const MENU_UNKNOWN       = "Unknown status returned";
 // Status enum
 let _status = { "Connecting":1, "Connected":2, "Disconnecting":3, "Disconnected":4, "NoConnection":5, "Unknown":6 };
 // Status override - there is a delay in the status returning Connecting, so this isused to force the UI t show it anyway
@@ -37,11 +37,11 @@ let _statusOverride;
 let _statusOverrideUntil;
 // Timeouts
 const TIMEOUT_NORMAL = 30;
-const TIMEOUT_FAST = 1;
+const TIMEOUT_FAST   = 1;
 
 
 // Extension-wide variables
-let _vpnIndicator, _statusLabel, _timeout, _menuItem, _panelLabel;
+let _vpnIndicator, _statusLabel, _timeout, _menuItem, _panelLabel, _menuItemClickId;
 
 const VpnIndicator = new Lang.Class({
     Name: 'VpnIndicator',
@@ -50,9 +50,11 @@ const VpnIndicator = new Lang.Class({
     _init: function () {
         // Init the parent
         this.parent(0.0, "VPN Indicator", false);
+    },
 
+    enable () {
         // Create the button with label for the panel
-        button = new St.Bin({
+        let button = new St.Bin({
             style_class: 'panel-button',
             reactive: true,
             can_focus: true,
@@ -69,7 +71,7 @@ const VpnIndicator = new Lang.Class({
         // Create the menu items
         _statusLabel = new St.Label({ text: "Checking...", y_expand: true, style_class: "statuslabel" });
         _menuItem = new PopupMenu.PopupMenuItem(MENU_CONNECT);
-        _menuItem.connect('activate', Lang.bind(this, this._toggleConnection));
+        _menuItemClickId = _menuItem.connect('activate', Lang.bind(this, this._toggleConnection));
 
         // Add the menu items to the menu
         this.menu.box.add(_statusLabel);
@@ -78,6 +80,7 @@ const VpnIndicator = new Lang.Class({
 
         // Add the button and a popup menu
         this.actor.add_actor(button);
+
         this._refresh();
     },
 
@@ -233,6 +236,21 @@ const VpnIndicator = new Lang.Class({
     _setTimeout (timeoutDuration) {
         // Refresh after an interval
         this._timeout = Mainloop.timeout_add_seconds(timeoutDuration, Lang.bind(this, this._refresh));
+    },
+
+    disable () {
+
+        // Clear timeout and remove menu callback
+        this._clearTimeout();
+
+        if (this._menuItemClickId) {
+            this._menuItem.disconnect(this._menuItemClickId);
+        }
+    },
+
+    destroy () {
+        // Call destroy on the parent
+        this.parent();
     }
 });
 
@@ -240,12 +258,21 @@ const VpnIndicator = new Lang.Class({
 function init() {}
 
 function enable() {
-    // Add the indicator to the status area of the panel
+    // Init the indicator
     _vpnIndicator = new VpnIndicator();
+
+    // Add the indicator to the status area of the panel
+    if (!_vpnIndicator) _vpnIndicator = new VpnIndicator();
+    _vpnIndicator.enable();
     Main.panel.addToStatusArea('vpn-indicator', _vpnIndicator);
 }
 
 function disable() {
     // Remove the indicator from the panel
-    Main.panel._rightBox.remove_child(_vpnIndicator);
+    _vpnIndicator.disable();
+    destroy();
+}
+
+function destroy () {
+    _vpnIndicator.destroy();
 }
