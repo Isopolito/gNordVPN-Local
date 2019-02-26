@@ -33,7 +33,7 @@ The actual extension isn't on the Gnome extensions site yet, so below are instru
 Please do contribute if you like the extension. Pull requests are more than welcome.
 
 ### Bugs
-1. If you disconnect the VPN via the command line while the plugin is connecting, it will get stuck on Connecting... Due to the way the NordVPN command-line works, the plugin is specifically waiting to get to a Connected state once you click Connect. To resolve this, either connect to NordVPN via the command-line (`nordvpn c`) or reload the extension through Tweaks.
+None known
 
 ### Future Plans
 1. I often move between Wifi's from hotels and train companies, which have captive portals to log on to the wifi. I have noticed that whilst NordVPN is connected, the laptop can't load those captive portals and the NordVPN command-line tools get a bit mixed up when you switch connections. To work around this, I want the plugin to listen for Wifi changes and automatically disconnect NordVPN when it detects either you have disconnected or the Wifi connection has changed. This allows the laptop to connect and authenticate to the new network, after which the user can connect the VPN again.
