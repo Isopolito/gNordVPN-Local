@@ -30,14 +30,4 @@ The actual extension isn't on the Gnome extensions site yet, so below are instru
 
 ## Development
 
-### Contribute
-Please do contribute if you like the extension. Pull requests are more than welcome.
-
-### Bugs
-None known
-
-### Future Plans
-1. I often move between Wifi's from hotels and train companies, which have captive portals to log on to the wifi. I have noticed that whilst NordVPN is connected, the laptop can't load those captive portals and the NordVPN command-line tools get a bit mixed up when you switch connections. To work around this, I want the plugin to listen for Wifi changes and automatically disconnect NordVPN when it detects either you have disconnected or the Wifi connection has changed. This allows the laptop to connect and authenticate to the new network, after which the user can connect the VPN again.
-2. The current panel button is purely based on Quasipedia's extension. I'd like to add the option to just show an icon, perhaps one that changes colour depending on status. This allows you to still see the status at a glance, get the details by opening the menu, but doesn't take up so much panel space.
-3. Add the ability to configure which country / city to connect to.
-4. Add a configuration menu to configure all of the above.
+Contributions welcome! If you find any issues or think of any cool features, check it's not already been raised under Issues and raise it.
