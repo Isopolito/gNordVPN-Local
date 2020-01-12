@@ -106,12 +106,14 @@ const VpnIndicator = new Lang.Class({
         _connectMenuItemClickId = _connectMenuItem.connect('activate', Lang.bind(this, this._connect));
         _disconnectMenuItem = new PopupMenu.PopupMenuItem(MENU_DISCONNECT);
         _disconnectMenuItemClickId = _disconnectMenuItem.connect('activate', Lang.bind(this, this._disconnect));
+        _updateMenuLabel = new St.Label({ visible: false, style_class: "updatelabel" });
 
         // Add the menu items to the menu
         this.menu.box.add(_statusLabel);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(_connectMenuItem);
         this.menu.addMenuItem(_disconnectMenuItem);
+        this.menu.box.add(_updateMenuLabel);
 
         // Add the button and a popup menu
         this.actor.add_actor(button);
@@ -122,10 +124,19 @@ const VpnIndicator = new Lang.Class({
     _refresh () {
         // Stop the refreshes
         this._clearTimeout();        
-        
-        // Read the VPN status from the command line and determine the correct state from the "Status: xxxx" line
-        let statusText = GLib.spawn_command_line_sync(CMD_VPNSTATUS)[1].toString().split('\r')[3];
-        let vpnStatus = _states[statusText.split('\n')[0]] || _states.ERROR;
+
+        // Read the VPN status from the command line
+        const statusMessages = GLib.spawn_command_line_sync(CMD_VPNSTATUS)[1].toString().split('\n');
+
+        // Check to see if a new version is available and display message in menu if so
+        if (statusMessages[0].includes('new version')) {
+            updateAvailableText = statusMessages.shift(1);
+        } else {
+            updateAvailableText = null;
+        }
+
+        // Determine the correct state from the "Status: xxxx" line
+        let vpnStatus = _states[statusMessages[0]] || _states.ERROR;
 
         // If a state override is active, increment it and override the state if appropriate
         if (_stateOverride) {
@@ -142,30 +153,36 @@ const VpnIndicator = new Lang.Class({
         }
 
         // Update the menu and panel based on the current state
-        this._updateMenu(vpnStatus, statusText);
-        this._updatePanel(vpnStatus, statusText);
+        this._updateMenu(vpnStatus, statusMessages[0], updateAvailableText);
+        this._updatePanel(vpnStatus, statusMessages);
 
         // Start the refreshes again
         this._setTimeout(vpnStatus.refreshTimeout);
     },
 
-    _updateMenu (vpnStatus, statusText) {
+    _updateMenu (vpnStatus, statusText, updateAvailableText) {
         // Set the status text on the menu
         _statusLabel.text = statusText;
+        
+        if (updateAvailableText) {
+            _updateMenuLabel.text = updateAvailableText;
+            _updateMenuLabel.visible = true;
+        } else {
+            _updateMenuLabel.visible = false;;
+        }
 
         // Activate / deactivate menu items
         _connectMenuItem.actor.reactive = vpnStatus.canConnect;
         _disconnectMenuItem.actor.reactive = vpnStatus.canDisconnect;
     },
 
-    _updatePanel(vpnStatus, statusText) {
+    _updatePanel(vpnStatus, statusMessages) {
         let panelText;
 
         // If connected, build up the panel text based on the server location and number
         if (vpnStatus.panelShowServer) {
-            let statusLines = statusText.split('\n');
-            let country = statusLines[2].replace("Country: ", "").toUpperCase();
-            let serverNumber = statusLines[1].match(/\d+/);
+            let country = statusMessages[2].replace("Country: ", "").toUpperCase();
+            let serverNumber = statusMessages[1].match(/\d+/);
             panelText  = country + " #" + serverNumber;
         }
 
