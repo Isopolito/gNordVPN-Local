@@ -6,6 +6,7 @@ const PopupMenu = imports.ui.popupMenu;
 const Lang      = imports.lang;
 const GLib      = imports.gi.GLib;
 const Mainloop  = imports.mainloop;
+const ByteArray = imports.byteArray;    
 
 // Commands to run
 const CMD_VPNSTATUS  = "nordvpn status";
@@ -126,16 +127,18 @@ const VpnIndicator = new Lang.Class({
         this._clearTimeout();        
 
         // Read the VPN status from the command line
-        const statusMessages = GLib.spawn_command_line_sync(CMD_VPNSTATUS)[1].toString().split('\n');
+        const [ok, standardOut, standardError, exitStatus] = GLib.spawn_command_line_sync(CMD_VPNSTATUS);
+
+        // Convert Uint8Array object to string and split up the different messages
+        const statusMessages = ByteArray.toString(standardOut).split('\n');
 
         // Check to see if a new version is available and display message in menu if so
-        if (statusMessages[0].includes('new version')) {
-            updateAvailableText = statusMessages.shift(1);
-        } else {
-            updateAvailableText = null;
-        }
+        const updateAvailableText = statusMessages[0].includes('new version')
+            ? statusMessages.shift(1)
+            : null;
 
         // Determine the correct state from the "Status: xxxx" line
+        // TODO: use results from vpn command to give details of error
         let vpnStatus = _states[statusMessages[0]] || _states.ERROR;
 
         // If a state override is active, increment it and override the state if appropriate
