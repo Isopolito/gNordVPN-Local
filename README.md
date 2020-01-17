@@ -2,6 +2,7 @@
 <img align="right" src="img/screenshot.png">
 A Gnome extension that shows your NordVPN status in the top bar, features a menu showing the current status and a button to Connect / Disconnect.
 
+###### Note
 **Forked from: https://github.com/ThatRobVK/NordVPN-Local
 TheRobVK version is awesome but does not seem to be active anymore, this repo is just continuing on with the good work already done there.**
 
