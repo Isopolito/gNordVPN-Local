@@ -79,7 +79,7 @@ let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuI
 // State persistence
 let _stateOverride, _stateOverrideCounter;
 
-const stringStartsWithCaptialLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
+const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
 
 const buildCountrySelector = () => {
     const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
@@ -92,7 +92,7 @@ const buildCountrySelector = () => {
             GLib.spawn_command_line_async(`${CMD_CONNECT} ${actor.label.get_text()}`);
         }));
 
-        stringStartsWithCaptialLetter(country) && cPopupMenuExpander.menu.addMenuItem(menuitm);
+        stringStartsWithCapitalLetter(country) && cPopupMenuExpander.menu.addMenuItem(menuitm);
     }
 
     return cPopupMenuExpander;
