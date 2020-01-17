@@ -3,7 +3,6 @@
     "description": "Controls your NordVPN connection and shows its current status.",
     "uuid": "nordvpn-local@robvk.uk",
     "shell-version": [
-        "3.28.3",
         "3.34.1"
     ]
 }

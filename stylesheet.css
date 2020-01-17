@@ -3,7 +3,8 @@
 }
 
 .updatelabel {
-    padding: 30px 30px 0 30px;
+    padding: 5px 10px 0 30px;
+    font-size: smaller;
     color: yellowgreen;
 }
 
