@@ -12,7 +12,7 @@ When disconnected, the top bar will show a red button reading `UNPROTECTED`--as 
 When updates are available a message will display in the menu.
 
 ### How it's different 
-gNordVPN-Local is a fork of NordVPN-Local. That extension is loosely based on Quadipedia's NordVPN Status extension (found on the Gnome extensions site), kudos to them for creating the original. Their version works by reading the server list from NordVPN's API and comparing the computer's public IP against this list. It was found to often not pick up active connection, which I suspect is due to incorrect API data.
+gNordVPN-Local is a fork of NordVPN-Local. That extension is loosely based on Quadipedia's NordVPN Status extension (found on the Gnome extensions site), kudos to them for creating the original. Their version works by reading the server list from NordVPN's API and comparing the computer's public IP against this list. It was found to often not pick up active connections, possibly due to incorrect API data.
 
 This version uses the NordVPN command-line tools to determine the status. It updates on connect / disconnet, and it refreshes every 30 seconds in case you change your connection external to the plugin.
 
