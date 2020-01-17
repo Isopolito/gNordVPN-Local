@@ -88,7 +88,7 @@ const VpnIndicator = new Lang.Class({
         this.parent(0.0, "VPN Indicator", false);
     },
 
-    buildCountrySelector() {
+    _buildCountrySelector() {
         const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
         const countries = GLib.spawn_command_line_sync("nordvpn countries").toString().replace(/\s+/g,' ').split(' ');
         countries.sort();
@@ -134,7 +134,7 @@ const VpnIndicator = new Lang.Class({
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(_connectMenuItem);
         this.menu.addMenuItem(_disconnectMenuItem);
-        this.menu.addMenuItem(this.buildCountrySelector());
+        this.menu.addMenuItem(this._buildCountrySelector());
 
         // Add the button and a popup menu
         this.actor.add_actor(button);
