@@ -1,5 +1,5 @@
 {
-    "name": "gNordVPN",
+    "name": "gNordVPN-Local",
     "description": "Controls your NordVPN connection and shows its current status.",
     "uuid": "gnordvpn-local@isopolito",
     "version": 1,
