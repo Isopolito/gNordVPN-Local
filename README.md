@@ -7,7 +7,9 @@ A Gnome extension that shows your NordVPN status in the top bar, features a menu
 TheRobVK version is awesome but does not seem to be active anymore, this repo is just continuing on with the good work already done there.**
 
 ## What it does
-When disconnected, the top bar will show a red button reading `UNPROTECTED`, to remind you that you are not connected to the VPN. When connecting or disconnecting the button turns amber, and once connected it will turn green showing you the country and server number you are connected to, e.g. `UNITED KINGDOM #813`. When you click the button it will show the full command-line output of the command `nordvpn status` in the menu. Undearneath the status is a button that allows you to connect / disconnect.
+When disconnected, the top bar will show a red button reading `UNPROTECTED`, to remind you that you are not connected to the VPN. When connecting or disconnecting the button turns amber, and once connected it will turn green showing you the country and server number you are connected to, e.g. `UNITED KINGDOM #813`. When you click the button it will show the full command-line output of the command `nordvpn status` in the menu. Undearneath the status is a button that allows you to connect / disconnect. Below that is a menu for selecting the Country. 
+
+When updates are available a message will display in the menu.
 
 ### How it's different 
 This is loosely based on Quadipedia's NordVPN Status extension (found on the Gnome extensions site), kudos to them for creating the original. Their version works by reading the server list from NordVPN's API and comparing the computer's public IP against this list. I found it often didn't pick up my active connection, which I suspect is due to incorrect API data.
