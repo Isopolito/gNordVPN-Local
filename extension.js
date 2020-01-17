@@ -79,25 +79,6 @@ let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuI
 // State persistence
 let _stateOverride, _stateOverrideCounter;
 
-const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
-
-const buildCountrySelector = () => {
-    const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
-    const countries = GLib.spawn_command_line_sync("nordvpn countries").toString().replace(/\s+/g,' ').split(' ');
-    countries.sort();
-    for (var i=3; i<countries.length; i++) {
-        const country = countries[i].replace(",","");
-        const menuitm = new PopupMenu.PopupMenuItem(country);
-        _menuItemClickId = menuitm.connect('activate', Lang.bind(this,function(actor, event) {
-            GLib.spawn_command_line_async(`${CMD_CONNECT} ${actor.label.get_text()}`);
-        }));
-
-        stringStartsWithCapitalLetter(country) && cPopupMenuExpander.menu.addMenuItem(menuitm);
-    }
-
-    return cPopupMenuExpander;
-};
-
 const VpnIndicator = new Lang.Class({
     Name: 'VpnIndicator',
     Extends: PanelMenu.Button,
@@ -105,6 +86,25 @@ const VpnIndicator = new Lang.Class({
     _init: function () {
         // Init the parent
         this.parent(0.0, "VPN Indicator", false);
+    },
+
+    buildCountrySelector() {
+        const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
+        const countries = GLib.spawn_command_line_sync("nordvpn countries").toString().replace(/\s+/g,' ').split(' ');
+        countries.sort();
+        for (var i=3; i<countries.length; i++) {
+            const country = countries[i].replace(",","");
+            const menuitm = new PopupMenu.PopupMenuItem(country);
+            _menuItemClickId = menuitm.connect('activate', Lang.bind(this,function(actor, event) {
+                GLib.spawn_command_line_async(`${CMD_CONNECT} ${actor.label.get_text()}`);
+            }));
+
+            const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
+
+            stringStartsWithCapitalLetter(country) && cPopupMenuExpander.menu.addMenuItem(menuitm);
+        }
+
+        return cPopupMenuExpander;
     },
 
     enable () {
@@ -134,7 +134,7 @@ const VpnIndicator = new Lang.Class({
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(_connectMenuItem);
         this.menu.addMenuItem(_disconnectMenuItem);
-        this.menu.addMenuItem(buildCountrySelector());
+        this.menu.addMenuItem(this.buildCountrySelector());
 
         // Add the button and a popup menu
         this.actor.add_actor(button);
