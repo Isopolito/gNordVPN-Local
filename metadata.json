@@ -1,7 +1,7 @@
 {
     "name": "gNordVPN",
     "description": "Controls your NordVPN connection and shows its current status.",
-    "uuid": "gnordvpn@isopolito",
+    "uuid": "gnordvpn-local@isopolito",
     "version": 1,
     "shell-version": [
         "3.34.1"
