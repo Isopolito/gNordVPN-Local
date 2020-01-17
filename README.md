@@ -24,11 +24,12 @@ This extension uses the NordVPN command line client, which can be set up as foll
 2. Configure your credentials with `nordvpn login`, following the prompts.
 3. Check NordVPN is set up with `nordvpn c`, if it connects successfully then you're good to go.
 
-### Install the extension
-Easiest way: enable on gnome-extensions at [NordVPN Local on gnome extensions](https://extensions.gnome.org/extension/1656/nordvpn-local/)
+### TODO: Create extension and update this 
+~~Install the extension
+Easiest way: enable on gnome-extensions at [NordVPN Local on gnome extensions](https://extensions.gnome.org/extension/1656/nordvpn-local/)~~
 
 Manual install:  
-1. Create a folder for the extension with `mkdir ~/.local/share/gnome-shell/extensions/nordvpn-local@robvk.uk`
+1. Create a folder for the extension with `mkdir ~/.local/share/gnome-shell/extensions/gnordvpn@isopolito`
 2. Copy the files from this repo into that folder
 3. Enable the extension using `Tweaks` (if you don't have it, install via `sudo apt install gnome-tweaks`)
 
