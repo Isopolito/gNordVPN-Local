@@ -14,7 +14,7 @@ When updates are available a message will display in the menu.
 ### How it's different 
 gNordVPN-Local is a fork of NordVPN-Local. That extension is loosely based on Quadipedia's NordVPN Status extension (found on the Gnome extensions site), kudos to them for creating the original. Their version works by reading the server list from NordVPN's API and comparing the computer's public IP against this list. It was found to often not pick up active connections, possibly due to incorrect API data.
 
-This version uses the NordVPN command-line tools to determine the status. It updates on connect / disconnet, and it refreshes every 30 seconds in case you change your connection external to the plugin.
+This version uses the NordVPN command-line tools to determine the status. It updates on connect / disconnect, and it refreshes every 30 seconds in case you change your connection external to the plugin.
 
 Note that due to using the local command-line tools, this only works when using NordVPN locally (hence the title). If the VPN connection is established outside of the computer, e.g. on your router, then this plugin __will not__ detect the VPN connection. Use Quasipedia's version instead, which will detect that, if it finds your public IP in the NordVPN server list.
 
