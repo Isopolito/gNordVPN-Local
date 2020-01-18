@@ -75,7 +75,9 @@ let _states = {
 };
 
 // Extension, panel button, menu items, timeout
-let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem, _connectMenuItemClickId, _disconnectMenuItemClickId, _timeout;
+let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem, 
+    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId, _timeout, _menuItemClickId;
+
 // State persistence
 let _stateOverride, _stateOverrideCounter;
 
@@ -90,8 +92,10 @@ const VpnIndicator = new Lang.Class({
 
     _buildCountrySelector() {
         const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
-        const countries = GLib.spawn_command_line_sync("nordvpn countries").toString().replace(/\s+/g,' ').split(' ');
+        const [ok, standardOut, standardError, exitStatus] = GLib.spawn_command_line_sync("nordvpn countries");
+        const countries = ByteArray.toString(standardOut).replace(/\s+/g,' ').split(' ');
         countries.sort();
+
         for (var i=3; i<countries.length; i++) {
             const country = countries[i].replace(",","");
             const menuitm = new PopupMenu.PopupMenuItem(country);
