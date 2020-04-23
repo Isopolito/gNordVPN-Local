@@ -101,7 +101,7 @@ const VpnIndicator = new Lang.Class({
             const menuitm = new PopupMenu.PopupMenuItem(country);
             _menuItemClickId = menuitm.connect('activate', Lang.bind(this, function(actor, event) {
                 GLib.spawn_command_line_async(`${CMD_CONNECT} ${actor.label.get_text()}`);
-                this._override("Status: Reconnecting", 0)
+                this._overrideRefresh("Status: Reconnecting", 0)
             }));
 
             const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
@@ -112,9 +112,9 @@ const VpnIndicator = new Lang.Class({
         return cPopupMenuExpander;
     },
 
-    _override (state, counter) {
+    _overrideRefresh (state, counter) {
       this._stateOverride = _states[state];
-      this._stateOverrideCounter = 0;
+      this._stateOverrideCounter = counter;
       this._refresh()
     },
 
@@ -154,8 +154,6 @@ const VpnIndicator = new Lang.Class({
     },
 
     _refresh () {
-        _stateOverride = this._stateOverride;
-        _stateOverrideCounter = this._stateOverrideCounter
         // Stop the refreshes
         this._clearTimeout();
 
@@ -176,12 +174,12 @@ const VpnIndicator = new Lang.Class({
         let vpnStatus = _states[status] || _states.ERROR;
 
         // If a state override is active, increment it and override the state if appropriate
-        if (_stateOverride) {
-            _stateOverrideCounter += 1;
+        if (this._stateOverride) {
+            this._stateOverrideCounter += 1;
 
-            if (_stateOverrideCounter <= STATE_OVERRIDE_DURATION && vpnStatus.clearsOverrideId != _stateOverride.overrideId) {
+            if (this._stateOverrideCounter <= STATE_OVERRIDE_DURATION && vpnStatus.clearsOverrideId != this._stateOverride.overrideId) {
                 // State override still active
-                vpnStatus = _stateOverride;
+                vpnStatus = this._stateOverride;
             } else {
                 // State override expired or cleared by current state, remove it
                 this._stateOverride = undefined;
@@ -233,10 +231,7 @@ const VpnIndicator = new Lang.Class({
         GLib.spawn_command_line_async(CMD_CONNECT);
 
         // Set an override on the status as the command line status takes a while to catch up
-        this._stateOverride = _states["Status: Connecting"];
-        this._stateOverrideCounter = 0;
-
-        this._refresh();
+        this._overrideRefresh("Status: Connecting", 0)
     },
 
     _disconnect () {
@@ -244,10 +239,7 @@ const VpnIndicator = new Lang.Class({
         GLib.spawn_command_line_async(CMD_DISCONNECT);
 
         // Set an override on the status as the command line status takes a while to catch up
-        this._stateOverride = _states["Status: Disconnecting"];
-        this._stateOverrideCounter = 0;
-
-        this._refresh();
+        this._overrideRefresh("Status: Disconnecting", 0)
     },
 
     _clearTimeout () {
