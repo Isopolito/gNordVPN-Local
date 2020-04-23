@@ -55,7 +55,7 @@ let _states = {
         "styleClass":"amber",
         "canConnect":false,
         "canDisconnect":true,
-        "refreshTimeout":10
+        "refreshTimeout":2
     },
     "Status: Restarting": { 
         "panelText":"RESTARTING...",
@@ -78,7 +78,6 @@ let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuI
     _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId, _timeout, _menuItemClickId;
 
 // State persistence
-let _stateOverride, _stateOverrideCounter;
 
 const VpnIndicator = new Lang.Class({
     Name: 'VpnIndicator',
@@ -87,6 +86,8 @@ const VpnIndicator = new Lang.Class({
     _init: function () {
         // Init the parent
         this.parent(0.0, "VPN Indicator", false);
+        this._stateOverride = undefined;
+        this._stateOverrideCounter = 0;
     },
 
     _buildCountrySelector() {
@@ -98,8 +99,9 @@ const VpnIndicator = new Lang.Class({
         for (var i=3; i<countries.length; i++) {
             const country = countries[i].replace(",","");
             const menuitm = new PopupMenu.PopupMenuItem(country);
-            _menuItemClickId = menuitm.connect('activate', Lang.bind(this,function(actor, event) {
+            _menuItemClickId = menuitm.connect('activate', Lang.bind(this, function(actor, event) {
                 GLib.spawn_command_line_async(`${CMD_CONNECT} ${actor.label.get_text()}`);
+                this._override("Status: Reconnecting", 0)
             }));
 
             const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
@@ -108,6 +110,12 @@ const VpnIndicator = new Lang.Class({
         }
 
         return cPopupMenuExpander;
+    },
+
+    _override (state, counter) {
+      this._stateOverride = _states[state];
+      this._stateOverrideCounter = 0;
+      this._refresh()
     },
 
     enable () {
@@ -146,8 +154,10 @@ const VpnIndicator = new Lang.Class({
     },
 
     _refresh () {
+        _stateOverride = this._stateOverride;
+        _stateOverrideCounter = this._stateOverrideCounter
         // Stop the refreshes
-        this._clearTimeout();        
+        this._clearTimeout();
 
         // Read the VPN status from the command line
         const [ok, standardOut, standardError, exitStatus] = GLib.spawn_command_line_sync(CMD_VPNSTATUS);
@@ -162,7 +172,7 @@ const VpnIndicator = new Lang.Class({
 
         // Determine the correct state from the "Status: xxxx" line
         // TODO: use results from vpn command to give details of error
-        let status = statusMessages[0].replace("\r-\r  \r\r-\r  \r","")
+        let status = (statusMessages[0].match(/Status: \w+/) || [''])[0]
         let vpnStatus = _states[status] || _states.ERROR;
 
         // If a state override is active, increment it and override the state if appropriate
@@ -174,8 +184,8 @@ const VpnIndicator = new Lang.Class({
                 vpnStatus = _stateOverride;
             } else {
                 // State override expired or cleared by current state, remove it
-                _stateOverride = undefined;
-                _stateOverrideCounter = 0;
+                this._stateOverride = undefined;
+                this._stateOverrideCounter = 0;
             }
         }
 
@@ -223,8 +233,8 @@ const VpnIndicator = new Lang.Class({
         GLib.spawn_command_line_async(CMD_CONNECT);
 
         // Set an override on the status as the command line status takes a while to catch up
-        _stateOverride = _states["Status: Connecting"];
-        _stateOverrideCounter = 0;
+        this._stateOverride = _states["Status: Connecting"];
+        this._stateOverrideCounter = 0;
 
         this._refresh();
     },
@@ -234,8 +244,8 @@ const VpnIndicator = new Lang.Class({
         GLib.spawn_command_line_async(CMD_DISCONNECT);
 
         // Set an override on the status as the command line status takes a while to catch up
-        _stateOverride = _states["Status: Disconnecting"];
-        _stateOverrideCounter = 0;
+        this._stateOverride = _states["Status: Disconnecting"];
+        this._stateOverrideCounter = 0;
 
         this._refresh();
     },
