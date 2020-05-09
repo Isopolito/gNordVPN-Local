@@ -73,52 +73,68 @@ let _states = {
     }
 };
 
-// Extension, panel button, menu items, timeout
 let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem, 
-    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId, _timeout, _menuItemClickId;
-
-// State persistence
+    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId, _timeout, 
+    _menuItemClickId, _isCountryMenuBuilt;
 
 const VpnIndicator = new Lang.Class({
     Name: 'VpnIndicator',
     Extends: PanelMenu.Button,
 
-    _init: function () {
+    _init: function() {
         // Init the parent
         this.parent(0.0, "VPN Indicator", false);
         this._stateOverride = undefined;
         this._stateOverrideCounter = 0;
     },
 
-    _buildCountrySelector() {
-        const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
+    _tryToBuildCountryMenu() {
         const [ok, standardOut, standardError, exitStatus] = GLib.spawn_command_line_sync("nordvpn countries");
+        if (!standardOut) return;
+
         const countries = standardOut.toString().replace(/\s+/g,' ').split(' ');
         countries.sort();
 
+        let cPopupMenuExpander = null;
+        const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
+
         for (var i=3; i<countries.length; i++) {
             const country = countries[i].replace(",","");
-            const menuitm = new PopupMenu.PopupMenuItem(country);
-            _menuItemClickId = menuitm.connect('activate', Lang.bind(this, function(actor, event) {
-                GLib.spawn_command_line_async(`${CMD_CONNECT} ${actor.label.get_text()}`);
+
+            // All countries should be capitalized in output
+            if (!stringStartsWithCapitalLetter(country)) continue;
+
+            const menuItem = new PopupMenu.PopupMenuItem(country.replace(/_/g, " "));
+            _menuItemClickId = menuItem.connect('activate', Lang.bind(this, function(actor, event) {
+                GLib.spawn_command_line_async(`${CMD_CONNECT} ${country}`);
                 this._overrideRefresh("Status: Reconnecting", 0)
             }));
 
-            const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
-
-            stringStartsWithCapitalLetter(country) && cPopupMenuExpander.menu.addMenuItem(menuitm);
+            if (!cPopupMenuExpander) cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
+            cPopupMenuExpander.menu.addMenuItem(menuItem);
+            _isCountryMenuBuilt = true;
         }
 
         return cPopupMenuExpander;
     },
 
-    _overrideRefresh (state, counter) {
+    _overrideRefresh(state, counter) {
       this._stateOverride = _states[state];
       this._stateOverrideCounter = counter;
       this._refresh()
     },
 
-    enable () {
+    // Can't build this country selection menu until nordvpn is properly up and running.
+    // If menu construction only happens once at startup when gnome is loading up extensions 
+    // after reboot, the menu won't get populated correctly.
+    _buildCountryMenuIfNeeded() {
+        if (_isCountryMenuBuilt) return;
+
+        const countryMenu = this._tryToBuildCountryMenu();
+        if (countryMenu) this.menu.addMenuItem(countryMenu);
+    },
+
+    enable() {
         // Create the button with label for the panel
         let button = new St.Bin({
             style_class: 'panel-button',
@@ -145,7 +161,6 @@ const VpnIndicator = new Lang.Class({
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(_connectMenuItem);
         this.menu.addMenuItem(_disconnectMenuItem);
-        this.menu.addMenuItem(this._buildCountrySelector());
 
         // Add the button and a popup menu
         this.actor.add_actor(button);
@@ -153,7 +168,9 @@ const VpnIndicator = new Lang.Class({
         this._refresh();
     },
 
-    _refresh () {
+    _refresh() {
+        this._buildCountryMenuIfNeeded();
+
         // Stop the refreshes
         this._clearTimeout();
 
@@ -177,7 +194,8 @@ const VpnIndicator = new Lang.Class({
         if (this._stateOverride) {
             this._stateOverrideCounter += 1;
 
-            if (this._stateOverrideCounter <= STATE_OVERRIDE_DURATION && vpnStatus.clearsOverrideId != this._stateOverride.overrideId) {
+            if (this._stateOverrideCounter <= STATE_OVERRIDE_DURATION 
+                && (!vpnStatus.clearsOverrideId || vpnStatus.clearsOverrideId != this._stateOverride.overrideId)) {
                 // State override still active
                 vpnStatus = this._stateOverride;
             } else {
@@ -195,7 +213,7 @@ const VpnIndicator = new Lang.Class({
         this._setTimeout(vpnStatus.refreshTimeout);
     },
 
-    _updateMenu (vpnStatus, statusText, updateAvailableText) {
+    _updateMenu(vpnStatus, statusText, updateAvailableText) {
         // Set the status text on the menu
         _statusLabel.text = statusText;
         
@@ -226,7 +244,7 @@ const VpnIndicator = new Lang.Class({
         _panelLabel.style_class = vpnStatus.styleClass;
     },
 
-    _connect () {
+    _connect() {
         // Run the connect command
         GLib.spawn_command_line_async(CMD_CONNECT);
 
@@ -234,7 +252,7 @@ const VpnIndicator = new Lang.Class({
         this._overrideRefresh("Status: Connecting", 0)
     },
 
-    _disconnect () {
+    _disconnect() {
         // Run the disconnect command
         GLib.spawn_command_line_async(CMD_DISCONNECT);
 
@@ -242,7 +260,7 @@ const VpnIndicator = new Lang.Class({
         this._overrideRefresh("Status: Disconnecting", 0)
     },
 
-    _clearTimeout () {
+    _clearTimeout() {
         // Remove the refresh timer if active
         if (this._timeout) {
             Mainloop.source_remove(this._timeout);
@@ -250,12 +268,12 @@ const VpnIndicator = new Lang.Class({
         }
     },
 
-    _setTimeout (timeoutDuration) {
+    _setTimeout(timeoutDuration) {
         // Refresh after an interval
         this._timeout = Mainloop.timeout_add_seconds(timeoutDuration, Lang.bind(this, this._refresh));
     },
 
-    disable () {
+    disable() {
 
         // Clear timeout and remove menu callback
         this._clearTimeout();
@@ -269,12 +287,11 @@ const VpnIndicator = new Lang.Class({
         }
     },
 
-    destroy () {
+    destroy() {
         // Call destroy on the parent
         this.parent();
     }
 });
-
 
 function init() {}
 
@@ -294,6 +311,6 @@ function disable() {
     destroy();
 }
 
-function destroy () {
+function destroy() {
     _vpnIndicator.destroy();
 }
