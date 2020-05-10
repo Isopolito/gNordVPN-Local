@@ -277,6 +277,7 @@ const VpnIndicator = new Lang.Class({
 
         // Clear timeout and remove menu callback
         this._clearTimeout();
+        _isCountryMenuBuilt = false;
 
         // Disconnect the menu click handlers
         if (this._connectMenuItemClickId) {
