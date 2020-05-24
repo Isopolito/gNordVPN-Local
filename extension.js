@@ -7,6 +7,8 @@ const Lang      = imports.lang;
 const GLib      = imports.gi.GLib;
 const Mainloop  = imports.mainloop;
 
+const STATE_OVERRIDE_UNSET = -1;
+
 // Commands to run
 const CMD_VPNSTATUS  = "nordvpn status";
 const CMD_CONNECT    = "nordvpn c";
@@ -24,6 +26,7 @@ let _states = {
         "canConnect":false,     // Connect menu item enabled true/false
         "canDisconnect":true,   // Disconnect menu item enabled true/false
         "refreshTimeout":30,    // Seconds to refresh when this is the status
+        "overrideId": STATE_OVERRIDE_UNSET,
         "clearsOverrideId":1    // Clears a status override with this ID
     },
     "Status: Connecting": { 
@@ -32,6 +35,8 @@ let _states = {
         "canConnect":false,
         "canDisconnect":true,
         "refreshTimeout":1,
+        "overrideId": STATE_OVERRIDE_UNSET,
+        "clearsOverrideId": STATE_OVERRIDE_UNSET,
         "overrideId":1               // Allows an override of this state to be cleared by a state with clearsOverrideId of the same ID
     },
     "Status: Disconnected": { 
@@ -40,6 +45,7 @@ let _states = {
         "canConnect":true,
         "canDisconnect":false,
         "refreshTimeout":10,
+        "overrideId": STATE_OVERRIDE_UNSET,
         "clearsOverrideId":2
     },
     "Status: Disconnecting": { 
@@ -47,6 +53,7 @@ let _states = {
         "styleClass":"amber",
         "canConnect":true,
         "canDisconnect":false,
+        "clearsOverrideId": STATE_OVERRIDE_UNSET,
         "refreshTimeout":1,
         "overrideId":2
     },
@@ -55,6 +62,8 @@ let _states = {
         "styleClass":"amber",
         "canConnect":false,
         "canDisconnect":true,
+        "clearsOverrideId": STATE_OVERRIDE_UNSET,
+        "overrideId": STATE_OVERRIDE_UNSET,
         "refreshTimeout":2
     },
     "Status: Restarting": { 
@@ -62,6 +71,8 @@ let _states = {
         "styleClass":"amber",
         "canConnect":false,
         "canDisconnect":true,
+        "clearsOverrideId": STATE_OVERRIDE_UNSET,
+        "overrideId": STATE_OVERRIDE_UNSET,
         "refreshTimeout":10
     },
     "ERROR": {
@@ -69,6 +80,8 @@ let _states = {
         "styleClass":"red",
         "canConnect":true,
         "canDisconnect":true,
+        "clearsOverrideId": STATE_OVERRIDE_UNSET,
+        "overrideId": STATE_OVERRIDE_UNSET,
         "refreshTimeout":5
     }
 };
@@ -135,7 +148,24 @@ const VpnIndicator = new Lang.Class({
     },
 
     enable() {
-        // Create the button with label for the panel
+        // Add the menu items to the menu
+        _statusLabel = new St.Label({ text: "Checking...", y_expand: false, style_class: "statuslabel" });
+        this.menu.box.add(_statusLabel);
+
+        _updateMenuLabel = new St.Label({ visible: false, style_class: "updatelabel" });
+        this.menu.box.add(_updateMenuLabel);
+
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        _connectMenuItem = new PopupMenu.PopupMenuItem(MENU_CONNECT);
+        _connectMenuItemClickId = _connectMenuItem.connect('activate', Lang.bind(this, this._connect));
+        this.menu.addMenuItem(_connectMenuItem);
+
+        _disconnectMenuItem = new PopupMenu.PopupMenuItem(MENU_DISCONNECT);
+        _disconnectMenuItemClickId = _disconnectMenuItem.connect('activate', Lang.bind(this, this._disconnect));
+        this.menu.addMenuItem(_disconnectMenuItem);
+
+        // Create and add the button with label for the panel
         let button = new St.Bin({
             style_class: 'panel-button',
             reactive: true,
@@ -146,31 +176,12 @@ const VpnIndicator = new Lang.Class({
         });
         _panelLabel = new St.Label();
         button.set_child(_panelLabel);
-
-        // Create the menu items
-        _statusLabel = new St.Label({ text: "Checking...", y_expand: true, style_class: "statuslabel" });
-        _connectMenuItem = new PopupMenu.PopupMenuItem(MENU_CONNECT);
-        _connectMenuItemClickId = _connectMenuItem.connect('activate', Lang.bind(this, this._connect));
-        _disconnectMenuItem = new PopupMenu.PopupMenuItem(MENU_DISCONNECT);
-        _disconnectMenuItemClickId = _disconnectMenuItem.connect('activate', Lang.bind(this, this._disconnect));
-        _updateMenuLabel = new St.Label({ visible: false, style_class: "updatelabel" });
-
-        // Add the menu items to the menu
-        this.menu.box.add(_statusLabel);
-        this.menu.box.add(_updateMenuLabel);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addMenuItem(_connectMenuItem);
-        this.menu.addMenuItem(_disconnectMenuItem);
-
-        // Add the button and a popup menu
         this.actor.add_actor(button);
 
         this._refresh();
     },
 
     _refresh() {
-        this._buildCountryMenuIfNeeded();
-
         // Stop the refreshes
         this._clearTimeout();
 
@@ -190,12 +201,14 @@ const VpnIndicator = new Lang.Class({
         let status = (statusMessages[0].match(/Status: \w+/) || [''])[0]
         let vpnStatus = _states[status] || _states.ERROR;
 
+        if (vpnStatus !== _states.ERROR) this._buildCountryMenuIfNeeded();
+
         // If a state override is active, increment it and override the state if appropriate
         if (this._stateOverride) {
             this._stateOverrideCounter += 1;
 
             if (this._stateOverrideCounter <= STATE_OVERRIDE_DURATION 
-                && (!vpnStatus.clearsOverrideId || vpnStatus.clearsOverrideId != this._stateOverride.overrideId)) {
+                && (vpnStatus.clearsOverrideId != this._stateOverride.overrideId)) {
                 // State override still active
                 vpnStatus = this._stateOverride;
             } else {
@@ -274,9 +287,10 @@ const VpnIndicator = new Lang.Class({
     },
 
     disable() {
-
         // Clear timeout and remove menu callback
         this._clearTimeout();
+
+        // Make sure the country menu gets rebuilt if this extension is re-enabled
         _isCountryMenuBuilt = false;
 
         // Disconnect the menu click handlers
