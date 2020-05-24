@@ -12,19 +12,25 @@
     font-weight: bold;
     color: #ffffff;
     background-color: rgba(0,255,0,0.7);
-    padding: 0px 5px;
+    border-radius: 2px;
+    padding: 2px 6px 0;
+    margin: 2.5px 0 3px 0;
 }
 
 .red {
     font-weight: bold;
     color: #ffffff;
     background-color: rgba(255,0,0,0.7);
-    padding: 0px 5px;
+    border-radius: 2px;
+    padding: 2px 6px 0;
+    margin: 2.5px 0 3px 0;
 }
 
 .amber {
     font-weight: bold;
     color: #ffffff;
     background-color: rgba(255,191,0,0.7);
-    padding: 0px 5px;
+    border-radius: 2px;
+    padding: 2px 6px 0;
+    margin: 2.5px 0 3px 0;
 }
