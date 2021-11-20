@@ -6,7 +6,7 @@ const Lang = imports.lang;
 const GLib = imports.gi.GLib;
 const Mainloop = imports.mainloop;
 
-// Gnordvpn-Local modules
+// gNordvpn-Local modules
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
@@ -110,28 +110,18 @@ const VpnIndicator = new Lang.Class({
         // Stop the refreshes
         this._clearTimeout();
 
-        const statusMessages = Vpn.getStatus();
-        
-        // Check to see if a new version is available and display message in menu if so
-        const updateAvailableText = statusMessages[0].includes('new version')
-            ? statusMessages.shift(1)
-            : null;
-
-        // Determine the correct state from the "Status: xxxx" line
-        // TODO: use results from vpn command to give details of error
-        let status = (statusMessages[0].match(/Status: \w+/) || [''])[0]
-        let vpnStatus = vpnStateManagement.states[status] || vpnStateManagement.states.ERROR;
-
-        if (vpnStatus !== vpnStateManagement.states.ERROR) this._buildCountryMenuIfNeeded();
+        const status = Vpn.getStatus();
+        let vpnState = vpnStateManagement.states[status.connectStatus] || vpnStateManagement.states.ERROR;
+        if (vpnState !== vpnStateManagement.states.ERROR) this._buildCountryMenuIfNeeded();
 
         // If a state override is active, increment it and override the state if appropriate
         if (vpnStateManagement.stateOverride) {
             vpnStateManagement.stateOverrideCounter += 1;
 
-            if (vpnStateManagement.stateOverrideCounter <= vpnStateManagement.STATE_OVERRIDE_DURATION
-                && (vpnStatus.clearsOverrideId != vpnStateManagement.stateOverride.overrideId)) {
+            if (vpnStateManagement.stateOverrideCounter <= vpnStateManagement.STATE_OVERRIDE_DURATION 
+                                    && (vpnState.clearsOverrideId != vpnStateManagement.stateOverride.overrideId)) {
                 // State override still active
-                vpnStatus = vpnStateManagement.stateOverride;
+                vpnState = vpnStateManagement.stateOverride;
             } else {
                 // State override expired or cleared by current state, remove it
                 vpnStateManagement.stateOverride = undefined;
@@ -140,11 +130,11 @@ const VpnIndicator = new Lang.Class({
         }
 
         // Update the menu and panel based on the current state
-        this._updateMenu(vpnStatus, status, updateAvailableText);
-        this._updatePanel(vpnStatus, statusMessages);
+        this._updateMenu(vpnState, status.connectStatus, status.updateMessage);
+        this._updatePanel(vpnState, status);
 
         // Start the refreshes again
-        this._setTimeout(vpnStatus.refreshTimeout);
+        this._setTimeout(vpnState.refreshTimeout);
     },
 
     _updateMenu(vpnStatus, statusText, updateAvailableText) {
@@ -163,19 +153,17 @@ const VpnIndicator = new Lang.Class({
         _disconnectMenuItem.actor.reactive = vpnStatus.canDisconnect;
     },
 
-    _updatePanel(vpnStatus, statusMessages) {
+    _updatePanel(vpnState, status) {
         let panelText;
 
         // If connected, build up the panel text based on the server location and number
-        if (vpnStatus.panelShowServer) {
-            let country = statusMessages[2].replace("Country: ", "").toUpperCase();
-            let serverNumber = statusMessages[1].match(/\d+/);
-            panelText = country + " #" + serverNumber;
+        if (vpnState.panelShowServer) {
+            panelText = status.country + " #" + status.serverNumber;
         }
 
         // Update the panel button
-        _panelLabel.text = panelText || vpnStatus.panelText;
-        _panelLabel.style_class = vpnStatus.styleClass;
+        _panelLabel.text = panelText || vpnState.panelText;
+        _panelLabel.style_class = vpnState.styleClass;
     },
 
     _connect() {
