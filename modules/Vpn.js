@@ -43,8 +43,8 @@ var Vpn = class Vpn {
         return {
             updateMessage,
             connectStatus,
-            country: allStatusMessages[2].replace("Country: ", "").toUpperCase(),
-            serverNumber: allStatusMessages[1].match(/\d+/),
+            country: allStatusMessages.length > 2 && allStatusMessages[2].replace("Country: ", "").toUpperCase(),
+            serverNumber: allStatusMessages.length > 1 && allStatusMessages[1].match(/\d+/),
         }
     }
 

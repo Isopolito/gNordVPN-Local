@@ -118,7 +118,7 @@ const VpnIndicator = new Lang.Class({
         _statusLabel.text = statusText;
 
         if (updateAvailableText) {
-            _updateMenuLabel.text = updateAvailableText;
+            _updateMenuLabel.text = 'Update Available';
             _updateMenuLabel.visible = true;
         } else {
             _updateMenuLabel.visible = false;
