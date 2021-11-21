@@ -8,6 +8,30 @@ var stateOverrideCounter = 0;
 
 var STATE_OVERRIDE_DURATION = 10
 
+var refreshOverride = function(state) {
+    stateOverride = states[state];
+    stateOverrideCounter = 0;
+}
+
+var resolveState = function(status) {
+    let vpnState = states[status.connectStatus] || states.ERROR;
+
+    // If a state override is active, increment it and override the state if appropriate
+    if (stateOverride) {
+        stateOverrideCounter += 1;
+        if (stateOverrideCounter <= STATE_OVERRIDE_DURATION && (vpnState.clearsOverrideId != stateOverride.overrideId)) {
+            // State override still active
+            vpnState = stateOverride;
+        } else {
+            // State override expired or cleared by current state, remove it
+            stateOverride = undefined;
+            stateOverrideCounter = 0;
+        }
+    } 
+    
+    return vpnState;
+}
+
 var states = {
     "Status: Connected": {
         "panelShowServer": true, // Indicates the panel text is built up with the country and ID of the VPN server

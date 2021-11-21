@@ -31,21 +31,13 @@ const VpnIndicator = new Lang.Class({
     },
 
     _tryToBuildCountryMenu() {
-        const countries = Vpn.getCountries();
-
         let cPopupMenuExpander = null;
-        const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
-
-        for (let i = 3; i < countries.length; i++) {
-            const country = countries[i].replace(",", "");
-
-            // All countries should be capitalized in output
-            if (!stringStartsWithCapitalLetter(country)) continue;
-
-            const menuItem = new PopupMenu.PopupMenuItem(country.replace(/_/g, " "));
+        
+        for (const country of Vpn.getCountries()) {
+            const menuItem = new PopupMenu.PopupMenuItem(country.displayName);
             _menuItemClickId = menuItem.connect('activate', Lang.bind(this, function (actor, event) {
-                Vpn.connectVpn(country);
-                this._overrideRefresh("Status: Reconnecting", 0)
+                Vpn.connectVpn(country.name);
+                this._overrideRefresh("Status: Reconnecting")
             }));
 
             if (!cPopupMenuExpander) cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
@@ -56,9 +48,8 @@ const VpnIndicator = new Lang.Class({
         return cPopupMenuExpander;
     },
 
-    _overrideRefresh(state, counter) {
-        vpnStateManagement.stateOverride = vpnStateManagement.states[state];
-        vpnStateManagement.stateOverrideCounter = counter;
+    _overrideRefresh(state) {
+        vpnStateManagement.refreshOverride(state);
         this._refresh()
     },
 
@@ -101,7 +92,7 @@ const VpnIndicator = new Lang.Class({
         });
         _panelLabel = new St.Label();
         button.set_child(_panelLabel);
-        this.actor.add_actor(button);
+        this.add_actor(button);
 
         this._refresh();
     },
@@ -111,30 +102,15 @@ const VpnIndicator = new Lang.Class({
         this._clearTimeout();
 
         const status = Vpn.getStatus();
-        let vpnState = vpnStateManagement.states[status.connectStatus] || vpnStateManagement.states.ERROR;
-        if (vpnState !== vpnStateManagement.states.ERROR) this._buildCountryMenuIfNeeded();
-
-        // If a state override is active, increment it and override the state if appropriate
-        if (vpnStateManagement.stateOverride) {
-            vpnStateManagement.stateOverrideCounter += 1;
-
-            if (vpnStateManagement.stateOverrideCounter <= vpnStateManagement.STATE_OVERRIDE_DURATION 
-                                    && (vpnState.clearsOverrideId != vpnStateManagement.stateOverride.overrideId)) {
-                // State override still active
-                vpnState = vpnStateManagement.stateOverride;
-            } else {
-                // State override expired or cleared by current state, remove it
-                vpnStateManagement.stateOverride = undefined;
-                vpnStateManagement.stateOverrideCounter = 0;
-            }
-        }
+        const currentVpnState = vpnStateManagement.resolveState(status);
+        if (currentVpnState !== vpnStateManagement.states.ERROR) this._buildCountryMenuIfNeeded();
 
         // Update the menu and panel based on the current state
-        this._updateMenu(vpnState, status.connectStatus, status.updateMessage);
-        this._updatePanel(vpnState, status);
+        this._updateMenu(currentVpnState, status.connectStatus, status.updateMessage);
+        this._updatePanel(currentVpnState, status);
 
         // Start the refreshes again
-        this._setTimeout(vpnState.refreshTimeout);
+        this._setTimeout(currentVpnState.refreshTimeout);
     },
 
     _updateMenu(vpnStatus, statusText, updateAvailableText) {
@@ -157,9 +133,7 @@ const VpnIndicator = new Lang.Class({
         let panelText;
 
         // If connected, build up the panel text based on the server location and number
-        if (vpnState.panelShowServer) {
-            panelText = status.country + " #" + status.serverNumber;
-        }
+        if (vpnState.panelShowServer) panelText = status.country + " #" + status.serverNumber;
 
         // Update the panel button
         _panelLabel.text = panelText || vpnState.panelText;
@@ -170,7 +144,7 @@ const VpnIndicator = new Lang.Class({
         Vpn.connectVpn();
 
         // Set an override on the status as the command line status takes a while to catch up
-        this._overrideRefresh("Status: Connecting", 0)
+        this._overrideRefresh("Status: Connecting")
     },
 
     _disconnect() {
@@ -178,7 +152,7 @@ const VpnIndicator = new Lang.Class({
         Vpn.disconnectVpn();
 
         // Set an override on the status as the command line status takes a while to catch up
-        this._overrideRefresh("Status: Disconnecting", 0)
+        this._overrideRefresh("Status: Disconnecting")
     },
 
     _clearTimeout() {
