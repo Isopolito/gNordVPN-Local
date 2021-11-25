@@ -18,10 +18,6 @@ var Vpn = class Vpn {
     constructor(executorFuncSync, executorFuncAsync) {
         this._executorFuncSync = executorFuncSync;
         this._executorFuncAsync = executorFuncAsync;
-
-        if (typeof this._executorFuncSync !== `function` || typeof this._executorFuncAsync !== 'function') {
-            throw `parameters executorFuncSync and executorFuncAsync must be a function for running commands against the OS`;
-        }
     }
 
     getStatus() {

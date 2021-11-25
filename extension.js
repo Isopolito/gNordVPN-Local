@@ -5,20 +5,26 @@ const PopupMenu = imports.ui.popupMenu;
 const Lang = imports.lang;
 const GLib = imports.gi.GLib;
 const Mainloop = imports.mainloop;
+const Gio = imports.gi.Gio;
+const ExtensionUtils = imports.misc.extensionUtils;
+const settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
 
 // gNordvpn-Local modules
-const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
 const Vpn = new Me.imports.modules.Vpn.Vpn(GLib.spawn_command_line_sync, GLib.spawn_command_line_async);
+const Constants = Me.imports.modules.constants;
 
-// Menu display text
-const MENU_CONNECT = "Connect";
-const MENU_DISCONNECT = "Disconnect";
+function getData(a) { return settings.get_string(a); }
+getData.bind(this);
 
-// How many refreshes the state is overridden for
+function setData(a, b) { return settings.set_string(a, b); }
+setData.bind(this);
+
+const Favorites = new Me.imports.modules.Favorites.Favorites(getData, setData);
+
 let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem,
-    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId, _timeout,
+    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId,
     _menuItemClickId, _isCountryMenuBuilt;
 
 const VpnIndicator = new Lang.Class({
@@ -32,12 +38,12 @@ const VpnIndicator = new Lang.Class({
 
     _tryToBuildCountryMenu() {
         let cPopupMenuExpander = null;
-        
+
         for (const country of Vpn.getCountries()) {
             const menuItem = new PopupMenu.PopupMenuItem(country.displayName);
             _menuItemClickId = menuItem.connect('activate', Lang.bind(this, function (actor, event) {
                 Vpn.connectVpn(country.name);
-                this._overrideRefresh("Status: Reconnecting")
+                this._overrideRefresh(Constants.status.reconnecting)
             }));
 
             if (!cPopupMenuExpander) cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem('Countries');
@@ -73,11 +79,11 @@ const VpnIndicator = new Lang.Class({
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        _connectMenuItem = new PopupMenu.PopupMenuItem(MENU_CONNECT);
+        _connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
         _connectMenuItemClickId = _connectMenuItem.connect('activate', Lang.bind(this, this._connect));
         this.menu.addMenuItem(_connectMenuItem);
 
-        _disconnectMenuItem = new PopupMenu.PopupMenuItem(MENU_DISCONNECT);
+        _disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
         _disconnectMenuItemClickId = _disconnectMenuItem.connect('activate', Lang.bind(this, this._disconnect));
         this.menu.addMenuItem(_disconnectMenuItem);
 
@@ -118,7 +124,7 @@ const VpnIndicator = new Lang.Class({
         _statusLabel.text = statusText;
 
         if (updateAvailableText) {
-            _updateMenuLabel.text = 'Update Available';
+            _updateMenuLabel.text = Constants.messages.updateAvailable;
             _updateMenuLabel.visible = true;
         } else {
             _updateMenuLabel.visible = false;
@@ -144,7 +150,7 @@ const VpnIndicator = new Lang.Class({
         Vpn.connectVpn();
 
         // Set an override on the status as the command line status takes a while to catch up
-        this._overrideRefresh("Status: Connecting")
+        this._overrideRefresh(Constants.status.connecting)
     },
 
     _disconnect() {
@@ -152,7 +158,7 @@ const VpnIndicator = new Lang.Class({
         Vpn.disconnectVpn();
 
         // Set an override on the status as the command line status takes a while to catch up
-        this._overrideRefresh("Status: Disconnecting")
+        this._overrideRefresh(Constants.status.disconnecting)
     },
 
     _clearTimeout() {
