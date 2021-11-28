@@ -5,12 +5,24 @@ var Favorites = class Favorites {
     }
 
     get(favoriteType, items) {
-        const favorites = this._getData(favoriteType)?.split(',')?.map(i => i.trim());
+        const favorites = this._getData(favoriteType)
+            ?.split(`,`)
+            ?.map(i => i.trim())
+            ?.filter(i => i && i.length > 0);
 
         return {
             favorites: favorites?.sort() ?? [],
             itemsMinusFavorites: items.filter(i => !favorites?.includes(i)),
         }
+    }
+    
+    remove(favoriteType, item) {
+        const favorites = this._getData(favoriteType)
+            ?.split(`,`)
+            ?.map(i => i.trim());
+        if (!favorites) return;
+        
+        this._setData(favoriteType, favorites.filter(favorite => favorite !== item).join(`,`));
     }
 
     add(favoriteType, item) {

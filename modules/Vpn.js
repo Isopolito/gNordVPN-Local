@@ -71,13 +71,13 @@ var Vpn = class Vpn {
             if (!stringStartsWithCapitalLetter(countries[i])) continue;
             if (countries[i].startsWith("A new version")) continue;
 
-            const country = countries[i].replace(",", "");
-            processedCountries.push({
-                name: country,
-                displayName: country.replace(/_/g, " ")
-            });
+            processedCountries.push(countries[i].replace(",", ""));
         }
 
         return processedCountries;
+    }
+    
+    getDisplayName(item) {
+        return item?.replace(/_/g, " ");
     }
 };
