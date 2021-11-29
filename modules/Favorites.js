@@ -1,9 +1,13 @@
+const ExtensionUtils = imports.misc.extensionUtils;
+
 var Favorites = class Favorites {
-    constructor(getData, setData) {
-        this._getData = getData;
-        this._setData = setData;
+    constructor() {
+        this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     }
 
+    _getData(a) { return this._settings.get_string(a); }
+    _setData(a, b) { return this._settings.set_string(a, b); }
+    
     get(favoriteType, items) {
         const favorites = this._getData(favoriteType)
             ?.split(`,`)
@@ -19,7 +23,7 @@ var Favorites = class Favorites {
     remove(favoriteType, item) {
         const favorites = this._getData(favoriteType)
             ?.split(`,`)
-            ?.map(i => i.trim());
+            ?.map(i => i?.trim());
         if (!favorites) return;
         
         this._setData(favoriteType, favorites.filter(favorite => favorite !== item).join(`,`));

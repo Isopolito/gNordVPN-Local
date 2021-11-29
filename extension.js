@@ -4,31 +4,15 @@ const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const Lang = imports.lang;
-const GLib = imports.gi.GLib;
 const Mainloop = imports.mainloop;
-const Gio = imports.gi.Gio;
 const ExtensionUtils = imports.misc.extensionUtils;
-const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
 // gNordvpn-Local modules
 const Me = ExtensionUtils.getCurrentExtension();
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
-const Vpn = new Me.imports.modules.Vpn.Vpn(GLib.spawn_command_line_sync, GLib.spawn_command_line_async);
+const Vpn = new Me.imports.modules.Vpn.Vpn();
 const Constants = Me.imports.modules.constants;
-
-function getData(a) {
-    return settings.get_string(a);
-}
-
-getData.bind(this);
-
-function setData(a, b) {
-    return settings.set_string(a, b);
-}
-
-setData.bind(this);
-
-const Favorites = new Me.imports.modules.Favorites.Favorites(getData, setData);
+const Favorites = new Me.imports.modules.Favorites.Favorites();
 
 let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem,
     _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId, _isCountryMenuBuilt,
@@ -41,6 +25,7 @@ const VpnIndicator = new Lang.Class({
     _init: function () {
         // Init the parent
         this.parent(0.0, `VPN Indicator`, false);
+        this._countryCallback = this._overrideRefresh.bind(this);
     },
 
     _tryToBuildCountryMenu() {
@@ -52,7 +37,7 @@ const VpnIndicator = new Lang.Class({
         const countryFavs = Favorites.get(Constants.favorites.favoriteCountries, countries);
         const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem(`Countries`);
         for (const country of countryFavs.favorites) {
-            const menuItem = buildCountryMenuItem(country, true);
+            const menuItem = buildCountryMenuItem(country, true, this._countryCallback);
             _favCountryCount++;
             cPopupMenuExpander.menu.addMenuItem(menuItem);
         }
@@ -60,7 +45,7 @@ const VpnIndicator = new Lang.Class({
         cPopupMenuExpander.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         for (const country of countryFavs.itemsMinusFavorites) {
-            const menuItem = buildCountryMenuItem(country, false);
+            const menuItem = buildCountryMenuItem(country, false, this._countryCallback);
             _countryMenuItems.push(country);
             cPopupMenuExpander.menu.addMenuItem(menuItem);
         }
@@ -71,7 +56,7 @@ const VpnIndicator = new Lang.Class({
 
     _overrideRefresh(state) {
         vpnStateManagement.refreshOverride(state);
-        this._refresh()
+        this._refresh();
     },
 
     // Can`t build this country selection menu until nordvpn is properly up and running.
@@ -251,12 +236,13 @@ function buildFavIcon(isFavorite) {
     });
 }
 
-function buildCountryMenuItem(country, isFavorite) {
+function buildCountryMenuItem(country, isFavorite, refresh) {
     const countryDisplayName = Vpn.getDisplayName(country);
     const menuItem = new PopupMenu.PopupMenuItem(countryDisplayName);
     menuItem.connect(`activate`, Lang.bind(this, function (actor, event) {
+        // This logic will be a callback param
         Vpn.connectVpn(country);
-        this._overrideRefresh(Constants.status.reconnecting)
+        refresh(Constants.status.reconnecting)
     }));
 
     const icofavBtn = buildFavIcon(isFavorite);
@@ -264,7 +250,7 @@ function buildCountryMenuItem(country, isFavorite) {
     menuItem.icofavBtn = icofavBtn;
     menuItem.favoritePressId = icofavBtn.connect(`button-press-event`,
         Lang.bind(this, function () {
-            const newMenuItem = buildCountryMenuItem(country, !isFavorite);
+            const newMenuItem = buildCountryMenuItem(country, !isFavorite, refresh);
             menuItem.destroy();
             addCountryMenuItem(country, _countryMenu.menu, newMenuItem, !isFavorite);
 
@@ -289,9 +275,8 @@ function addCountryMenuItem(country, menu, newMenuItem, shouldAddToTop) {
     } else {
         _countryMenuItems.push(country);
         _countryMenuItems.sort();
-        idx = _countryMenuItems.findIndex(item => item === country) + 1;
-        _favCountryCount--;
-        menu.addMenuItem(newMenuItem, idx + _favCountryCount);
+        idx = _countryMenuItems.findIndex(item => item === country) + 1 + _favCountryCount;
+        menu.addMenuItem(newMenuItem, idx > menu.numMenuItems ? menu.numMenuItems : idx);
     }
 }
 

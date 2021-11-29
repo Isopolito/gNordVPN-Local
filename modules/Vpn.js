@@ -1,4 +1,5 @@
 `use strict`;
+const GLib = imports.gi.GLib;
 
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_COUNTRIES = `nordvpn countries`;
@@ -16,13 +17,13 @@ const getString = (data) => {
 
 var Vpn = class Vpn {
     constructor(executorFuncSync, executorFuncAsync) {
-        this._executorFuncSync = executorFuncSync;
-        this._executorFuncAsync = executorFuncAsync;
+        this.excecuteCommandSync = GLib.spawn_command_line_sync;
+        this.executeCommandAsync = GLib.spawn_command_line_async;
     }
 
     getStatus() {
         // Read the VPN status from the command line
-        const [ok, standardOut, standardError, exitStatus] = this._executorFuncSync(CMD_VPNSTATUS);
+        const [ok, standardOut, standardError, exitStatus] = this.excecuteCommandSync(CMD_VPNSTATUS);
 
         // Convert Uint8Array object to string and split up the different messages
         const allStatusMessages = getString(standardOut).split(`\n`);
@@ -46,18 +47,18 @@ var Vpn = class Vpn {
 
     connectVpn(country) {
         if (country) {
-            this._executorFuncAsync(`${CMD_CONNECT} ${country}`);
+            this.executeCommandAsync(`${CMD_CONNECT} ${country}`);
         } else {
-            this._executorFuncAsync(CMD_CONNECT);
+            this.executeCommandAsync(CMD_CONNECT);
         }
     }
 
     disconnectVpn() {
-        this._executorFuncAsync(CMD_DISCONNECT);
+        this.executeCommandAsync(CMD_DISCONNECT);
     }
 
     getCountries() {
-        const [ok, standardOut, standardError, exitStatus] = this._executorFuncSync(CMD_COUNTRIES);
+        const [ok, standardOut, standardError, exitStatus] = this.excecuteCommandSync(CMD_COUNTRIES);
 
         const countries = getString(standardOut)
             .replace(/A new version.*?\./g, ``)
