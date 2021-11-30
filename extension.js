@@ -12,11 +12,9 @@ const Me = ExtensionUtils.getCurrentExtension();
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
 const Vpn = new Me.imports.modules.Vpn.Vpn();
 const Constants = Me.imports.modules.constants;
-const Favorites = new Me.imports.modules.Favorites.Favorites();
 
 let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem,
-    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId, _isCountryMenuBuilt,
-    _countryMenu, _countryMenuItems, _favCountryCount;
+    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId;
 
 const VpnIndicator = new Lang.Class({
     Name: `VpnIndicator`,
@@ -25,33 +23,7 @@ const VpnIndicator = new Lang.Class({
     _init: function () {
         // Init the parent
         this.parent(0.0, `VPN Indicator`, false);
-        this._countryCallback = this._overrideRefresh.bind(this);
-    },
-
-    _tryToBuildCountryMenu() {
-        const countries = Vpn.getCountries();
-        if (!countries || countries.length < 1) return;
-
-        _countryMenuItems = [];
-        _favCountryCount = 0;
-        const countryFavs = Favorites.get(Constants.favorites.favoriteCountries, countries);
-        const cPopupMenuExpander = new PopupMenu.PopupSubMenuMenuItem(`Countries`);
-        for (const country of countryFavs.favorites) {
-            const menuItem = buildCountryMenuItem(country, true, this._countryCallback);
-            _favCountryCount++;
-            cPopupMenuExpander.menu.addMenuItem(menuItem);
-        }
-
-        cPopupMenuExpander.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        for (const country of countryFavs.itemsMinusFavorites) {
-            const menuItem = buildCountryMenuItem(country, false, this._countryCallback);
-            _countryMenuItems.push(country);
-            cPopupMenuExpander.menu.addMenuItem(menuItem);
-        }
-
-        _isCountryMenuBuilt = true;
-        return cPopupMenuExpander;
+        this._countryMenu = new Me.imports.modules.CountryMenu.CountryMenu(this._overrideRefresh.bind(this));
     },
 
     _overrideRefresh(state) {
@@ -60,13 +32,11 @@ const VpnIndicator = new Lang.Class({
     },
 
     // Can`t build this country selection menu until nordvpn is properly up and running.
-    // If menu construction only happens once at startup when gnome is loading up extensions 
-    // after reboot, the menu won`t get populated correctly.
+    // If menu construction only happens once at startup when gnome is loading up extensions, 
+    // the menu won`t get populated correctly.
     _buildCountryMenuIfNeeded() {
-        if (_isCountryMenuBuilt) return;
-
-        _countryMenu = this._tryToBuildCountryMenu();
-        if (_countryMenu) this.menu.addMenuItem(_countryMenu);
+        this._countryMenu.tryBuild();
+        if (this._countryMenu.isBuilt) this.menu.addMenuItem(this._countryMenu.menu);
     },
 
     enable() {
@@ -179,7 +149,7 @@ const VpnIndicator = new Lang.Class({
         this._clearTimeout();
 
         // Make sure the country menu gets rebuilt if this extension is re-enabled
-        _isCountryMenuBuilt = false;
+        this._countryMenu.disable();
 
         // Disconnect the menu click handlers
         if (this._connectMenuItemClickId) {
@@ -218,65 +188,3 @@ function disable() {
 function destroy() {
     _vpnIndicator.destroy();
 }
-
-function buildFavIcon(isFavorite) {
-    let icon_name = isFavorite ? `starred-symbolic` : `non-starred-symbolic`;
-    let iconfav = new St.Icon({
-        icon_name: icon_name,
-        style_class: `system-status-icon`
-    });
-
-    return new St.Button({
-        style_class: `ci-action-btn`,
-        can_focus: true,
-        child: iconfav,
-        x_align: Clutter.ActorAlign.END,
-        x_expand: true,
-        y_expand: true
-    });
-}
-
-function buildCountryMenuItem(country, isFavorite, refresh) {
-    const countryDisplayName = Vpn.getDisplayName(country);
-    const menuItem = new PopupMenu.PopupMenuItem(countryDisplayName);
-    menuItem.connect(`activate`, Lang.bind(this, function (actor, event) {
-        // This logic will be a callback param
-        Vpn.connectVpn(country);
-        refresh(Constants.status.reconnecting)
-    }));
-
-    const icofavBtn = buildFavIcon(isFavorite);
-    menuItem.actor.add_child(icofavBtn);
-    menuItem.icofavBtn = icofavBtn;
-    menuItem.favoritePressId = icofavBtn.connect(`button-press-event`,
-        Lang.bind(this, function () {
-            const newMenuItem = buildCountryMenuItem(country, !isFavorite, refresh);
-            menuItem.destroy();
-            addCountryMenuItem(country, _countryMenu.menu, newMenuItem, !isFavorite);
-
-            if (isFavorite) {
-                Favorites.remove(Constants.favorites.favoriteCountries, country);
-            } else {
-                Favorites.add(Constants.favorites.favoriteCountries, country);
-            }
-        })
-    );
-
-    return menuItem;
-}
-
-function addCountryMenuItem(country, menu, newMenuItem, shouldAddToTop) {
-    let idx = _countryMenuItems.findIndex(item => item === country);
-    if (idx > 0) _countryMenuItems.splice(idx, 1);
-
-    if (shouldAddToTop) {
-        menu.addMenuItem(newMenuItem, 0);
-        _favCountryCount++;
-    } else {
-        _countryMenuItems.push(country);
-        _countryMenuItems.sort();
-        idx = _countryMenuItems.findIndex(item => item === country) + 1 + _favCountryCount;
-        menu.addMenuItem(newMenuItem, idx > menu.numMenuItems ? menu.numMenuItems : idx);
-    }
-}
-
