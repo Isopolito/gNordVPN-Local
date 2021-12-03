@@ -3,8 +3,8 @@ const Clutter = imports.gi.Clutter;
 
 var MenuBase = class MenuBase {
     buildFavIcon(isFavorite) {
-        let icon_name = isFavorite ? `starred-symbolic` : `non-starred-symbolic`;
-        let iconfav = new St.Icon({
+        const icon_name = isFavorite ? `starred-symbolic` : `non-starred-symbolic`;
+        const iconfav = new St.Icon({
             icon_name: icon_name,
             style_class: `system-status-icon`
         });
