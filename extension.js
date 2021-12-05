@@ -13,8 +13,7 @@ const Vpn = new Me.imports.modules.Vpn.Vpn();
 const Constants = Me.imports.modules.constants;
 const Signals = new Me.imports.modules.Signals.Signals();
 
-let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem, _updateMenuLabel;
-
+let _vpnIndicator, _panelLabel, _statusLabel, _updateMenuLabel, _connectMenuItem, _disconnectMenuItem;
 const VpnIndicator = new Lang.Class({
     Name: `VpnIndicator`,
     Extends: PanelMenu.Button,
@@ -50,14 +49,12 @@ const VpnIndicator = new Lang.Class({
 
         _connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
         const connectMenuItemClickId = _connectMenuItem.connect(`activate`, Lang.bind(this, this._connect));
-        Signals.register(connectMenuItemClickId, function () {
-            this._connectMenuItem.disconnect(connectMenuItemClickId)
-        }.bind(this));
+        Signals.register(connectMenuItemClickId, function(){_connectMenuItem.disconnect(connectMenuItemClickId)}.bind(this));
         this.menu.addMenuItem(_connectMenuItem);
 
         _disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
         const disconnectMenuItemClickId = _disconnectMenuItem.connect(`activate`, Lang.bind(this, this._disconnect));
-        Signals.register(disconnectMenuItemClickId, function() { this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)}.bind(this));
+        Signals.register(disconnectMenuItemClickId, function(){_disconnectMenuItem.disconnect(disconnectMenuItemClickId)}.bind(this));
         this.menu.addMenuItem(_disconnectMenuItem);
 
         // Create and add the button with label for the panel

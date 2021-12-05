@@ -28,9 +28,7 @@ var CountryMenu = class CountryMenu extends MenuBase {
             Vpn.connectVpn(country);
             this._countryCallback(Constants.status.reconnecting)
         }));
-        Signals.register(menuItemClickId, function () {
-            menuItem.disconnect(menuItemClickId)
-        }.bind(this));
+        Signals.register(menuItemClickId, function(){menuItem.disconnect(menuItemClickId)}.bind(this));
 
         const icofavBtn = super.buildFavIcon(isFavorite);
         menuItem.actor.add_child(icofavBtn);
@@ -52,9 +50,7 @@ var CountryMenu = class CountryMenu extends MenuBase {
             })
         );
 
-        Signals.register(menuItemClickId, function () {
-            icofavBtn.disconnect(menuItem.favoritePressId)
-        }.bind(this));
+        Signals.register(menuItem.favoritePressId, function(){icofavBtn.disconnect(menuItem.favoritePressId)}.bind(this));
         return menuItem;
     }
 
@@ -95,6 +91,7 @@ var CountryMenu = class CountryMenu extends MenuBase {
     }
 
     disable() {
+        Signals.disconnectAll();
         this._countryMenu.destroy();
         this._countryMenuItems = [];
         this._favCountryItems = [];

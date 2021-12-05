@@ -16,7 +16,7 @@ var Signals = class Signals {
     }
     
     disconnect(ids) {
-        for (const id of ids) {
+        for (const id in ids) {
             if (this._ids[id] && typeof this._ids[id] === 'function') {
                 try {
                     this._ids[id]();
@@ -29,14 +29,14 @@ var Signals = class Signals {
     }
     
     disconnectAll() {
-        for (const callback of this._ids) {
+        for (const callback in this._ids) {
             try {
-                callback();
+                typeof callback === 'function' && callback();
             } catch (e) {
                 log(`gnordvpn: In disconnectAll, failure executing callback - ${e}`);
             }
         }
         
-        this._ids ={};
+        this._ids = {};
     }
 }
