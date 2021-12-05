@@ -72,8 +72,7 @@ var states = {
     "Status: Reconnecting": {
         "panelText": "RECONNECTING...",
         "styleClass": "amber",
-        "canConnect": false,
-        "canDisconnect": true,
+        "canConnect": false, "canDisconnect": true,
         "clearsOverrideId": STATE_OVERRIDE_UNSET,
         "overrideId": STATE_OVERRIDE_UNSET,
         "refreshTimeout": 2

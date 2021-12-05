@@ -34,3 +34,7 @@
     padding: 0px 6px 0;
     margin: 0px 0 3px 0;
 }
+
+.popup-menu-item .ci-action-btn StIcon {
+    icon-size:16px;
+}
