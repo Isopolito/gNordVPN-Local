@@ -34,7 +34,10 @@ const VpnIndicator = new Lang.Class({
     // the menu won`t get populated correctly.
     _buildCountryMenuIfNeeded() {
         this._countryMenu.tryBuild();
-        if (this._countryMenu.isBuilt) this.menu.addMenuItem(this._countryMenu.menu);
+        if (this._countryMenu.isBuilt && !this._countryMenu.isAdded) {
+            this.menu.addMenuItem(this._countryMenu.menu);
+            this._countryMenu.isAdded = true;
+        }
     },
 
     enable() {
@@ -149,6 +152,7 @@ const VpnIndicator = new Lang.Class({
         this._clearTimeout();
 
         this._countryMenu.disable();
+        this._countryMenu.isAdded = false;
         Signals.disconnectAll();
     },
 
