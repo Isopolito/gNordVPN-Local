@@ -11,9 +11,9 @@ const Me = ExtensionUtils.getCurrentExtension();
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
 const Vpn = new Me.imports.modules.Vpn.Vpn();
 const Constants = Me.imports.modules.constants;
+const Signals = new Me.imports.modules.Signals.Signals();
 
-let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem,
-    _connectMenuItemClickId, _updateMenuLabel, _disconnectMenuItemClickId;
+let _vpnIndicator, _panelLabel, _statusLabel, _connectMenuItem, _disconnectMenuItem, _updateMenuLabel;
 
 const VpnIndicator = new Lang.Class({
     Name: `VpnIndicator`,
@@ -49,11 +49,15 @@ const VpnIndicator = new Lang.Class({
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         _connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
-        _connectMenuItemClickId = _connectMenuItem.connect(`activate`, Lang.bind(this, this._connect));
+        const connectMenuItemClickId = _connectMenuItem.connect(`activate`, Lang.bind(this, this._connect));
+        Signals.register(connectMenuItemClickId, function () {
+            this._connectMenuItem.disconnect(connectMenuItemClickId)
+        }.bind(this));
         this.menu.addMenuItem(_connectMenuItem);
 
         _disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
-        _disconnectMenuItemClickId = _disconnectMenuItem.connect(`activate`, Lang.bind(this, this._disconnect));
+        const disconnectMenuItemClickId = _disconnectMenuItem.connect(`activate`, Lang.bind(this, this._disconnect));
+        Signals.register(disconnectMenuItemClickId, function() { this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)}.bind(this));
         this.menu.addMenuItem(_disconnectMenuItem);
 
         // Create and add the button with label for the panel
@@ -147,16 +151,8 @@ const VpnIndicator = new Lang.Class({
         // Clear timeout and remove menu callback
         this._clearTimeout();
 
-        // Make sure the country menu gets rebuilt if this extension is re-enabled
         this._countryMenu.disable();
-
-        // Disconnect the menu click handlers
-        if (this._connectMenuItemClickId) {
-            this._connectMenuItem.disconnect(this._connectMenuItemClickId);
-        }
-        if (this._disconnectMenuItemClickId) {
-            this._disconnectMenuItem.disconnect(this._disconnectMenuItemClickId);
-        }
+        Signals.disconnectAll();
     },
 
     destroy() {

@@ -1,5 +1,4 @@
 'use strict';
-
 const Lang = imports.lang;
 const PopupMenu = imports.ui.popupMenu;
 
@@ -9,6 +8,7 @@ const MenuBase = Me.imports.modules.MenuBase.MenuBase;
 const Favorites = new Me.imports.modules.Favorites.Favorites();
 const Vpn = new Me.imports.modules.Vpn.Vpn();
 const Constants = Me.imports.modules.constants;
+const Signals = new Me.imports.modules.Signals.Signals();
 
 var CountryMenu = class CountryMenu extends MenuBase {
     constructor(countryCallback) {
@@ -24,19 +24,23 @@ var CountryMenu = class CountryMenu extends MenuBase {
     _buildCountryMenuItem(country, isFavorite) {
         const countryDisplayName = Vpn.getDisplayName(country);
         const menuItem = new PopupMenu.PopupMenuItem(countryDisplayName);
-        menuItem.connect(`activate`, Lang.bind(this, function (actor, event) {
+        const menuItemClickId = menuItem.connect(`activate`, Lang.bind(this, function (actor, event) {
             Vpn.connectVpn(country);
             this._countryCallback(Constants.status.reconnecting)
         }));
+        Signals.register(menuItemClickId, function () {
+            menuItem.disconnect(menuItemClickId)
+        }.bind(this));
 
         const icofavBtn = super.buildFavIcon(isFavorite);
         menuItem.actor.add_child(icofavBtn);
         menuItem.icofavBtn = icofavBtn;
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`,
             Lang.bind(this, function () {
-                //icofavBtn.destroy();
+                Signals.disconnect([menuItemClickId, menuItem.favoritePressId]);
+                icofavBtn.destroy();
                 menuItem.destroy();
-                
+
                 const newMenuItem = this._buildCountryMenuItem(country, !isFavorite);
                 this._addCountryMenuItem(country, newMenuItem, !isFavorite);
 
@@ -48,6 +52,9 @@ var CountryMenu = class CountryMenu extends MenuBase {
             })
         );
 
+        Signals.register(menuItemClickId, function () {
+            icofavBtn.disconnect(menuItem.favoritePressId)
+        }.bind(this));
         return menuItem;
     }
 
@@ -70,11 +77,12 @@ var CountryMenu = class CountryMenu extends MenuBase {
 
             this._countryMenuItems.push(country);
             this._countryMenuItems.sort();
-            idx = this._countryMenuItems.findIndex(item => item === country) + this._favCountryItems.length+1;
-            this._countryMenu.menu.addMenuItem(newMenuItem,
-                idx > this._countryMenu.menu.numMenuItems
-                    ? this._countryMenu.menu.numMenuItems-1
-                    : idx);
+            idx = this._countryMenuItems.findIndex(item => item === country) + this._favCountryItems.length + 1;
+            idx = idx > this._countryMenu.menu.numMenuItems
+                ? this._countryMenu.menu.numMenuItems - 1
+                : idx;
+
+            this._countryMenu.menu.addMenuItem(newMenuItem, idx);
         }
     }
 
@@ -87,6 +95,9 @@ var CountryMenu = class CountryMenu extends MenuBase {
     }
 
     disable() {
+        this._countryMenu.destroy();
+        this._countryMenuItems = [];
+        this._favCountryItems = [];
         this._isBuilt = false;
     }
 
