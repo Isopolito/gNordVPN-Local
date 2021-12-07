@@ -2,7 +2,6 @@ const St = imports.gi.St;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
-const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const ExtensionUtils = imports.misc.extensionUtils;
 
@@ -11,21 +10,15 @@ const Me = ExtensionUtils.getCurrentExtension();
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
 const Constants = Me.imports.modules.constants;
 
-let _vpnIndicator, _panelLabel, _statusLabel, _updateMenuLabel, _connectMenuItem, _disconnectMenuItem;
-
-const VpnIndicator = new Lang.Class({
-    Name: `VpnIndicator`,
-    Extends: PanelMenu.Button,
-
-    _init: function () {
-        // Init the parent
-        this.parent(0.0, `VPN Indicator`, false);
-    },
+class VpnIndicator {
+    constructor() {
+        this._vpnIndicator = null;
+    }
 
     _overrideRefresh(state) {
         vpnStateManagement.refreshOverride(state);
         this._refresh();
-    },
+    }
 
     // Can`t build this country selection menu until nordvpn is properly up and running.
     // If menu construction only happens once at startup when gnome is loading up extensions, 
@@ -33,10 +26,10 @@ const VpnIndicator = new Lang.Class({
     _buildCountryMenuIfNeeded() {
         this._countryMenu.tryBuild();
         if (this._countryMenu.isBuilt && !this._countryMenu.isAdded) {
-            this.menu.addMenuItem(this._countryMenu.menu);
+            this._vpnIndicator.menu.addMenuItem(this._countryMenu.menu);
             this._countryMenu.isAdded = true;
         }
-    },
+    }
 
     _refresh() {
         // Stop the refreshes
@@ -52,23 +45,23 @@ const VpnIndicator = new Lang.Class({
 
         // Start the refreshes again
         this._setTimeout(currentVpnState.refreshTimeout);
-    },
+    }
 
     _updateMenu(vpnStatus, statusText, updateAvailableText) {
         // Set the status text on the menu
-        _statusLabel.text = statusText;
+        this._statusLabel.text = statusText;
 
         if (updateAvailableText) {
-            _updateMenuLabel.text = Constants.messages.updateAvailable;
-            _updateMenuLabel.visible = true;
+            this._updateMenuLabel.text = Constants.messages.updateAvailable;
+            this._updateMenuLabel.visible = true;
         } else {
-            _updateMenuLabel.visible = false;
+            this._updateMenuLabel.visible = false;
         }
 
         // Activate / deactivate menu items
-        _connectMenuItem.actor.reactive = vpnStatus.canConnect;
-        _disconnectMenuItem.actor.reactive = vpnStatus.canDisconnect;
-    },
+        this._connectMenuItem.actor.reactive = vpnStatus.canConnect;
+        this._disconnectMenuItem.actor.reactive = vpnStatus.canDisconnect;
+    }
 
     _updatePanel(vpnState, status) {
         let panelText;
@@ -77,16 +70,16 @@ const VpnIndicator = new Lang.Class({
         if (vpnState.panelShowServer) panelText = status.country + ` #` + status.serverNumber;
 
         // Update the panel button
-        _panelLabel.text = panelText || vpnState.panelText;
-        _panelLabel.style_class = vpnState.styleClass;
-    },
+        this._panelLabel.text = panelText || vpnState.panelText;
+        this._panelLabel.style_class = vpnState.styleClass;
+    }
 
     _connect() {
-       this._vpn.connectVpn();
+        this._vpn.connectVpn();
 
         // Set an override on the status as the command line status takes a while to catch up
         this._overrideRefresh(Constants.status.connecting)
-    },
+    }
 
     _disconnect() {
         // Run the disconnect command
@@ -94,7 +87,7 @@ const VpnIndicator = new Lang.Class({
 
         // Set an override on the status as the command line status takes a while to catch up
         this._overrideRefresh(Constants.status.disconnecting)
-    },
+    }
 
     _clearTimeout() {
         // Remove the refresh timer if active
@@ -102,36 +95,31 @@ const VpnIndicator = new Lang.Class({
             Mainloop.source_remove(this._timeout);
             this._timeout = undefined;
         }
-    },
+    }
 
-    _setTimeout(timeoutDuration) {
-        // Refresh after an interval
-        this._timeout = Mainloop.timeout_add_seconds(timeoutDuration, Lang.bind(this, this._refresh));
-    },
-    
-    enable() {
-        this._vpn = new Me.imports.modules.Vpn.Vpn();
-        this._signals = new Me.imports.modules.Signals.Signals();
-        this._countryMenu = new Me.imports.modules.CountryMenu.CountryMenu(this._overrideRefresh.bind(this));
-
+    _buildIndicatorMenu() {
         // Add the menu items to the menu
-        _statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
-        this.menu.box.add(_statusLabel);
+        this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
+        this._vpnIndicator.menu.box.add(this._statusLabel);
 
-        _updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
-        this.menu.box.add(_updateMenuLabel);
+        this._updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
+        this._vpnIndicator.menu.box.add(this._updateMenuLabel);
 
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._vpnIndicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        _connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
-        const connectMenuItemClickId = _connectMenuItem.connect(`activate`, Lang.bind(this, this._connect));
-        this._signals.register(connectMenuItemClickId, function(){_connectMenuItem.disconnect(connectMenuItemClickId)}.bind(this));
-        this.menu.addMenuItem(_connectMenuItem);
+        this._connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
+        const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, this._connect.bind(this));
+        this._signals.register(connectMenuItemClickId, function () {
+            this._connectMenuItem.disconnect(connectMenuItemClickId)
+        }.bind(this));
+        this._vpnIndicator.menu.addMenuItem(this._connectMenuItem);
 
-        _disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
-        const disconnectMenuItemClickId = _disconnectMenuItem.connect(`activate`, Lang.bind(this, this._disconnect));
-        this._signals.register(disconnectMenuItemClickId, function(){_disconnectMenuItem.disconnect(disconnectMenuItemClickId)}.bind(this));
-        this.menu.addMenuItem(_disconnectMenuItem);
+        this._disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
+        const disconnectMenuItemClickId = this._disconnectMenuItem.connect(`activate`, this._disconnect.bind(this));
+        this._signals.register(disconnectMenuItemClickId, function () {
+            this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)
+        }.bind(this));
+        this._vpnIndicator.menu.addMenuItem(this._disconnectMenuItem);
 
         // Create and add the button with label for the panel
         let button = new St.Bin({
@@ -142,50 +130,45 @@ const VpnIndicator = new Lang.Class({
             y_expand: false,
             track_hover: true
         });
-        _panelLabel = new St.Label();
-        button.set_child(_panelLabel);
-        this.add_actor(button);
+
+        this._panelLabel = new St.Label();
+        button.set_child(this._panelLabel);
+        this._vpnIndicator.add_actor(button);
+    }
+
+    _setTimeout(timeoutDuration) {
+        // Refresh after an interval
+        this._timeout = Mainloop.timeout_add_seconds(timeoutDuration, this._refresh.bind(this));
+    }
+
+    enable() {
+        // Add the indicator to the status area of the panel
+        const indicatorName = `VPN Indicator`;
+        if (!this._vpnIndicator) this._vpnIndicator = new PanelMenu.Button(0.0, indicatorName, false);
+        Main.panel.addToStatusArea(indicatorName, this._vpnIndicator);
+
+        this._vpn = new Me.imports.modules.Vpn.Vpn();
+        this._signals = new Me.imports.modules.Signals.Signals();
+        this._countryMenu = new Me.imports.modules.CountryMenu.CountryMenu(this._overrideRefresh.bind(this));
+
+        this._buildIndicatorMenu();
 
         this._refresh();
-    },
+    }
 
     disable() {
-        // Clear timeout and remove menu callback
         this._clearTimeout();
 
         this._countryMenu.disable();
         this._countryMenu.isAdded = false;
         this._signals.disconnectAll();
-    },
 
-    destroy() {
-        // Call destroy on the parent
-        this.parent();
+        // Remove the indicator from the panel
+        this._vpnIndicator.disable();
+        this._vpnIndicator = null;
     }
-});
+};
 
 function init() {
-}
-
-function enable() {
-    // Init the indicator
-    _vpnIndicator = new VpnIndicator();
-
-    // Add the indicator to the status area of the panel
-    if (!_vpnIndicator) _vpnIndicator = new VpnIndicator();
-    
-    _vpnIndicator.enable();
-    Main.panel.addToStatusArea(`vpn-indicator`, _vpnIndicator);
-}
-
-function disable() {
-    // Remove the indicator from the panel
-    _vpnIndicator.disable();
-    destroy();
-    
-    _vpnIndicator = null;
-}
-
-function destroy() {
-    _vpnIndicator.destroy();
+    return new VpnIndicator();
 }
