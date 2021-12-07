@@ -1,14 +1,10 @@
 'use strict';
-const Lang = imports.lang;
 const PopupMenu = imports.ui.popupMenu;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const MenuBase = Me.imports.modules.MenuBase.MenuBase;
-const Favorites = new Me.imports.modules.Favorites.Favorites();
-const Vpn = new Me.imports.modules.Vpn.Vpn();
 const Constants = Me.imports.modules.constants;
-const Signals = new Me.imports.modules.Signals.Signals();
 
 var CountryMenu = class CountryMenu extends MenuBase {
     constructor(countryCallback) {
@@ -19,23 +15,31 @@ var CountryMenu = class CountryMenu extends MenuBase {
         this._favCountryItems = [];
         this._isBuilt = false;
         this._menuSeperator = null;
+
+        this._favorites = new Me.imports.modules.Favorites.Favorites();
+        this._vpn = new Me.imports.modules.Vpn.Vpn();
+        this._signals = new Me.imports.modules.Signals.Signals();
     }
 
     _buildCountryMenuItem(country, isFavorite) {
-        const countryDisplayName = Vpn.getDisplayName(country);
+        const countryDisplayName = this._vpn.getDisplayName(country);
         const menuItem = new PopupMenu.PopupMenuItem(countryDisplayName);
-        const menuItemClickId = menuItem.connect(`activate`, Lang.bind(this, function (actor, event) {
-            Vpn.connectVpn(country);
-            this._countryCallback(Constants.status.reconnecting)
-        }));
-        Signals.register(menuItemClickId, function(){menuItem.disconnect(menuItemClickId)}.bind(this));
+        const menuItemClickId = menuItem.connect(`activate`, function (actor, event) {
+                this._vpn.connectVpn(country);
+                this._countryCallback(Constants.status.reconnecting)
+            }.bind(this)
+        );
+
+        this._signals.register(menuItemClickId, function () {
+                menuItem.disconnect(menuItemClickId)
+            }.bind(this)
+        );
 
         const icofavBtn = super.buildFavIcon(isFavorite);
         menuItem.actor.add_child(icofavBtn);
         menuItem.icofavBtn = icofavBtn;
-        menuItem.favoritePressId = icofavBtn.connect(`button-press-event`,
-            Lang.bind(this, function () {
-                Signals.disconnect([menuItemClickId, menuItem.favoritePressId]);
+        menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, function () {
+                this._signals.disconnect([menuItemClickId, menuItem.favoritePressId]);
                 icofavBtn.destroy();
                 menuItem.destroy();
 
@@ -43,14 +47,16 @@ var CountryMenu = class CountryMenu extends MenuBase {
                 this._addCountryMenuItem(country, newMenuItem, !isFavorite);
 
                 if (isFavorite) {
-                    Favorites.remove(Constants.favorites.favoriteCountries, country);
+                    this._favorites.remove(Constants.favorites.favoriteCountries, country);
                 } else {
-                    Favorites.add(Constants.favorites.favoriteCountries, country);
+                    this._favorites.add(Constants.favorites.favoriteCountries, country);
                 }
-            })
+            }.bind(this)
         );
 
-        Signals.register(menuItem.favoritePressId, function(){icofavBtn.disconnect(menuItem.favoritePressId)}.bind(this));
+        this._signals.register(menuItem.favoritePressId, function () {
+            icofavBtn.disconnect(menuItem.favoritePressId)
+        }.bind(this));
         return menuItem;
     }
 
@@ -91,7 +97,7 @@ var CountryMenu = class CountryMenu extends MenuBase {
     }
 
     disable() {
-        Signals.disconnectAll();
+        this._signals.disconnectAll();
         this._countryMenu.destroy();
         this._countryMenuItems = [];
         this._favCountryItems = [];
@@ -101,13 +107,13 @@ var CountryMenu = class CountryMenu extends MenuBase {
     tryBuild() {
         if (this._isBuilt) return;
 
-        const countries = Vpn.getCountries();
+        const countries = this._vpn.getCountries();
         if (!countries || countries.length < 1) return;
 
         this._countryMenuItems = [];
         this._favCountryItems = [];
 
-        const countryFavs = Favorites.get(Constants.favorites.favoriteCountries, countries);
+        const countryFavs = this._favorites.get(Constants.favorites.favoriteCountries, countries);
         const countryMenu = new PopupMenu.PopupSubMenuMenuItem(`Countries`);
         for (const country of countryFavs.favorites) {
             const menuItem = this._buildCountryMenuItem(country, true);
