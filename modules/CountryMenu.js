@@ -1,10 +1,14 @@
 'use strict';
 const PopupMenu = imports.ui.popupMenu;
 
+// gNordVpn-Local modules
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const MenuBase = Me.imports.modules.MenuBase.MenuBase;
+const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
+const Signals = Me.imports.modules.Signals.Signals;
+const MenuBase = Me.imports.modules.MenuBase.MenuBase;
+const Favorites = Me.imports.modules.Favorites.Favorites;
 
 var CountryMenu = class CountryMenu extends MenuBase {
     constructor(countryCallback) {
@@ -16,9 +20,9 @@ var CountryMenu = class CountryMenu extends MenuBase {
         this._isBuilt = false;
         this._menuSeperator = null;
 
-        this._favorites = new Me.imports.modules.Favorites.Favorites();
-        this._vpn = new Me.imports.modules.Vpn.Vpn();
-        this._signals = new Me.imports.modules.Signals.Signals();
+        this._favorites = new Favorites();
+        this._vpn = new Vpn();
+        this._signals = new Signals();
     }
 
     _buildCountryMenuItem(country, isFavorite) {

@@ -1,15 +1,20 @@
+'use strict';
+
 const St = imports.gi.St;
 const Main = imports.ui.main;
+const Mainloop = imports.mainloop;
+const GObject = imports.gi.GObject;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
-const Mainloop = imports.mainloop;
 const ExtensionUtils = imports.misc.extensionUtils;
-const GObject = imports.gi.GObject;
 
 // gNordvpn-Local modules
 const Me = ExtensionUtils.getCurrentExtension();
-const vpnStateManagement = Me.imports.modules.vpnStateManagement;
+const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
+const Signals = Me.imports.modules.Signals.Signals;
+const CountryMenu = Me.imports.modules.CountryMenu.CountryMenu;
+const vpnStateManagement = Me.imports.modules.vpnStateManagement;
 
 let vpnIndicator;
 const indicatorName = `VPN Indicator`;
@@ -148,9 +153,9 @@ const VpnIndicator = GObject.registerClass({
         }
 
         enable() {
-            this._vpn = new Me.imports.modules.Vpn.Vpn();
-            this._signals = new Me.imports.modules.Signals.Signals();
-            this._countryMenu = new Me.imports.modules.CountryMenu.CountryMenu(this._overrideRefresh.bind(this));
+            this._vpn = new Vpn();
+            this._signals = new Signals();
+            this._countryMenu = new CountryMenu(this._overrideRefresh.bind(this));
 
             this._buildIndicatorMenu();
 
