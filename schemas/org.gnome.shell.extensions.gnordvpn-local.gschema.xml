@@ -5,5 +5,29 @@
         <key name="favorite-countries" type="s">
             <default>""</default>
         </key>
+        <key name="autoconnect" type="b">
+            <default>false</default>
+        </key>
+        <key name="cybersec" type="b">
+            <default>false</default>
+        </key>
+        <key name="firewall" type="b">
+            <default>false</default>
+        </key>
+        <key name="killswitch" type="b">
+            <default>false</default>
+        </key>
+        <key name="obfuscate" type="b">
+            <default>false</default>
+        </key>
+        <key name="ipv6" type="b">
+            <default>false</default>
+        </key>
+        <key name="protocol" type="s">
+            <default>"UDP"</default>
+        </key>
+        <key name="technology" type="s">
+            <default>"OpenVPN"</default>
+        </key>
     </schema>
 </schemalist>
