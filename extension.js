@@ -31,24 +31,17 @@ const VpnIndicator = GObject.registerClass({
             this._refresh();
         }
 
-        // Can`t build this country selection menu until nordvpn is properly up and running.
-        // If menu construction only happens once at startup when gnome is loading up extensions, 
-        // the menu won`t get populated correctly.
-        _buildCountryMenuIfNeeded() {
-            this._countryMenu.tryBuild();
-            if (this._countryMenu.isBuilt && !this._countryMenu.isAdded) {
-                this.menu.addMenuItem(this._countryMenu.menu);
-                this._countryMenu.isAdded = true;
-            }
-        }
-
         _refresh() {
             // Stop the refreshes
             this._clearTimeout();
 
             const status = this._vpn.getStatus();
             const currentVpnState = vpnStateManagement.resolveState(status);
-            if (currentVpnState !== vpnStateManagement.states.ERROR) this._buildCountryMenuIfNeeded();
+            if (currentVpnState !== vpnStateManagement.states.ERROR) {
+                // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
+                // to provide available cities, countries, etc
+                this._countryMenu.tryBuild();
+            }
 
             // Update the menu and panel based on the current state
             this._updateMenu(currentVpnState, status.connectStatus, status.updateMessage);
@@ -145,7 +138,8 @@ const VpnIndicator = GObject.registerClass({
             }.bind(this));
             this.menu.addMenuItem(this._disconnectMenuItem);
             
-            // TODO: Add Country menu item now, populate it later when nordvpn is running
+            this._countryMenu.tryBuild();
+            this.menu.addMenuItem(this._countryMenu.menu);
             
             // Add 'Settings' menu item 
             const settingsMenuItem = new PopupMenu.PopupMenuItem('Settings...');

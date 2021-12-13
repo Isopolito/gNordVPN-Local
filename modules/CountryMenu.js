@@ -110,6 +110,7 @@ var CountryMenu = class CountryMenu extends MenuBase {
 
     tryBuild() {
         if (this._isBuilt) return;
+        if (!this._countryMenu) this._countryMenu = new PopupMenu.PopupSubMenuMenuItem(`Countries`);
 
         const countries = this._vpn.getCountries();
         if (!countries || countries.length < 1) return;
@@ -118,23 +119,21 @@ var CountryMenu = class CountryMenu extends MenuBase {
         this._favCountryItems = [];
 
         const countryFavs = this._favorites.get(Constants.favorites.favoriteCountries, countries);
-        const countryMenu = new PopupMenu.PopupSubMenuMenuItem(`Countries`);
         for (const country of countryFavs.favorites) {
             const menuItem = this._buildCountryMenuItem(country, true);
             this._favCountryItems.push(country);
-            countryMenu.menu.addMenuItem(menuItem);
+            this._countryMenu.menu.addMenuItem(menuItem);
         }
 
         this._menuSeperator = new PopupMenu.PopupSeparatorMenuItem();
-        countryMenu.menu.addMenuItem(this._menuSeperator);
+        this._countryMenu.menu.addMenuItem(this._menuSeperator);
 
         for (const country of countryFavs.itemsMinusFavorites) {
             const menuItem = this._buildCountryMenuItem(country, false);
             this._countryMenuItems.push(country);
-            countryMenu.menu.addMenuItem(menuItem);
+            this._countryMenu.menu.addMenuItem(menuItem);
         }
 
         this._isBuilt = true;
-        this._countryMenu = countryMenu;
     }
 }
