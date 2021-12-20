@@ -3,6 +3,7 @@ const GLib = imports.gi.GLib;
 
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_COUNTRIES = `nordvpn countries`;
+const CMD_SETTINGS = `nordvpn s`;
 const CMD_CONNECT = "nordvpn c";
 const CMD_DISCONNECT = "nordvpn d";
 
@@ -17,13 +18,18 @@ const getString = (data) => {
 
 var Vpn = class Vpn {
     constructor(executorFuncSync, executorFuncAsync) {
-        this.excecuteCommandSync = GLib.spawn_command_line_sync;
+        this.executeCommandSync = GLib.spawn_command_line_sync;
         this.executeCommandAsync = GLib.spawn_command_line_async;
     }
 
+    setDefaults() {
+        // Read the VPN status from the command line
+        this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
+    }
+    
     getStatus() {
         // Read the VPN status from the command line
-        const [ok, standardOut, standardError, exitStatus] = this.excecuteCommandSync(CMD_VPNSTATUS);
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
 
         // Convert Uint8Array object to string and split up the different messages
         const allStatusMessages = getString(standardOut).split(`\n`);
@@ -58,7 +64,7 @@ var Vpn = class Vpn {
     }
 
     getCountries() {
-        const [ok, standardOut, standardError, exitStatus] = this.excecuteCommandSync(CMD_COUNTRIES);
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
 
         const countries = getString(standardOut)
             .replace(/A new version.*?\./g, ``)
