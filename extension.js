@@ -140,7 +140,9 @@ const VpnIndicator = GObject.registerClass({
             
             this._countryMenu.tryBuild();
             this.menu.addMenuItem(this._countryMenu.menu);
-            
+
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
             // Add 'Settings' menu item 
             const settingsMenuItem = new PopupMenu.PopupMenuItem('Settings...');
             this.menu.addMenuItem(settingsMenuItem);

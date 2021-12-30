@@ -16,7 +16,8 @@ function buildPrefsWidget() {
     this.vpn = new Vpn();
 
     const prefsWidget = new Gtk.Grid({
-        margin: 18,
+        margin_start: 18,
+        margin_top: 10,
         column_spacing: 12,
         row_spacing: 12,
         visible: true
@@ -29,7 +30,7 @@ function buildPrefsWidget() {
         use_markup: true,
         visible: true
     });
-    prefsWidget.attach(title, 0, 0, 2, 1);
+    prefsWidget.attach(title, 1, 0, 2, 1);
 
     // autoconnect
     const toggleLabel = new Gtk.Label({
@@ -149,37 +150,72 @@ function buildPrefsWidget() {
     });
     prefsWidget.attach(protocolLabel, 0, 6, 1, 1);
 
-    let model = new Gtk.ListStore();
-    model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
+    let protoModel = new Gtk.ListStore();
+    protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
 
-    let cbox = new Gtk.ComboBox({model: model});
-    let renderer = new Gtk.CellRendererText();
-    cbox.pack_start(renderer, true);
-    cbox.add_attribute(renderer, 'text', 1);
+    let protoCbox = new Gtk.ComboBox({model: protoModel});
+    let protoRenderer = new Gtk.CellRendererText();
+    protoCbox.pack_start(protoRenderer, true);
+    protoCbox.add_attribute(protoRenderer, 'text', 1);
 
-    model.set(model.append(), [0, 1], ['udp', 'UDP']);
-    model.set(model.append(), [0, 1], ['tcp', 'TCP']);
+    protoModel.set(protoModel.append(), [0, 1], ['UDP', 'UDP']);
+    protoModel.set(protoModel.append(), [0, 1], ['TCP', 'TCP']);
 
-    cbox.set_active(0); // set value
-
-    cbox.connect('changed', function(entry) {
-        let [success, iter] = cbox.get_active_iter();
-        if (!success) return;
-        let myValue = model.get_value(iter, 0); // get value
-    });
-
-    cbox.show();
-    prefsWidget.attach(cbox, 1, 6, 1, 1);
+    let protocol = this.settings.get_string(`protocol`);
+    protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
     
+    protoCbox.connect('changed', function(entry) {
+        let [success, iter] = protoCbox.get_active_iter();
+        if (!success) return;
+        let protocol = protoModel.get_value(iter, 0);
+        this.settings.set_string(`protocol`, protocol);
+    }.bind(this));
+
+    protoCbox.show();
+    prefsWidget.attach(protoCbox, 1, 6, 1, 1);
+    
+    // Technology
+    const techLabel = new Gtk.Label({
+        label: `Select Technology:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    prefsWidget.attach(techLabel, 0, 7, 1, 1);
+
+    let techModel = new Gtk.ListStore();
+    techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
+
+    let techCbox = new Gtk.ComboBox({model: techModel});
+    let techRenderer = new Gtk.CellRendererText();
+    techCbox.pack_start(techRenderer, true);
+    techCbox.add_attribute(techRenderer, 'text', 1);
+
+    techModel.set(techModel.append(), [0, 1], ['OpenVPN', 'OpenVPN']);
+    techModel.set(techModel.append(), [0, 1], ['NordLynx', 'NordLynx']);
+
+    let tech = this.settings.get_string(`technology`);
+    
+    techCbox.set_active(tech === 'OpenVPN' ? 0 : 1);
+
+    techCbox.connect('changed', function(entry) {
+        let [success, iter] = techCbox.get_active_iter();
+        if (!success) return;
+        let tech = techModel.get_value(iter, 0);
+        this.settings.set_string(`technology`, tech);
+    }.bind(this));
+
+    techCbox.show();
+    prefsWidget.attach(techCbox, 1, 7, 1, 1);
+
     // Reset to defaults
     const defaults = new Gtk.Button({ 
         label: `Reset To Defaults`,
         visible: true
     });
     defaults.connect(`clicked`, () => {
-        this.vpn.setDefaults();
+        this.vpn.setToDefaults();
     });
-    prefsWidget.attach(defaults, 3, 7, 1, 1);
+    prefsWidget.attach(defaults, 0, 8, 1, 1);
 
     return prefsWidget;
 }

@@ -22,7 +22,7 @@ var Vpn = class Vpn {
         this.executeCommandAsync = GLib.spawn_command_line_async;
     }
 
-    setDefaults() {
+    setToDefaults() {
         // Read the VPN status from the command line
         this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
