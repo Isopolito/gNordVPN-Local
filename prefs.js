@@ -23,9 +23,8 @@ function buildPrefsWidget() {
         visible: true
     });
 
-    // Add a simple title and add it to the prefsWidget
     const title = new Gtk.Label({
-        label: `<b>${Me.metadata.name} Preferences</b>`,
+        label: `<b>Preferences</b>`,
         halign: Gtk.Align.START,
         use_markup: true,
         visible: true
@@ -40,16 +39,16 @@ function buildPrefsWidget() {
     });
     prefsWidget.attach(toggleLabel, 0, 1, 1, 1);
 
-    const toggle = new Gtk.Switch({
+    const autoConnectToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`autoconnect`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(toggle, 1, 1, 1, 1);
-
+    
+    prefsWidget.attach(autoConnectToggle, 1, 1, 1, 1);
     this.settings.bind(
         `autoconnect`,
-        toggle,
+        autoConnectToggle,
         `active`,
         Gio.SettingsBindFlags.DEFAULT
     );
@@ -206,9 +205,9 @@ function buildPrefsWidget() {
 
     techCbox.show();
     prefsWidget.attach(techCbox, 1, 7, 1, 1);
-
+   
     // Reset to defaults
-    const defaults = new Gtk.Button({ 
+    const defaults = new Gtk.Button({
         label: `Reset To Defaults`,
         visible: true
     });
@@ -217,5 +216,9 @@ function buildPrefsWidget() {
     });
     prefsWidget.attach(defaults, 0, 8, 1, 1);
 
+    prefsWidget.connect('unmap', function() {
+        log(`\n\n\ngnordVpn prefs window unmap`)
+    }.bind(this));
+    
     return prefsWidget;
 }
