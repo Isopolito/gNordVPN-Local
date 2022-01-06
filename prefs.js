@@ -12,8 +12,8 @@ function init() {
 }
 
 function buildPrefsWidget() {
-    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     this.vpn = new Vpn();
+    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
     const prefsWidget = new Gtk.Grid({
         margin_start: 18,
@@ -24,7 +24,7 @@ function buildPrefsWidget() {
     });
 
     const title = new Gtk.Label({
-        label: `<b>Preferences</b>`,
+        label: `<b>Preferences</b> (changes applied on close)`,
         halign: Gtk.Align.START,
         use_markup: true,
         visible: true
@@ -216,8 +216,9 @@ function buildPrefsWidget() {
     });
     prefsWidget.attach(defaults, 0, 8, 1, 1);
 
+    // Apply settings when prefs window is closed
     prefsWidget.connect('unmap', function() {
-        log(`\n\n\ngnordVpn prefs window unmap`)
+        this.vpn.applySettings();
     }.bind(this));
     
     return prefsWidget;

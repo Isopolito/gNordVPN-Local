@@ -174,6 +174,7 @@ const VpnIndicator = GObject.registerClass({
             this._countryMenu = new CountryMenu(this._overrideRefresh.bind(this));
             this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
+            this._vpn.applySettings();
             this._buildIndicatorMenu();
             this._refresh();
         }
