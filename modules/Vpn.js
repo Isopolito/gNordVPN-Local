@@ -25,14 +25,18 @@ var Vpn = class Vpn {
     }
 
     applySettings() {
-        this.executeCommandAsync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
-        this.executeCommandAsync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
-        this.executeCommandAsync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
-        this.executeCommandAsync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
-        this.executeCommandAsync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
-        this.executeCommandAsync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
-        this.executeCommandAsync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
-        this.executeCommandAsync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
+        
+        // TODO: Why is this 2nd call to firewall needed to make things work?
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
     }
     
     setToDefaults() {
