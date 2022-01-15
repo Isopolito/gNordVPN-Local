@@ -20,6 +20,9 @@
         <key name="obfuscate" type="b">
             <default>false</default>
         </key>
+        <key name="notify" type="b">
+            <default>false</default>
+        </key>
         <key name="ipv6" type="b">
             <default>false</default>
         </key>

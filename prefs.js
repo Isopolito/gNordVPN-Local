@@ -52,21 +52,43 @@ function buildPrefsWidget() {
         `active`,
         Gio.SettingsBindFlags.DEFAULT
     );
-    
+
+    // Notify
+    const notifyLabel = new Gtk.Label({
+        label: `Enable Notify:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    prefsWidget.attach(notifyLabel, 0, 2, 1, 1);
+
+    const notifyToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`notify`),
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    prefsWidget.attach(notifyToggle, 1, 2, 1, 1);
+
+    this.settings.bind(
+        `notify`,
+        notifyToggle,
+        `active`,
+        Gio.SettingsBindFlags.DEFAULT
+    );
+
     // CyberSec
     const cybersecLabel = new Gtk.Label({
         label: `Enable CyberSec:`,
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(cybersecLabel, 0, 2, 1, 1);
+    prefsWidget.attach(cybersecLabel, 0, 3, 1, 1);
 
     const cyberSecToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`cybersec`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(cyberSecToggle, 1, 2, 1, 1);
+    prefsWidget.attach(cyberSecToggle, 1, 3, 1, 1);
 
     this.settings.bind(
         `cybersec`,
@@ -81,14 +103,14 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(firewallLabel, 0, 3, 1, 1);
+    prefsWidget.attach(firewallLabel, 0, 4, 1, 1);
 
     const firewallToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`firewall`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(firewallToggle, 1, 3, 1, 1);
+    prefsWidget.attach(firewallToggle, 1, 4, 1, 1);
 
     this.settings.bind(
         `firewall`,
@@ -103,14 +125,14 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(killswitchLabel, 0, 4, 1, 1);
+    prefsWidget.attach(killswitchLabel, 0, 5, 1, 1);
 
     const killswitchToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`killswitch`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(killswitchToggle, 1, 4, 1, 1);
+    prefsWidget.attach(killswitchToggle, 1, 5, 1, 1);
 
     this.settings.bind(
         `killswitch`,
@@ -125,14 +147,14 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(obfuscateLabel, 0, 5, 1, 1);
+    prefsWidget.attach(obfuscateLabel, 0, 6, 1, 1);
 
     const obfuscateToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`obfuscate`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(obfuscateToggle, 1, 5, 1, 1);
+    prefsWidget.attach(obfuscateToggle, 1, 6, 1, 1);
 
     this.settings.bind(
         `obfuscate`,
@@ -147,7 +169,7 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(protocolLabel, 0, 6, 1, 1);
+    prefsWidget.attach(protocolLabel, 0, 7, 1, 1);
 
     let protoModel = new Gtk.ListStore();
     protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
@@ -171,7 +193,7 @@ function buildPrefsWidget() {
     }.bind(this));
 
     protoCbox.show();
-    prefsWidget.attach(protoCbox, 1, 6, 1, 1);
+    prefsWidget.attach(protoCbox, 1, 7, 1, 1);
     
     // Technology
     const techLabel = new Gtk.Label({
@@ -179,7 +201,7 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(techLabel, 0, 7, 1, 1);
+    prefsWidget.attach(techLabel, 0, 8, 1, 1);
 
     let techModel = new Gtk.ListStore();
     techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
@@ -204,7 +226,7 @@ function buildPrefsWidget() {
     }.bind(this));
 
     techCbox.show();
-    prefsWidget.attach(techCbox, 1, 7, 1, 1);
+    prefsWidget.attach(techCbox, 1, 8, 1, 1);
    
     // Reset to defaults
     const defaults = new Gtk.Button({
@@ -214,7 +236,7 @@ function buildPrefsWidget() {
     defaults.connect(`clicked`, () => {
         this.vpn.setToDefaults();
     });
-    prefsWidget.attach(defaults, 0, 8, 1, 1);
+    prefsWidget.attach(defaults, 0, 9, 1, 1);
 
     // Apply settings when prefs window is closed
     prefsWidget.connect('unmap', function() {
