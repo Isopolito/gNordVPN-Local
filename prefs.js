@@ -14,6 +14,7 @@ function init() {
 function buildPrefsWidget() {
     this.vpn = new Vpn();
     this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    this.vpn.setSettingsFromNord();
 
     const prefsWidget = new Gtk.Grid({
         margin_start: 18,
@@ -53,27 +54,29 @@ function buildPrefsWidget() {
         Gio.SettingsBindFlags.DEFAULT
     );
 
+    // Currently a bug in nordvpn where notify doesn't reflect in settings output, hiding for now to 
+    // not confuse people.
     // Notify
-    const notifyLabel = new Gtk.Label({
-        label: `Enable Notify:`,
-        halign: Gtk.Align.START,
-        visible: true
-    });
-    prefsWidget.attach(notifyLabel, 0, 2, 1, 1);
-
-    const notifyToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`notify`),
-        halign: Gtk.Align.END,
-        visible: true
-    });
-    prefsWidget.attach(notifyToggle, 1, 2, 1, 1);
-
-    this.settings.bind(
-        `notify`,
-        notifyToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    // const notifyLabel = new Gtk.Label({
+    //     label: `Enable Notify:`,
+    //     halign: Gtk.Align.START,
+    //     visible: true
+    // });
+    // prefsWidget.attach(notifyLabel, 0, 2, 1, 1);
+    //
+    // const notifyToggle = new Gtk.Switch({
+    //     active: this.settings.get_boolean(`notify`),
+    //     halign: Gtk.Align.END,
+    //     visible: true
+    // });
+    // prefsWidget.attach(notifyToggle, 1, 2, 1, 1);
+    //
+    // this.settings.bind(
+    //     `notify`,
+    //     notifyToggle,
+    //     `active`,
+    //     Gio.SettingsBindFlags.DEFAULT
+    // );
 
     // CyberSec
     const cybersecLabel = new Gtk.Label({
@@ -211,12 +214,12 @@ function buildPrefsWidget() {
     techCbox.pack_start(techRenderer, true);
     techCbox.add_attribute(techRenderer, 'text', 1);
 
-    techModel.set(techModel.append(), [0, 1], ['OpenVPN', 'OpenVPN']);
-    techModel.set(techModel.append(), [0, 1], ['NordLynx', 'NordLynx']);
+    techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
+    techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
 
     let tech = this.settings.get_string(`technology`);
     
-    techCbox.set_active(tech === 'OpenVPN' ? 0 : 1);
+    techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
 
     techCbox.connect('changed', function(entry) {
         let [success, iter] = techCbox.get_active_iter();
@@ -240,7 +243,7 @@ function buildPrefsWidget() {
 
     // Apply settings when prefs window is closed
     prefsWidget.connect('unmap', function() {
-        this.vpn.applySettings();
+        this.vpn.applySettingsToNord();
     }.bind(this));
     
     return prefsWidget;

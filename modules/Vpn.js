@@ -5,17 +5,9 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_COUNTRIES = `nordvpn countries`;
 const CMD_SETTINGS = `nordvpn s`;
+const CMD_FETCH_SETTINGS = `nordvpn settings`;
 const CMD_CONNECT = "nordvpn c";
 const CMD_DISCONNECT = "nordvpn d";
-
-const stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
-const getString = (data) => {
-    if (data instanceof Uint8Array) {
-        return imports.byteArray.toString(data);
-    } else {
-        return data.toString();
-    }
-}
 
 var Vpn = class Vpn {
     constructor() {
@@ -23,8 +15,66 @@ var Vpn = class Vpn {
         this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     }
+    
+    _stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
+    
+    _getString = (data) => {
+        if (data instanceof Uint8Array) {
+            return imports.byteArray.toString(data);
+        } else {
+            return data.toString();
+        }
+    }
 
-    applySettings() {
+    _resolveSettingsValue(text) {
+        if (!text) return;
+        const normalizedText = text.trim();
+
+        if (normalizedText === `enabled`) return true;
+        if (normalizedText === `disabled`) return false;
+
+        return normalizedText;
+    }
+
+    _resolveSettingsKey(text) {
+        if (!text) return;
+        const normalizedText = text.trim().toLowerCase()
+
+        if (normalizedText === `firewall`) return `firewall`;
+        if (normalizedText.includes(`tech`)) return `technology`;
+        if (normalizedText === `protocol`)return `protocol`;
+        if (normalizedText === `kill switch`) return `killswitch`;
+        if (normalizedText === `cybersec`) return `cybersec`;
+        if (normalizedText === `obfuscate`) return `obfuscate`;
+        if (normalizedText === `notify`) return `notify`;
+        if (normalizedText === `auto-connect`) return `autoconnect`;
+        
+        // Currently these settings are not supported in this extension
+        //if (normalizedText === `ipv6`) return `ipv6`;
+        //if (normalizedText === `dns`) return `dns`;
+        
+        return null;
+    }
+    
+    setSettingsFromNord() {
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_FETCH_SETTINGS);
+        const normalizedOut = this._getString(standardOut);
+
+        for (const line of normalizedOut.split(`\n`)) {
+            let parts = line.split(`:`);
+            const settingName = this._resolveSettingsKey(parts[0]);
+            const settingValue = this._resolveSettingsValue(parts[1]);
+            if (!settingName || settingValue === undefined) continue;
+
+            if (settingName === `protocol` || settingName === 'technology') {
+                this.settings.set_string(settingName, settingValue);
+            } else {
+                this.settings.set_boolean(settingName, settingValue);
+            }
+        }
+    }
+
+    applySettingsToNord() {
         this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
@@ -39,7 +89,7 @@ var Vpn = class Vpn {
         this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
     }
     
-    setToDefaults() {
+   setToDefaults() {
         this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
     
@@ -48,16 +98,16 @@ var Vpn = class Vpn {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
 
         // Convert Uint8Array object to string and split up the different messages
-        const allStatusMessages = getString(standardOut).split(`\n`);
+        const allStatusMessages = this._getString(standardOut).split(`\n`);
 
         // Grab the message for an available update
-        const updateMessage = allStatusMessages[0].includes('new version')
+        const updateMessage = allStatusMessages[0].includes(`new version`)
             ? allStatusMessages.shift(1)
             : null;
 
         // Determine the correct state from the "Status: xxxx" line
         // TODO: use results from vpn command to give details of error
-        let connectStatus = (allStatusMessages[0].match(/Status: \w+/) || [''])[0]
+        let connectStatus = (allStatusMessages[0].match(/Status: \w+/) || [``])[0]
 
         return {
             updateMessage,
@@ -82,7 +132,7 @@ var Vpn = class Vpn {
     getCountries() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
 
-        const countries = getString(standardOut)
+        const countries = this._getString(standardOut)
             .replace(/A new version.*?\./g, ``)
             .replace(/\s+/g, ` `)
             .split(` `)
@@ -91,7 +141,7 @@ var Vpn = class Vpn {
         let processedCountries = [];
         for (let i = 3; i < countries.length; i++) {
             // All countries should be capitalized in output
-            if (!stringStartsWithCapitalLetter(countries[i])) continue;
+            if (!this._stringStartsWithCapitalLetter(countries[i])) continue;
             if (countries[i].startsWith("A new version")) continue;
 
             processedCountries.push(countries[i].replace(",", ""));
