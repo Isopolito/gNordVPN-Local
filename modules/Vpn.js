@@ -147,6 +147,9 @@ var Vpn = class Vpn {
             processedCountries.push(countries[i].replace(",", ""));
         }
 
+        // If the list of countries from NordVpn cli is less then 5 there's most likely a problem with the connection.
+        // Better to return nothing so calling code can handle appropriately rather than a list of error message words
+        if (processedCountries.length < 5) return null;
         return processedCountries;
     }
     
