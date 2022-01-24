@@ -1,15 +1,20 @@
+'use strict';
+
 const St = imports.gi.St;
 const Main = imports.ui.main;
+const Mainloop = imports.mainloop;
+const GObject = imports.gi.GObject;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
-const Mainloop = imports.mainloop;
 const ExtensionUtils = imports.misc.extensionUtils;
-const GObject = imports.gi.GObject;
 
 // gNordvpn-Local modules
 const Me = ExtensionUtils.getCurrentExtension();
-const vpnStateManagement = Me.imports.modules.vpnStateManagement;
+const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
+const Signals = Me.imports.modules.Signals.Signals;
+const CountryMenu = Me.imports.modules.CountryMenu.CountryMenu;
+const vpnStateManagement = Me.imports.modules.vpnStateManagement;
 
 let vpnIndicator;
 const indicatorName = `VPN Indicator`;
@@ -26,24 +31,17 @@ const VpnIndicator = GObject.registerClass({
             this._refresh();
         }
 
-        // Can`t build this country selection menu until nordvpn is properly up and running.
-        // If menu construction only happens once at startup when gnome is loading up extensions, 
-        // the menu won`t get populated correctly.
-        _buildCountryMenuIfNeeded() {
-            this._countryMenu.tryBuild();
-            if (this._countryMenu.isBuilt && !this._countryMenu.isAdded) {
-                this.menu.addMenuItem(this._countryMenu.menu);
-                this._countryMenu.isAdded = true;
-            }
-        }
-
         _refresh() {
             // Stop the refreshes
             this._clearTimeout();
 
             const status = this._vpn.getStatus();
             const currentVpnState = vpnStateManagement.resolveState(status);
-            if (currentVpnState !== vpnStateManagement.states.ERROR) this._buildCountryMenuIfNeeded();
+            if (currentVpnState !== vpnStateManagement.states.ERROR) {
+                // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
+                // to provide available cities, countries, etc
+                this._countryMenu.tryBuild();
+            }
 
             // Update the menu and panel based on the current state
             this._updateMenu(currentVpnState, status.connectStatus, status.updateMessage);
@@ -102,17 +100,29 @@ const VpnIndicator = GObject.registerClass({
                 this._timeout = undefined;
             }
         }
+        
+        _openSettings() {
+            if (typeof ExtensionUtils.openPrefs === 'function') {
+                ExtensionUtils.openPrefs();
+            } else {
+                Util.spawn([
+                    "gnome-shell-extension-prefs",
+                    Me.uuid
+                ]);
+            }
+        }
 
         _buildIndicatorMenu() {
-            // Add the menu items to the menu
             this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
             this.menu.box.add(this._statusLabel);
 
+            // Optionally add 'Update' status
             this._updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
             this.menu.box.add(this._updateMenuLabel);
 
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
+            // Add 'Connect' menu item 
             this._connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
             const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, this._connect.bind(this));
             this._signals.register(connectMenuItemClickId, function () {
@@ -120,12 +130,23 @@ const VpnIndicator = GObject.registerClass({
             }.bind(this));
             this.menu.addMenuItem(this._connectMenuItem);
 
+            // Add 'Disconnect' menu item 
             this._disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
             const disconnectMenuItemClickId = this._disconnectMenuItem.connect(`activate`, this._disconnect.bind(this));
             this._signals.register(disconnectMenuItemClickId, function () {
                 this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)
             }.bind(this));
             this.menu.addMenuItem(this._disconnectMenuItem);
+            
+            this._countryMenu.tryBuild();
+            this.menu.addMenuItem(this._countryMenu.menu);
+
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+            // Add 'Settings' menu item 
+            const settingsMenuItem = new PopupMenu.PopupMenuItem('Settings...');
+            this.menu.addMenuItem(settingsMenuItem);
+            settingsMenuItem.connect('activate', this._openSettings.bind(this));
 
             // Create and add the button with label for the panel
             let button = new St.Bin({
@@ -148,12 +169,13 @@ const VpnIndicator = GObject.registerClass({
         }
 
         enable() {
-            this._vpn = new Me.imports.modules.Vpn.Vpn();
-            this._signals = new Me.imports.modules.Signals.Signals();
-            this._countryMenu = new Me.imports.modules.CountryMenu.CountryMenu(this._overrideRefresh.bind(this));
+            this._vpn = new Vpn();
+            this._signals = new Signals();
+            this._countryMenu = new CountryMenu(this._overrideRefresh.bind(this));
+            this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
+            this._vpn.applySettingsToNord();
             this._buildIndicatorMenu();
-
             this._refresh();
         }
 
