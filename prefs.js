@@ -12,6 +12,47 @@ const Vpn = Me.imports.modules.Vpn.Vpn;
 function init() {
 }
 
+
+function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap){
+    resetGeneralSetting(settings);
+    resetConnectionSetting(settings, protoCbox, techCbox);
+    resetCitySetting(settings, cityTreeView, cityTreeIterMap);
+}
+
+function resetGeneralSetting(settings){
+    resetSetting(settings, ['autoconnect']);
+}
+
+
+function resetConnectionSetting(settings, protoCbox, techCbox) {
+    resetSetting(settings, ['cybersec','firewall','killswitch','obfuscate','notify','ipv6', 'protocol', 'technology']);
+
+    let protocol = settings.get_string(`protocol`);
+    protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
+
+    let tech = settings.get_string(`technology`);
+    techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
+}
+
+function resetCitySetting(settings, cityTreeView, cityTreeIterMap){
+    resetSetting(settings, ['number-cities-per-countries', 'countries-selected-for-cities']);
+
+    let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
+
+    cityCountries.forEach(country => {
+        cityTreeView.get_selection().select_iter(cityTreeIterMap[country.replace(/_/g, " ")]);
+    })
+
+}
+
+function resetSetting(settings, keys){
+    keys.forEach(key => {
+        settings.set_value(key, settings.get_default_value(key));
+    })
+}
+
+
+
 function buildPrefsWidget() {
     this.normalRender = new Gtk.CellRendererText();
 
@@ -21,6 +62,9 @@ function buildPrefsWidget() {
 
     this.countrieMap = this.vpn.getCountries();
     this.countrieNames = Object.keys(this.countrieMap);
+
+
+
 
     const notebook = new Gtk.Notebook()
 
@@ -56,15 +100,11 @@ function buildPrefsWidget() {
 
 
     // Reset to defaults
-    const defaults = new Gtk.Button({
-        label: `Reset To Defaults`,
+    const resetAll = new Gtk.Button({
+        label: `Reset All Settings`,
         visible: true
     });
-    defaults.connect(`clicked`, () => {
-        this.vpn.setToDefaults();
-    });
-    generalPage.attach(defaults, 0, 2, 1, 1);
-
+    generalPage.attach(resetAll, 0, 2, 1, 1);
 
 
     const generalSaveLabel = new Gtk.Label({
@@ -268,6 +308,15 @@ function buildPrefsWidget() {
     this.techCbox.show();
     connectionPage.attach(this.techCbox, 1, 5, 1, 1);
 
+
+    // Reset connection settings
+    const resetConnection = new Gtk.Button({
+        label: `Reset Connection Settings`,
+        visible: true
+    });
+    connectionPage.attach(resetConnection, 0, 6, 1, 1);
+
+
     const connectionSaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
         halign: Gtk.Align.START,
@@ -345,11 +394,13 @@ function buildPrefsWidget() {
     cityTreeView.insert_column(cityColumn, 0);
     cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
+    let cityTreeIterMap = {}
     let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
     if(this.countrieNames){
         this.countrieNames.forEach(country => {
             let iter = cityStore.append(null);
             cityStore.set(iter, [0], [country]);
+            cityTreeIterMap[country] = iter;
 
             if(cityCountries.includes(this.countrieMap[country])){
                 cityTreeView.get_selection().select_iter(iter);
@@ -412,6 +463,16 @@ function buildPrefsWidget() {
     notebook.connect('unmap', function() {
         this.vpn.applySettingsToNord();
     }.bind(this));
+
+
+
+    resetAll.connect(`clicked`, () => { 
+        resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap);
+    });
+
+    resetConnection.connect(`clicked`, () => {
+        resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
+    });
     
     return notebook;
 }

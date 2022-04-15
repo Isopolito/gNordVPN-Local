@@ -204,7 +204,4 @@ var Vpn = class Vpn {
         return processedCities;
     }
     
-    getDisplayName(item) {
-        return item?.replace(/_/g, " ");
-    }
 };
