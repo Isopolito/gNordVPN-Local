@@ -13,7 +13,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
 const Signals = Me.imports.modules.Signals.Signals;
-const CountryMenu = Me.imports.modules.CountryMenu.CountryMenu;
+const ConnectionMenu = Me.imports.modules.ConnectionMenu.ConnectionMenu;
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
 
 let vpnIndicator;
@@ -41,6 +41,7 @@ const VpnIndicator = GObject.registerClass({
                 // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
                 // to provide available cities, countries, etc
                 this._countryMenu.tryBuild();
+                this._cityMenu.tryBuild();
             }
 
             // Update the menu and panel based on the current state
@@ -152,6 +153,9 @@ const VpnIndicator = GObject.registerClass({
             this._countryMenu.tryBuild();
             this.menu.addMenuItem(this._countryMenu.menu);
 
+            this._cityMenu.tryBuild();
+            this.menu.addMenuItem(this._cityMenu.menu);
+
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
             // Add 'Settings' menu item 
@@ -182,7 +186,8 @@ const VpnIndicator = GObject.registerClass({
         enable() {
             this._vpn = new Vpn();
             this._signals = new Signals();
-            this._countryMenu = new CountryMenu(this._overrideRefresh.bind(this));
+            this._countryMenu = new ConnectionMenu('Countries', 'countries', Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this));
+            this._cityMenu = new ConnectionMenu('Cities', 'cities', Constants.favorites.favoriteCities, this._overrideRefresh.bind(this));
             this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
             this._vpn.applySettingsToNord();
@@ -195,6 +200,8 @@ const VpnIndicator = GObject.registerClass({
 
             this._countryMenu.disable();
             this._countryMenu.isAdded = false;
+            this._cityMenu.disable();
+            this._cityMenu.isAdded = false;
             this._signals.disconnectAll();
         }
     }

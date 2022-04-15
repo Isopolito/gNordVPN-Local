@@ -125,9 +125,9 @@ var Vpn = class Vpn {
         }
     }
 
-    connectVpn(country) {
-        if (country) {
-            this.executeCommandAsync(`${CMD_CONNECT} ${country}`);
+    connectVpn(query) {
+        if (query) {
+            this.executeCommandAsync(`${CMD_CONNECT} ${query}`);
         } else {
             this.executeCommandAsync(CMD_CONNECT);
         }
@@ -137,6 +137,15 @@ var Vpn = class Vpn {
         this.executeCommandAsync(CMD_DISCONNECT);
     }
 
+    getConectionList(connectionType){
+        switch(connectionType) {
+          case 'countries':
+            return this.getCountries();
+          case 'cities':
+            return this.getCities();
+        } 
+        return null;
+    }
     getCountries() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
 
@@ -146,19 +155,51 @@ var Vpn = class Vpn {
             .split(` `)
             .sort();
 
-        let processedCountries = [];
+        let processedCountries = {};
         for (let i = 3; i < countries.length; i++) {
             // All countries should be capitalized in output
             if (!this._stringStartsWithCapitalLetter(countries[i])) continue;
             if (countries[i].startsWith("A new version")) continue;
 
-            processedCountries.push(countries[i].replace(",", ""));
+            let c = countries[i].replace(",", "");
+            processedCountries[c.replace(/_/g, " ")] = c;
         }
 
         // If the list of countries from NordVpn cli is less then 5 there's most likely a problem with the connection.
         // Better to return nothing so calling code can handle appropriately rather than a list of error message words
-        if (processedCountries.length < 5) return null;
+        if (Object.keys(processedCountries).length < 5) return null;
+
         return processedCountries;
+    }
+
+    getCities() {
+
+        let citiesSaved = Object.keys(this.getCountries());
+
+        let processedCities = {};
+
+        for(let i=0; i<citiesSaved.length; i++){
+
+            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
+
+            const cities = this._getString(standardOut)
+                .replace(/A new version.*?\./g, ``)
+                .replace(/\s+/g, ` `)
+                .split(` `)
+                .sort();
+
+            for (let j = 3; j < cities.length; j++) {
+                // All cities should be capitalized in output
+                if (!this._stringStartsWithCapitalLetter(cities[j])) continue;
+                if (cities[j].startsWith("A new version")) continue;
+
+                let c = (citiesSaved[i]+", "+cities[j].replace(",", "")).replace(/_/g, " ");
+                let d = cities[j].replace(",", "");
+                processedCities[c] = d;
+            }
+        }
+
+        return processedCities;
     }
     
     getDisplayName(item) {

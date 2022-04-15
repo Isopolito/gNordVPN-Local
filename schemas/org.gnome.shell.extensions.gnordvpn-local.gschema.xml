@@ -5,6 +5,9 @@
         <key name="favorite-countries" type="s">
             <default>""</default>
         </key>
+        <key name="favorite-cities" type="s">
+            <default>""</default>
+        </key>
         <key name="autoconnect" type="b">
             <default>false</default>
         </key>

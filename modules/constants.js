@@ -1,5 +1,6 @@
 var favorites = {
     favoriteCountries: 'favorite-countries',
+    favoriteCities: 'favorite-cities',
 }
 
 var menus = {
