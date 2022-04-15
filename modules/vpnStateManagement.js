@@ -8,8 +8,9 @@ var stateOverrideCounter = 0;
 
 var STATE_OVERRIDE_DURATION = 10
 
-var refreshOverride = function(state) {
+var refreshOverride = function(state, overrideKeys) {
     stateOverride = states[state];
+    stateOverride.overrideKeys = overrideKeys;
     stateOverrideCounter = 0;
 }
 
@@ -19,13 +20,18 @@ var resolveState = function(status) {
     // If a state override is active, increment it and override the state if appropriate
     if (stateOverride) {
         stateOverrideCounter += 1;
-        if (stateOverrideCounter <= STATE_OVERRIDE_DURATION && (vpnState.clearsOverrideId != stateOverride.overrideId)) {
-            // State override still active
-            vpnState = stateOverride;
-        } else {
+
+        let overrideFromKey = (stateOverride.overrideKeys && (
+                              (stateOverride.overrideKeys[0] === 'countries' && stateOverride.overrideKeys[1].replace(/_/g, " ") === status.country) || 
+                              (stateOverride.overrideKeys[0] === 'cities'    && stateOverride.overrideKeys[1].replace(/_/g, " ") === status.city) ));
+
+        if (stateOverrideCounter > STATE_OVERRIDE_DURATION || (vpnState.clearsOverrideId == stateOverride.overrideId) || overrideFromKey){
             // State override expired or cleared by current state, remove it
             stateOverride = undefined;
             stateOverrideCounter = 0;
+        }else{ 
+           // State override still active
+            vpnState = stateOverride;
         }
     } 
     
@@ -72,7 +78,8 @@ var states = {
     "Status: Reconnecting": {
         "panelText": "RECONNECTING...",
         "styleClass": "amber",
-        "canConnect": false, "canDisconnect": true,
+        "canConnect": false,
+        "canDisconnect": true,
         "clearsOverrideId": STATE_OVERRIDE_UNSET,
         "overrideId": STATE_OVERRIDE_UNSET,
         "refreshTimeout": 2
@@ -95,4 +102,13 @@ var states = {
         "overrideId": STATE_OVERRIDE_UNSET,
         "refreshTimeout": 5
     }
+    "Status: Logged out": {
+        "panelText": "LOGGED OUT",
+        "styleClass": "amber",
+        "canConnect": false,
+        "canDisconnect": false,
+        "refreshTimeout": 10,
+        "overrideId": STATE_OVERRIDE_UNSET,
+        "clearsOverrideId": STATE_OVERRIDE_UNSET
+    },
 };

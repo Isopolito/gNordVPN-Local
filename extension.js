@@ -35,8 +35,8 @@ const VpnIndicator = GObject.registerClass({
             });
         }
 
-        _overrideRefresh(state) {
-            vpnStateManagement.refreshOverride(state);
+        _overrideRefresh(state, overrideKeys) {
+            vpnStateManagement.refreshOverride(state, overrideKeys);
             this._refresh();
         }
 
