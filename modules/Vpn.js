@@ -4,6 +4,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_COUNTRIES = `nordvpn countries`;
+const CMD_CITIES = `nordvpn cities`;
 const CMD_SETTINGS = `nordvpn s`;
 const CMD_FETCH_SETTINGS = `nordvpn settings`;
 const CMD_CONNECT = "nordvpn c";
@@ -110,10 +111,17 @@ var Vpn = class Vpn {
         let connectStatus = (allStatusMessages[0].match(/Status: \w+/) || [``])[0]
 
         return {
-            updateMessage,
             connectStatus,
-            country: allStatusMessages.length > 2 && allStatusMessages[2].replace("Country: ", "").toUpperCase(),
-            serverNumber: allStatusMessages.length > 1 && allStatusMessages[1].match(/\d+/),
+            'currentServer': allStatusMessages.length > 1 && allStatusMessages[1].replace("Current server: ", ""),
+            'country': allStatusMessages.length > 2 && allStatusMessages[2].replace("Country: ", ""),
+            'city': allStatusMessages.length > 3 && allStatusMessages[3].replace("City: ", ""),
+            'serverIP': allStatusMessages.length > 4 && allStatusMessages[4].replace("Server IP: ", ""),
+            'currentTechnology': allStatusMessages.length > 5 && allStatusMessages[5].replace("Current technology: ", ""),
+            'currentProtocol': allStatusMessages.length > 6 && allStatusMessages[6].replace("Current protocol: ", ""),
+            'transfer': allStatusMessages.length > 7 && allStatusMessages[7].replace("Transfer: ", ""),
+            'uptime': allStatusMessages.length > 8 && allStatusMessages[8].replace("Uptime: ", ""),
+            'serverNumber': allStatusMessages.length > 1 && allStatusMessages[1].match(/\d+/),
+            updateMessage,
         }
     }
 

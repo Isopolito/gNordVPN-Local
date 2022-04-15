@@ -44,18 +44,29 @@ const VpnIndicator = GObject.registerClass({
             }
 
             // Update the menu and panel based on the current state
-            this._updateMenu(currentVpnState, status.connectStatus, status.updateMessage);
+            this._updateMenu(currentVpnState, status);
             this._updatePanel(currentVpnState, status);
 
             // Start the refreshes again
             this._setTimeout(currentVpnState.refreshTimeout);
         }
 
-        _updateMenu(vpnStatus, statusText, updateAvailableText) {
-            // Set the status text on the menu
-            this._statusLabel.text = statusText;
+        _updateMenu(vpnStatus, status) {
 
-            if (updateAvailableText) {
+            // Set the status text on the menu
+            this._statusLabel.get_label_actor().set_text(status.connectStatus);
+            this._statusLabel.menu.removeAll();
+
+            ['country', 'city', 'currentServer', 'serverIP', 'transfer', 'uptime'].forEach(key => {
+                if(status[key]){
+                    const label = key.replace(/([A-Z]+)/g, " $1").replace(/([A-Z][a-z])/g, " $1").replace(/^./, e => e.toUpperCase());
+                    const menuItem = new PopupMenu.PopupMenuItem(label+": "+status[key]);
+                    this._statusLabel.menu.addMenuItem(menuItem);
+                }
+            })
+
+
+            if (status.updateMessage) {
                 this._updateMenuLabel.text = Constants.messages.updateAvailable;
                 this._updateMenuLabel.visible = true;
             } else {
@@ -113,8 +124,8 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _buildIndicatorMenu() {
-            this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
-            this.menu.box.add(this._statusLabel);
+            this._statusLabel = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
+            this.menu.addMenuItem(this._statusLabel);
 
             // Optionally add 'Update' status
             this._updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
