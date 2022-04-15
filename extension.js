@@ -41,6 +41,11 @@ const VpnIndicator = GObject.registerClass({
             });
         }
 
+        _setQuickRefresh(quick){
+            vpnStateManagement.setQuickRefresh(quick);
+            this._refresh();
+        }
+
         _overrideRefresh(state, overrideKeys) {
             vpnStateManagement.refreshOverride(state, overrideKeys);
             this._refresh();
@@ -179,6 +184,13 @@ const VpnIndicator = GObject.registerClass({
 
         _buildIndicatorMenu() {
             this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
+
+            let that = this;
+            this._statusPopup._setOpenState = function(open){
+                this.setSubmenuShown(open);
+                that._setQuickRefresh(open);
+            }
+
             this.menu.addMenuItem(this._statusPopup);
 
             this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});

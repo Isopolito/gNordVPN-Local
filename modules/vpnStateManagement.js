@@ -6,7 +6,15 @@ const STATE_OVERRIDE_UNSET = -1;
 var stateOverride = undefined;
 var stateOverrideCounter = 0;
 
+var quickRefresh = false;
+var QUICK_REFRESH_TIMEOUT = 1;
+
 var STATE_OVERRIDE_DURATION = 10
+
+
+var setQuickRefresh = function(quick=true){
+    quickRefresh = quick;
+}
 
 var refreshOverride = function(state, overrideKeys) {
     stateOverride = states[state];
@@ -36,6 +44,9 @@ var resolveState = function(status) {
             vpnState = stateOverride;
         }
     } 
+
+    if(quickRefresh)
+        vpnState['refreshTimeout'] = QUICK_REFRESH_TIMEOUT;
     
     return vpnState;
 }
