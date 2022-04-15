@@ -30,6 +30,17 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._favoritesKey = favoritesKey;
     }
 
+    rebuild(){
+        this._isBuilt = false;
+        this._connectionMenu.menu.removeAll();
+        this._connectionMenu.menu.addMenuItem(this._buildPlaceHolderMenuItem());
+        this.tryBuild();
+    }
+    
+    _buildPlaceHolderMenuItem(){
+        return new PopupMenu.PopupMenuItem("Loading...");
+    }
+
     _buildConnectionMenuItem(connection, isFavorite) {
         const menuItem = new PopupMenu.PopupMenuItem(connection);
         const menuItemClickId = menuItem.connect(`activate`, function (actor, event) {

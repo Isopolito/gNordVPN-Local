@@ -174,7 +174,8 @@ var Vpn = class Vpn {
 
     getCities() {
 
-        let citiesSaved = Object.keys(this.getCountries());
+        let citiesMax = this.settings.get_value('number-cities-per-countries').unpack();
+        let citiesSaved = this.settings.get_value('countries-selected-for-cities').deep_unpack();
 
         let processedCities = {};
 
@@ -189,6 +190,7 @@ var Vpn = class Vpn {
                 .sort();
 
             for (let j = 3; j < cities.length; j++) {
+                if(j-3>citiesMax) break;
                 // All cities should be capitalized in output
                 if (!this._stringStartsWithCapitalLetter(cities[j])) continue;
                 if (cities[j].startsWith("A new version")) continue;

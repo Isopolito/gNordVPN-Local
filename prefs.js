@@ -1,5 +1,6 @@
 `use strict`;
 
+const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
 const GObject = imports.gi.GObject;
@@ -12,11 +13,18 @@ function init() {
 }
 
 function buildPrefsWidget() {
+    this.normalRender = new Gtk.CellRendererText();
+
     this.vpn = new Vpn();
     this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     this.vpn.setSettingsFromNord();
 
-    const prefsWidget = new Gtk.Grid({
+    this.countrieMap = this.vpn.getCountries();
+    this.countrieNames = Object.keys(this.countrieMap);
+
+    const notebook = new Gtk.Notebook()
+
+    const generalPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
         column_spacing: 12,
@@ -24,35 +32,65 @@ function buildPrefsWidget() {
         visible: true
     });
 
-    const title = new Gtk.Label({
-        label: `<b>Preferences</b> (changes applied on close)`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    });
-    prefsWidget.attach(title, 1, 0, 2, 1);
-
     // autoconnect
     const toggleLabel = new Gtk.Label({
         label: `Autoconnect to VPN on startup:`,
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(toggleLabel, 0, 1, 1, 1);
+    generalPage.attach(toggleLabel, 0, 0, 1, 1);
 
     const autoConnectToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`autoconnect`),
         halign: Gtk.Align.END,
         visible: true
     });
-    
-    prefsWidget.attach(autoConnectToggle, 1, 1, 1, 1);
+    generalPage.attach(autoConnectToggle, 1, 0, 1, 1);
+
     this.settings.bind(
         `autoconnect`,
         autoConnectToggle,
         `active`,
         Gio.SettingsBindFlags.DEFAULT
     );
+
+
+    // Reset to defaults
+    const defaults = new Gtk.Button({
+        label: `Reset To Defaults`,
+        visible: true
+    });
+    defaults.connect(`clicked`, () => {
+        this.vpn.setToDefaults();
+    });
+    generalPage.attach(defaults, 0, 2, 1, 1);
+
+
+
+    const generalSaveLabel = new Gtk.Label({
+        label: `<b>* Changes applied on close</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    generalPage.attach(generalSaveLabel, 0, 3, 2, 1);
+
+    notebook.append_page(generalPage, new Gtk.Label({
+        label: `<b>General</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+
+
+    const connectionPage = new Gtk.Grid({
+        margin_start: 18,
+        margin_top: 10,
+        column_spacing: 12,
+        row_spacing: 12,
+        visible: true
+    });
 
     // Currently a bug in nordvpn where notify doesn't reflect in settings output, hiding for now to 
     // not confuse people.
@@ -78,20 +116,20 @@ function buildPrefsWidget() {
     //     Gio.SettingsBindFlags.DEFAULT
     // );
 
-    // CyberSec
+     // CyberSec
     const cybersecLabel = new Gtk.Label({
         label: `Enable CyberSec:`,
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(cybersecLabel, 0, 3, 1, 1);
+    connectionPage.attach(cybersecLabel, 0, 0, 1, 1);
 
     const cyberSecToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`cybersec`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(cyberSecToggle, 1, 3, 1, 1);
+    connectionPage.attach(cyberSecToggle, 1, 0, 1, 1);
 
     this.settings.bind(
         `cybersec`,
@@ -106,14 +144,14 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(firewallLabel, 0, 4, 1, 1);
+    connectionPage.attach(firewallLabel, 0, 1, 1, 1);
 
     const firewallToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`firewall`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(firewallToggle, 1, 4, 1, 1);
+    connectionPage.attach(firewallToggle, 1, 1, 1, 1);
 
     this.settings.bind(
         `firewall`,
@@ -128,14 +166,14 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(killswitchLabel, 0, 5, 1, 1);
+    connectionPage.attach(killswitchLabel, 0, 2, 1, 1);
 
     const killswitchToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`killswitch`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(killswitchToggle, 1, 5, 1, 1);
+    connectionPage.attach(killswitchToggle, 1, 2, 1, 1);
 
     this.settings.bind(
         `killswitch`,
@@ -150,14 +188,14 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(obfuscateLabel, 0, 6, 1, 1);
+    connectionPage.attach(obfuscateLabel, 0, 3, 1, 1);
 
     const obfuscateToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`obfuscate`),
         halign: Gtk.Align.END,
         visible: true
     });
-    prefsWidget.attach(obfuscateToggle, 1, 6, 1, 1);
+    connectionPage.attach(obfuscateToggle, 1, 3, 1, 1);
 
     this.settings.bind(
         `obfuscate`,
@@ -172,31 +210,31 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(protocolLabel, 0, 7, 1, 1);
+    connectionPage.attach(protocolLabel, 0, 4, 1, 1);
 
     let protoModel = new Gtk.ListStore();
     protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
 
-    let protoCbox = new Gtk.ComboBox({model: protoModel});
+    this.protoCbox = new Gtk.ComboBox({model: protoModel});
     let protoRenderer = new Gtk.CellRendererText();
-    protoCbox.pack_start(protoRenderer, true);
-    protoCbox.add_attribute(protoRenderer, 'text', 1);
+    this.protoCbox.pack_start(protoRenderer, true);
+    this.protoCbox.add_attribute(protoRenderer, 'text', 1);
 
     protoModel.set(protoModel.append(), [0, 1], ['UDP', 'UDP']);
     protoModel.set(protoModel.append(), [0, 1], ['TCP', 'TCP']);
 
     let protocol = this.settings.get_string(`protocol`);
-    protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
+    this.protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
     
-    protoCbox.connect('changed', function(entry) {
-        let [success, iter] = protoCbox.get_active_iter();
+    this.protoCbox.connect('changed', function(entry) {
+        let [success, iter] = this.protoCbox.get_active_iter();
         if (!success) return;
         let protocol = protoModel.get_value(iter, 0);
         this.settings.set_string(`protocol`, protocol);
     }.bind(this));
 
-    protoCbox.show();
-    prefsWidget.attach(protoCbox, 1, 7, 1, 1);
+    this.protoCbox.show();
+    connectionPage.attach(this.protoCbox, 1, 4, 1, 1);
     
     // Technology
     const techLabel = new Gtk.Label({
@@ -204,47 +242,176 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    prefsWidget.attach(techLabel, 0, 8, 1, 1);
+    connectionPage.attach(techLabel, 0, 5, 1, 1);
 
     let techModel = new Gtk.ListStore();
     techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
 
-    let techCbox = new Gtk.ComboBox({model: techModel});
+    this.techCbox = new Gtk.ComboBox({model: techModel});
     let techRenderer = new Gtk.CellRendererText();
-    techCbox.pack_start(techRenderer, true);
-    techCbox.add_attribute(techRenderer, 'text', 1);
+    this.techCbox.pack_start(techRenderer, true);
+    this.techCbox.add_attribute(techRenderer, 'text', 1);
 
     techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
     techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
 
     let tech = this.settings.get_string(`technology`);
-    
-    techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
+    this.techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
 
-    techCbox.connect('changed', function(entry) {
-        let [success, iter] = techCbox.get_active_iter();
+    this.techCbox.connect('changed', function(entry) {
+        let [success, iter] = this.techCbox.get_active_iter();
         if (!success) return;
         let tech = techModel.get_value(iter, 0);
         this.settings.set_string(`technology`, tech);
     }.bind(this));
 
-    techCbox.show();
-    prefsWidget.attach(techCbox, 1, 8, 1, 1);
-   
-    // Reset to defaults
-    const defaults = new Gtk.Button({
-        label: `Reset To Defaults`,
+    this.techCbox.show();
+    connectionPage.attach(this.techCbox, 1, 5, 1, 1);
+
+    const connectionSaveLabel = new Gtk.Label({
+        label: `<b>* Changes applied on close</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
         visible: true
     });
-    defaults.connect(`clicked`, () => {
-        this.vpn.setToDefaults();
+    connectionPage.attach(connectionSaveLabel, 0, 7, 2, 1);
+
+    notebook.append_page(connectionPage, new Gtk.Label({
+        label: `<b>Connection</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+
+
+
+
+
+
+
+    const cityPage = new Gtk.Grid({
+        margin_start: 18,
+        margin_top: 10,
+        column_spacing: 12,
+        row_spacing: 12,
+        visible: true
     });
-    prefsWidget.attach(defaults, 0, 9, 1, 1);
+
+    const maxCityPerCountryLabel = new Gtk.Label({
+        label: `Max cities per country displayed:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    cityPage.attach(maxCityPerCountryLabel, 0, 0, 1, 1);
+
+    const maxCityPerCountryInput = new Gtk.SpinButton();
+    maxCityPerCountryInput.set_sensitive(true);
+    maxCityPerCountryInput.set_range(0, 10000);
+    maxCityPerCountryInput.set_value(0);
+    maxCityPerCountryInput.set_increments(1, 2);
+
+    cityPage.attach(maxCityPerCountryInput, 1, 0, 1, 1);
+
+    this.settings.bind(
+        `number-cities-per-countries`,
+        maxCityPerCountryInput,
+        `value`,
+        Gio.SettingsBindFlags.DEFAULT
+    );
+
+
+    const citySelectLabel = new Gtk.Label({
+        label: `Select countries to list in cities tab:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    cityPage.attach(citySelectLabel, 0, 1, 1, 1);
+
+    let cityStore = new Gtk.TreeStore();
+    cityStore.set_column_types([
+        GObject.TYPE_STRING
+    ]);
+
+    let cityColumn = new Gtk.TreeViewColumn({
+        title: "Countries"
+    });
+    cityColumn.pack_start(this.normalRender, true);
+    cityColumn.add_attribute(this.normalRender, "text", 0);
+
+    let cityTreeView = new Gtk.TreeView({
+        model: cityStore
+    });
+    cityTreeView.insert_column(cityColumn, 0);
+    cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
+
+    let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
+    if(this.countrieNames){
+        this.countrieNames.forEach(country => {
+            let iter = cityStore.append(null);
+            cityStore.set(iter, [0], [country]);
+
+            if(cityCountries.includes(this.countrieMap[country])){
+                cityTreeView.get_selection().select_iter(iter);
+            }
+        });
+    }
+
+    cityTreeView.get_selection().connect('changed', (w) => {
+        let [ cityPathList, cityStore ] = cityTreeView.get_selection().get_selected_rows();
+        
+        let selected = [];
+        cityPathList.forEach(path => {
+            let model = cityTreeView.get_model();
+            let [ok, iter] = model.get_iter(path);
+            selected.push(this.countrieMap[model.get_value(iter, 0)]);
+        });
+
+        settings.set_value('countries-selected-for-cities', new GLib.Variant('as', selected));
+    });
+
+    this.cityScroll = new Gtk.ScrolledWindow();
+    this.cityScroll.set_child(cityTreeView);
+    this.cityScroll.set_policy (Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+    this.cityScroll.set_min_content_height(150);
+
+    cityPage.attach(this.cityScroll, 1, 1, 1, 1);
+
+
+
+    const cityTitle = new Gtk.Label({
+        label: `<b>* Changes applied on close</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    cityPage.attach(cityTitle, 0, 2, 2, 1);
+
+
+    notebook.append_page(cityPage, new Gtk.Label({
+        label: `<b>City</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // Apply settings when prefs window is closed
-    prefsWidget.connect('unmap', function() {
+    notebook.connect('unmap', function() {
         this.vpn.applySettingsToNord();
     }.bind(this));
     
-    return prefsWidget;
+    return notebook;
 }

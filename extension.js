@@ -24,6 +24,15 @@ const VpnIndicator = GObject.registerClass({
 }, class VpnIndicator extends PanelMenu.Button {
         _init() {
             super._init(0, indicatorName, false);
+
+            this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+            this.settings.connect('changed', (settings, key)=>  {
+                switch(key){
+                    case 'number-cities-per-countries':
+                    case 'countries-selected-for-cities': this._cityMenu.rebuild(); break;
+                }
+
+            });
         }
 
         _overrideRefresh(state) {
