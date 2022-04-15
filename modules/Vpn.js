@@ -1,7 +1,8 @@
 `use strict`;
+const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
-const {Gdk, Gtk} = imports.gi;
+const Soup = imports.gi.Soup;
 
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
@@ -19,6 +20,8 @@ var Vpn = class Vpn {
         this.executeCommandSync = GLib.spawn_command_line_sync;
         this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+        
+        this.session = Soup.Session.new();
     }
     
     _stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
@@ -97,23 +100,25 @@ var Vpn = class Vpn {
    setToDefaults() {
         this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
-    
+
     getAccount(){
         // Read the VPN status from the command line
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNACCOUNT);
         const allAccountMessages = this._getString(standardOut).split(`\n`);
 
-        let loggedin = false;
         let emailAddress;
         let vpnService;
         if( allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`) ){
-            loggedin = true;
             emailAddress =  allAccountMessages[1].replace("Email Address: ", "");
             vpnService   =  allAccountMessages[2].replace("VPN Service: ", "")
         }
 
-        return { loggedin, emailAddress, vpnService };
-
+        return { emailAddress, vpnService };
+    }
+    
+    checkLogin(){
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
+        return this._getString(standardOut).replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
     getStatus() {
@@ -131,10 +136,8 @@ var Vpn = class Vpn {
         // Determine the correct state from the "Status: xxxx" line
         // TODO: use results from vpn command to give details of error
         let connectStatus = (allStatusMessages[0].match(/Status: \w+/) || [``])[0]
-        let account = this.getAccount();
 
         return {
-            account,
             connectStatus,
             'currentServer': allStatusMessages.length > 1 && allStatusMessages[1].replace("Current server: ", ""),
             'country': allStatusMessages.length > 2 && allStatusMessages[2].replace("Country: ", ""),
@@ -169,7 +172,7 @@ var Vpn = class Vpn {
         let url = this._getString(standardOut).replace(/\s+/g, ` `);
         url = url.substring(url.indexOf(ref)+ref.length).trim();
 
-        Gtk.show_uri_on_window(null, url, Gdk.CURRENT_TIME);
+        Gio.app_info_launch_default_for_uri( url, global.create_app_launch_context(0, -1) );
     }
 
     logoutVpn(){
@@ -184,10 +187,29 @@ var Vpn = class Vpn {
             return this.getCountries();
           case 'cities':
             return this.getCities();
+          case 'servers':
+            return this.getServers();
         } 
         return null;
     }
-    getCountries() {
+    getCountries(withId=false) {
+        if(withId){
+            this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
+            this.session.send_message (this.message);
+            let countrieNames, countrieMap;
+            try{
+                let data = JSON.parse(this.message.response_body_data.get_data());
+                countrieMap = data.reduce((acc, v) => {
+                    acc[v['name']] = v['id'];
+                    return acc;
+                }, {}); 
+            }catch(e){
+                return [null, null];
+            }
+
+            return countrieMap;
+        }
+
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
 
         const countries = this._getString(standardOut)
@@ -245,4 +267,57 @@ var Vpn = class Vpn {
         return processedCities;
     }
     
+    getServers() {  
+
+        let countriesMax = this.settings.get_value('number-servers-per-countries').unpack();
+        let countriesSaved = this.settings.get_value('countries-selected-for-servers').deep_unpack();
+
+        let url = "https://api.nordvpn.com/v1/servers/recommendations?limit="+countriesMax
+        let technology = this.settings.get_string(`technology`);
+        if(technology == 'NORDLYNX'){
+            url += "&filters[servers_technologies][identifier]=wireguard_udp";
+
+        }else if(technology == 'OPENVPN'){
+            let obfuscate = this.settings.get_boolean(`obfuscate`);
+            let protocol = this.settings.get_string(`protocol`);
+            
+            if(protocol == "UDP"){
+                if(obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_udp";
+                else          url += "&filters[servers_technologies][identifier]=openvpn_udp";
+            }else if(protocol == "TCP"){
+                if(obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_tcp";
+                else          url += "&filters[servers_technologies][identifier]=openvpn_tcp";
+            }
+        }
+
+        url += "&filters[servers_groups][identifier]=legacy_standard";
+
+
+        let servers = {}
+        try{
+            for(let i=0; i<countriesSaved.length; i++){
+                this.message = Soup.Message.new("GET", url+"&filters[country_id]="+countriesSaved[i]);
+                this.session.send_message (this.message);
+                let data = this.message.response_body_data.get_data();
+                JSON.parse(this._getString(data)).forEach(e => {
+                    servers[e['name']] = e['hostname'].replace('.nordvpn.com','');
+                });
+            }
+        }catch(e){
+            return null;
+        }
+
+        return servers;
+
+
+        //TODO maybe async      
+        // this.session.send_async(this.message, null, (session,result) => {
+        //     let input_stream = session.send_finish(result);
+
+        //     let data_input_stream = Gio.DataInputStream.new(input_stream);
+        //     let out = data_input_stream.read_line(null);
+        // });
+        // let data = this.message.response_body_data.get_data();
+
+    }
 };

@@ -16,7 +16,7 @@ var refreshOverride = function(state, overrideKeys) {
 
 var resolveState = function(status) {
     let vpnState = states[status.connectStatus] || states.ERROR;
-    if(!status.account.loggedin) vpnState = states['LOGGED OUT'];
+    if(!status.loggedin) vpnState = states['LOGGED OUT'];
 
     // If a state override is active, increment it and override the state if appropriate
     if (stateOverride) {
@@ -24,7 +24,8 @@ var resolveState = function(status) {
 
         let overrideFromKey = (stateOverride.overrideKeys && (
                               (stateOverride.overrideKeys[0] === 'countries' && stateOverride.overrideKeys[1].replace(/_/g, " ") === status.country) || 
-                              (stateOverride.overrideKeys[0] === 'cities'    && stateOverride.overrideKeys[1].replace(/_/g, " ") === status.city) ));
+                              (stateOverride.overrideKeys[0] === 'cities'    && stateOverride.overrideKeys[1].replace(/_/g, " ") === status.city) || 
+                              (stateOverride.overrideKeys[0] === 'servers'   && stateOverride.overrideKeys[1] === status.currentServer.replace('.nordvpn.com',''))))
 
         if (stateOverrideCounter > STATE_OVERRIDE_DURATION || (vpnState.clearsOverrideId == stateOverride.overrideId) || overrideFromKey){
             // State override expired or cleared by current state, remove it
@@ -38,6 +39,13 @@ var resolveState = function(status) {
     
     return vpnState;
 }
+
+
+var isLoggingIn = function(){
+    return stateOverride?.panelText === "LOGGING IN...";
+}
+
+
 
 var states = {
     "Status: Connected": {

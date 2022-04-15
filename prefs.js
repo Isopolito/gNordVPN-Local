@@ -13,10 +13,11 @@ function init() {
 }
 
 
-function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap){
+function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap){
     resetGeneralSetting(settings);
     resetConnectionSetting(settings, protoCbox, techCbox);
     resetCitySetting(settings, cityTreeView, cityTreeIterMap);
+    resetServerSetting(settings, serverTreeView, serverTreeIterMap);
 }
 
 function resetGeneralSetting(settings){
@@ -38,11 +39,23 @@ function resetCitySetting(settings, cityTreeView, cityTreeIterMap){
     resetSetting(settings, ['number-cities-per-countries', 'countries-selected-for-cities']);
 
     let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
-
+    
+    cityTreeView.get_selection().unselect_all();
     cityCountries.forEach(country => {
         cityTreeView.get_selection().select_iter(cityTreeIterMap[country.replace(/_/g, " ")]);
     })
 
+}
+
+function resetServerSetting(settings, serverTreeView, serverTreeIterMap){
+    resetSetting(settings, ['number-servers-per-countries', 'countries-selected-for-servers']);
+
+    let serverCountries = this.settings.get_value('countries-selected-for-servers').deep_unpack();
+
+    serverTreeView.get_selection().unselect_all();
+    serverCountries.forEach(server => {
+        serverTreeView.get_selection().select_iter(serverTreeIterMap[server.replace(/_/g, " ")]);
+    })
 }
 
 function resetSetting(settings, keys){
@@ -61,6 +74,7 @@ function buildPrefsWidget() {
     this.vpn.setSettingsFromNord();
 
     this.countrieMap = this.vpn.getCountries();
+    this.countrieMapWithID = this.vpn.getCountries(true);
     this.countrieNames = Object.keys(this.countrieMap);
 
 
@@ -430,13 +444,13 @@ function buildPrefsWidget() {
 
 
 
-    const cityTitle = new Gtk.Label({
+    const citySaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
         halign: Gtk.Align.START,
         use_markup: true,
         visible: true
     });
-    cityPage.attach(cityTitle, 0, 2, 2, 1);
+    cityPage.attach(citySaveLabel, 0, 2, 2, 1);
 
 
     notebook.append_page(cityPage, new Gtk.Label({
@@ -449,6 +463,117 @@ function buildPrefsWidget() {
 
 
 
+
+
+
+
+
+    const serverPage = new Gtk.Grid({
+        margin_start: 18,
+        margin_top: 10,
+        column_spacing: 12,
+        row_spacing: 12,
+        visible: true
+    });
+
+    const maxServerPerCountryLabel = new Gtk.Label({
+        label: `Max server per country displayed:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    serverPage.attach(maxServerPerCountryLabel, 0, 0, 1, 1);
+
+    const maxServerPerCountryInput = new Gtk.SpinButton();
+    maxServerPerCountryInput.set_sensitive(true);
+    maxServerPerCountryInput.set_range(0, 10000);
+    maxServerPerCountryInput.set_value(0);
+    maxServerPerCountryInput.set_increments(1, 2);
+
+    serverPage.attach(maxServerPerCountryInput, 1, 0, 1, 1);
+
+    this.settings.bind(
+        `number-servers-per-countries`,
+        maxServerPerCountryInput,
+        `value`,
+        Gio.SettingsBindFlags.DEFAULT
+    );
+
+
+    const serverSelectLabel = new Gtk.Label({
+        label: `Select countries to list in servers tab:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    serverPage.attach(serverSelectLabel, 0, 1, 1, 1);
+
+    let serverStore = new Gtk.TreeStore();
+    serverStore.set_column_types([
+        GObject.TYPE_STRING
+    ]);
+
+    let serverColumn = new Gtk.TreeViewColumn({
+        title: "Countries"
+    });
+    serverColumn.pack_start(this.normalRender, true);
+    serverColumn.add_attribute(this.normalRender, "text", 0);
+
+    let serverTreeView = new Gtk.TreeView({
+        model: serverStore
+    });
+    serverTreeView.insert_column(serverColumn, 0);
+    serverTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
+    
+    let serverTreeIterMap = {}
+    let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
+    if(this.countrieNames){
+        this.countrieNames.forEach(country => {
+            let iter = serverStore.append(null);
+            serverStore.set(iter, [0], [country]);
+            serverTreeIterMap[country] = iter;
+
+            if(serverCountries.includes(this.countrieMapWithID[country])){
+                serverTreeView.get_selection().select_iter(iter);
+            }
+        });
+    }
+
+    serverTreeView.get_selection().connect('changed', (w) => {
+        let [ serverPathList, serverStore ] = serverTreeView.get_selection().get_selected_rows();
+        
+        let selected = [];
+        serverPathList.forEach(path => {
+            let model = serverTreeView.get_model();
+            let [ok, iter] = model.get_iter(path);
+            selected.push(this.countrieMapWithID[model.get_value(iter, 0)]);
+        });
+
+        settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
+    });
+
+    this.serverScroll = new Gtk.ScrolledWindow();
+    this.serverScroll.set_child(serverTreeView);
+    this.serverScroll.set_policy (Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+    this.serverScroll.set_min_content_height(150);
+
+    serverPage.attach(this.serverScroll, 1, 1, 1, 1);
+
+
+
+    const serverSaveLabel = new Gtk.Label({
+        label: `<b>* Changes applied on close</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    serverPage.attach(serverSaveLabel, 0, 2, 2, 1);
+
+
+    notebook.append_page(serverPage, new Gtk.Label({
+        label: `<b>Server</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
 
 
 
@@ -467,7 +592,7 @@ function buildPrefsWidget() {
 
 
     resetAll.connect(`clicked`, () => { 
-        resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap);
+        resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
     });
 
     resetConnection.connect(`clicked`, () => {

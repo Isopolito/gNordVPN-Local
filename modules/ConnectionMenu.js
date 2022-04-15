@@ -151,6 +151,9 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
             this._connectionMenu.menu.addMenuItem(menuItem);
         }
 
+        log('[EXTENSION_LOG]', 'Object.keys(this._connections).length');
+        log('[EXTENSION_LOG]', Object.keys(this._connections).length);
+
         if(Object.keys(this._connections).length < 1) {
             this._connectionMenu.hide();
         }else{
@@ -158,5 +161,13 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         }
 
         this._isBuilt = true;
+    }
+
+    showHide(show=true){
+        if(Object.keys(this._connections).length < 1 || !show) {
+            this._connectionMenu.hide();
+        }else{
+            this._connectionMenu.show();
+        }
     }
 }
