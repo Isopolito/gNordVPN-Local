@@ -16,6 +16,7 @@ const Constants = Me.imports.modules.constants;
 const Signals = Me.imports.modules.Signals.Signals;
 const ConnectionMenu = Me.imports.modules.ConnectionMenu.ConnectionMenu;
 const vpnStateManagement = Me.imports.modules.vpnStateManagement;
+const CommonFavorite = Me.imports.modules.CommonFavorite.CommonFavorite;
 
 let vpnIndicator;
 const indicatorName = `VPN Indicator`;
@@ -30,12 +31,29 @@ const VpnIndicator = GObject.registerClass({
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
             this.settings.connect('changed', (settings, key)=>  {
                 switch(key){
+                    case 'favorite-countries': 
+                        this._countryMenu.updateFavorite();
+                        this._commonFavorite.updateFavorite(); 
+                    break;
+                    case 'favorite-cities':
+                        this._cityMenu.updateFavorite(); 
+                        this._commonFavorite.updateFavorite(); 
+                    break;
+                    case 'favorite-servers':
+                        this._serverMenu.updateFavorite(); 
+                        this._commonFavorite.updateFavorite(); 
+                    break;
+
                     case 'number-cities-per-countries':
                     case 'countries-selected-for-cities': this._cityMenu.rebuild(); break;
                
                     case 'number-servers-per-countries':
                     case 'countries-selected-for-servers': this._serverMenu.rebuild(); break;
 
+                    case 'commonfavorite': {        
+                        if(settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show(); 
+                        else this._commonFavorite.menu.hide(); 
+                    }break;
                 }
 
             });
@@ -218,6 +236,13 @@ const VpnIndicator = GObject.registerClass({
             }.bind(this));
             this.menu.addMenuItem(this._disconnectMenuItem);
             
+
+            this._commonFavorite.build();
+            this.menu.addMenuItem(this._commonFavorite.menu);
+
+            if(this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show(); 
+            else this._commonFavorite.menu.hide(); 
+
             this._countryMenu.tryBuild();
             this.menu.addMenuItem(this._countryMenu.menu);
 
@@ -276,6 +301,7 @@ const VpnIndicator = GObject.registerClass({
         enable() {
             this._vpn = new Vpn();
             this._signals = new Signals();
+            this._commonFavorite = new CommonFavorite(this._overrideRefresh.bind(this));
             this._countryMenu = new ConnectionMenu('Countries', 'countries', Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this));
             this._cityMenu = new ConnectionMenu('Cities', 'cities', Constants.favorites.favoriteCities, this._overrideRefresh.bind(this));
             this._serverMenu = new ConnectionMenu('Servers', 'servers', Constants.favorites.favoriteServers, this._overrideRefresh.bind(this));
@@ -288,7 +314,9 @@ const VpnIndicator = GObject.registerClass({
 
         disable() {
             this._clearTimeout();
-
+            
+            this._commonFavorite.disable();
+            this._commonFavorite.isAdded = false();
             this._countryMenu.disable();
             this._countryMenu.isAdded = false;
             this._cityMenu.disable();

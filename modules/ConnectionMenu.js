@@ -30,6 +30,19 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._favoritesKey = favoritesKey;
     }
 
+    updateFavorite(){
+        const connectionFavs = this._favorites.get(this._favoritesKey).favorites;
+
+        //connectionFavs-favConnectionItems
+        let toAddToFav = Object.keys(connectionFavs).filter(x => !this._favConnectionItems.includes(x));
+        toAddToFav.forEach(connection => { this._toogleConnectionMenuItem(connection, !true); })
+
+        //_favConnectionItems-connectionFavs
+        let toRemoveFromFav = this._favConnectionItems.filter(x => !Object.keys(connectionFavs).includes(x))
+        toRemoveFromFav.forEach(connection => { this._toogleConnectionMenuItem(connection, !false); })
+
+    }
+
     rebuild(){
         this._isBuilt = false;
         this._connectionMenu.menu.removeAll();
@@ -59,13 +72,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         menuItem.icofavBtn = icofavBtn;
         this._destroyMap[connection] = {menuItemClickId, menuItem, icofavBtn};
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, function () {
-                this._signals.disconnect([menuItemClickId, menuItem.favoritePressId]);
-                icofavBtn.destroy();
-                menuItem.destroy(); 
-
-                const newMenuItem = this._buildConnectionMenuItem(connection, !isFavorite);
-                this._addConnectionMenuItem(connection, newMenuItem, !isFavorite);
-
+                this._toogleConnectionMenuItem(connection, isFavorite);
                 if (isFavorite) this._favorites.remove(this._favoritesKey, connection);
                 else            this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
             }.bind(this)
@@ -75,6 +82,18 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
             icofavBtn.disconnect(menuItem.favoritePressId)
         }.bind(this));
         return menuItem;
+    }
+
+    _toogleConnectionMenuItem(connection, isFavorite){
+        let d = this._destroyMap[connection];
+        if(d){
+            this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
+            d.icofavBtn.destroy();
+            d.menuItem.destroy();
+        }
+
+        const newMenuItem = this._buildConnectionMenuItem(connection, !isFavorite);
+        this._addConnectionMenuItem(connection, newMenuItem, !isFavorite);
     }
 
     _addConnectionMenuItem(connection, newMenuItem, isFavorite) {
@@ -150,9 +169,6 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
             this._connectionMenuItems.push(connection);
             this._connectionMenu.menu.addMenuItem(menuItem);
         }
-
-        log('[EXTENSION_LOG]', 'Object.keys(this._connections).length');
-        log('[EXTENSION_LOG]', Object.keys(this._connections).length);
 
         if(Object.keys(this._connections).length < 1) {
             this._connectionMenu.hide();

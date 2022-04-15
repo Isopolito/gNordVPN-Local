@@ -25,6 +25,9 @@
         <key name="countries-selected-for-servers" type="ai">
             <default>[]</default>
         </key>
+        <key name="commonfavorite" type="b">
+            <default>false</default>
+        </key>
         <key name="autoconnect" type="b">
             <default>false</default>
         </key>

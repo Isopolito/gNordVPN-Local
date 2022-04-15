@@ -21,7 +21,7 @@ function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIt
 }
 
 function resetGeneralSetting(settings){
-    resetSetting(settings, ['autoconnect']);
+    resetSetting(settings, ['autoconnect', 'commonfavorite']);
 }
 
 
@@ -108,6 +108,28 @@ function buildPrefsWidget() {
     this.settings.bind(
         `autoconnect`,
         autoConnectToggle,
+        `active`,
+        Gio.SettingsBindFlags.DEFAULT
+    );
+    
+    // common favorite
+    const commonFavLabel = new Gtk.Label({
+        label: `Display a common favorite tab:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    generalPage.attach(commonFavLabel, 0, 1, 1, 1);
+
+    const commonFavToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`commonfavorite`),
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    generalPage.attach(commonFavToggle, 1, 1, 1, 1);
+
+    this.settings.bind(
+        `commonfavorite`,
+        commonFavToggle,
         `active`,
         Gio.SettingsBindFlags.DEFAULT
     );
