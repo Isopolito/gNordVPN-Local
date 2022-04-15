@@ -1,14 +1,18 @@
 `use strict`;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
+const {Gdk, Gtk} = imports.gi;
 
 const CMD_VPNSTATUS = `nordvpn status`;
+const CMD_VPNACCOUNT = `nordvpn account`;
 const CMD_COUNTRIES = `nordvpn countries`;
 const CMD_CITIES = `nordvpn cities`;
 const CMD_SETTINGS = `nordvpn s`;
 const CMD_FETCH_SETTINGS = `nordvpn settings`;
 const CMD_CONNECT = "nordvpn c";
 const CMD_DISCONNECT = "nordvpn d";
+const CMD_LOGIN = "nordvpn login";
+const CMD_LOGOUT = "nordvpn logout";
 
 var Vpn = class Vpn {
     constructor() {
@@ -94,6 +98,24 @@ var Vpn = class Vpn {
         this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
     
+    getAccount(){
+        // Read the VPN status from the command line
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNACCOUNT);
+        const allAccountMessages = this._getString(standardOut).split(`\n`);
+
+        let loggedin = false;
+        let emailAddress;
+        let vpnService;
+        if( allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`) ){
+            loggedin = true;
+            emailAddress =  allAccountMessages[1].replace("Email Address: ", "");
+            vpnService   =  allAccountMessages[2].replace("VPN Service: ", "")
+        }
+
+        return { loggedin, emailAddress, vpnService };
+
+    }
+
     getStatus() {
         // Read the VPN status from the command line
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
@@ -109,8 +131,10 @@ var Vpn = class Vpn {
         // Determine the correct state from the "Status: xxxx" line
         // TODO: use results from vpn command to give details of error
         let connectStatus = (allStatusMessages[0].match(/Status: \w+/) || [``])[0]
+        let account = this.getAccount();
 
         return {
+            account,
             connectStatus,
             'currentServer': allStatusMessages.length > 1 && allStatusMessages[1].replace("Current server: ", ""),
             'country': allStatusMessages.length > 2 && allStatusMessages[2].replace("Country: ", ""),
@@ -136,6 +160,23 @@ var Vpn = class Vpn {
     disconnectVpn() {
         this.executeCommandAsync(CMD_DISCONNECT);
     }
+
+
+    loginVpn(){
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
+
+        const ref = "Continue in the browser: ";
+        let url = this._getString(standardOut).replace(/\s+/g, ` `);
+        url = url.substring(url.indexOf(ref)+ref.length).trim();
+
+        Gtk.show_uri_on_window(null, url, Gdk.CURRENT_TIME);
+    }
+
+    logoutVpn(){
+        this.executeCommandAsync(CMD_LOGOUT);
+    }
+
+
 
     getConectionList(connectionType){
         switch(connectionType) {

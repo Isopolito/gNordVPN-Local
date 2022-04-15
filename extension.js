@@ -61,19 +61,44 @@ const VpnIndicator = GObject.registerClass({
             this._setTimeout(currentVpnState.refreshTimeout);
         }
 
+
+getMethods(obj) {
+  let properties = new Set()
+  let currentObj = obj
+  do {
+    Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
+  } while ((currentObj = Object.getPrototypeOf(currentObj)))
+  return [...properties.keys()].filter(item => typeof obj[item] === 'function')
+}
+
         _updateMenu(vpnStatus, status) {
 
             // Set the status text on the menu
-            this._statusLabel.get_label_actor().set_text(status.connectStatus);
-            this._statusLabel.menu.removeAll();
+            this._statusLabel.text = status.connectStatus;
+            this._statusPopup.get_label_actor().set_text(status.connectStatus);
+            this._statusPopup.menu.removeAll();
 
-            ['country', 'city', 'currentServer', 'serverIP', 'transfer', 'uptime'].forEach(key => {
+            log('[EXTENSION_LOG]', this.getMethods(this._statusLabel));
+
+
+            let hasItems = false;
+            let statusToDisplay = ['country', 'city', 'currentServer', 'serverIP', 'transfer', 'uptime'];
+            statusToDisplay.forEach(key => {
                 if(status[key]){
                     const label = key.replace(/([A-Z]+)/g, " $1").replace(/([A-Z][a-z])/g, " $1").replace(/^./, e => e.toUpperCase());
                     const menuItem = new PopupMenu.PopupMenuItem(label+": "+status[key]);
-                    this._statusLabel.menu.addMenuItem(menuItem);
+                    this._statusPopup.menu.addMenuItem(menuItem);
+                    hasItems = true;
                 }
             })
+
+            if(hasItems){
+                this._statusPopup.show();
+                this._statusLabel.hide();
+            }else{
+                this._statusPopup.hide();
+                this._statusLabel.show();
+            }
 
 
             if (status.updateMessage) {
@@ -84,8 +109,19 @@ const VpnIndicator = GObject.registerClass({
             }
 
             // Activate / deactivate menu items
-            this._connectMenuItem.actor.reactive = vpnStatus.canConnect;
-            this._disconnectMenuItem.actor.reactive = vpnStatus.canDisconnect;
+            this._connectMenuItem.actor.visible = vpnStatus.canConnect;
+            this._disconnectMenuItem.actor.visible = vpnStatus.canDisconnect;
+
+            if(vpnStatus.showLists){
+                this._countryMenu.menu.show();
+                this._cityMenu.menu.show();
+            }else{
+                this._countryMenu.menu.hide();
+                this._cityMenu.menu.hide();
+            }
+
+            this._loginMenuItem.actor.visible = !status.account.loggedin;
+            this._logoutMenuItem.actor.visible = status.account.loggedin;
         }
 
         _updatePanel(vpnState, status) {
@@ -114,6 +150,20 @@ const VpnIndicator = GObject.registerClass({
             this._overrideRefresh(Constants.status.disconnecting)
         }
 
+        _login(){
+            this._vpn.loginVpn();
+
+            // Set an override on the status as the command line status takes a while to catch up
+            this._overrideRefresh(Constants.status.login)
+        }
+
+        _logout(){
+            this._vpn.logoutVpn();
+
+            // Set an override on the status as the command line status takes a while to catch up
+            this._overrideRefresh(Constants.status.logout)
+        }
+
         _clearTimeout() {
             // Remove the refresh timer if active
             if (this._timeout) {
@@ -134,8 +184,11 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _buildIndicatorMenu() {
-            this._statusLabel = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-            this.menu.addMenuItem(this._statusLabel);
+            this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
+            this.menu.addMenuItem(this._statusPopup);
+
+            this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
+            this.menu.box.add(this._statusLabel);
 
             // Optionally add 'Update' status
             this._updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
@@ -168,9 +221,27 @@ const VpnIndicator = GObject.registerClass({
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
             // Add 'Settings' menu item 
-            const settingsMenuItem = new PopupMenu.PopupMenuItem('Settings...');
+            const settingsMenuItem = new PopupMenu.PopupMenuItem('Settings');
             this.menu.addMenuItem(settingsMenuItem);
             settingsMenuItem.connect('activate', this._openSettings.bind(this));
+
+            // Add 'Login' menu item 
+            this._loginMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.login);
+            const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, this._login.bind(this));
+            this._signals.register(loginMenuItemClickId, function () {
+                this._loginMenuItem.disconnect(loginMenuItemClickId)
+            }.bind(this));
+            this.menu.addMenuItem(this._loginMenuItem);
+
+            // Add 'Logout' menu item 
+            this._logoutMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.logout);
+            const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, this._logout.bind(this));
+            this._signals.register(logoutMenuItemClickId, function () {
+                this._logoutMenuItem.disconnect(logoutMenuItemClickId)
+            }.bind(this));
+            this.menu.addMenuItem(this._logoutMenuItem);
+
+
 
             // Create and add the button with label for the panel
             let button = new St.Bin({

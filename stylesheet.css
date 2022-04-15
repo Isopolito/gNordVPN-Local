@@ -1,5 +1,5 @@
 .statuslabel {
-    padding: 0px 30px;
+    padding: 0px 24px;
 }
 
 .updatelabel {
@@ -30,6 +30,15 @@
     font-weight: bold;
     color: #ffffff;
     background-color: rgba(255,191,0,0.7);
+    border-radius: 2px;
+    padding: 2px 6px 0;
+    margin: 2.5px 0 3px 0;
+}
+
+.blue {
+    font-weight: bold;
+    color: #ffffff;
+    background-color: rgba(48,26,208,0.7);
     border-radius: 2px;
     padding: 2px 6px 0;
     margin: 2.5px 0 3px 0;

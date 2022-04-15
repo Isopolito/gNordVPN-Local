@@ -6,12 +6,16 @@ var favorites = {
 var menus = {
     connect: 'Connect',
     disconnect: 'Disconnect',
+    login: 'Login',
+    logout: 'Logout',
 }
 
 var status = {
    connecting: 'Status: Connecting',
    disconnecting: 'Status: Disconnecting',
    reconnecting: 'Status: Reconnecting',
+   login: 'Status: Logging in',
+   logout: 'Status: Logging out',
 }
 
 var messages = {

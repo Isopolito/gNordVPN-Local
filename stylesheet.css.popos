@@ -35,6 +35,15 @@
     margin: 0px 0 3px 0;
 }
 
+.blue {
+    font-weight: bold;
+    color: #ffffff;
+    background-color: rgba(48,26,208,0.7);
+    border-radius: 2px;
+    padding: 2px 6px 0;
+    margin: 2.5px 0 3px 0;
+}
+
 .popup-menu-item .ci-action-btn StIcon {
     icon-size:16px;
 }
