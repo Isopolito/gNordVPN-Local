@@ -1,3 +1,7 @@
+var panel = {
+    panelStyles: 'panel-styles'
+}
+
 var favorites = {
     favoriteCountries: 'favorite-countries',
     favoriteCities: 'favorite-cities',
@@ -22,3 +26,30 @@ var status = {
 var messages = {
     updateAvailable: 'Update available'
 }
+
+var states = {
+    'CONNECTED':     'Status: Connected',
+    'CONNECTING':    'Status: Connecting',
+    'DISCONNECTED':  'Status: Disconnected',
+    'DISCONNECTING': 'Status: Disconnecting',
+    'RECONNECTING':  'Status: Reconnecting',
+    'RESTARTING':    'Status: Restarting',
+    'ERROR':         'ERROR',
+    'LOGGED_OUT':    'LOGGED OUT',
+    'LOGGING_IN':    'Status: Logging in',
+    'LOGGING_OUT':   'Status: Logging out',
+}
+
+
+// var stateNames = [
+//     'Status: Connected',
+//     'Status: Connecting',
+//     'Status: Disconnected'
+//     'Status: Disconnecting'
+//     'Status: Reconnecting'
+//     'Status: Restarting'
+//     'ERROR'
+//     'LOGGED OUT'
+//     'Status: Logging in'
+//     'Status: Logging out'
+// ]

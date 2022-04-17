@@ -3,12 +3,17 @@
 }
 
 .updatelabel {
-    padding: 5px 10px 0 30px;
+    padding: 5px 10px 0 24px;
     font-size: smaller;
     color: yellowgreen;
 }
 
-.green {
+.test{
+    padding: 2px 6px 0;
+    margin: 2.5px 0 3px 0;
+}
+
+/*.green {
     font-weight: bold;
     color: #ffffff;
     background-color: rgba(0,255,0,0.7);
@@ -42,7 +47,7 @@
     border-radius: 2px;
     padding: 2px 6px 0;
     margin: 2.5px 0 3px 0;
-}
+}*/
 
 .popup-menu-item .ci-action-btn StIcon {
     icon-size:16px;

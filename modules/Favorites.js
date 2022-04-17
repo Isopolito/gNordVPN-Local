@@ -37,9 +37,8 @@ var Favorites = class Favorites {
 
             this._setData(favoriteType, JSON.stringify(favorites));
 
-            log('[EXTENSION_LOG]', JSON.stringify(favorites));
         }catch(e){
-            log('[EXTENSION_LOG]', e);
+            log('gnordvpn: ', e);
         }
 
     }
@@ -57,8 +56,8 @@ var Favorites = class Favorites {
         try{
             favorites[item] = item2;
             this._setData(favoriteType, JSON.stringify(favorites));
-
-            log('[EXTENSION_LOG]', JSON.stringify(favorites));
-        }catch(e){}
+        }catch(e){ 
+            log('gnordvpn: ', e);
+        }
     }
 }

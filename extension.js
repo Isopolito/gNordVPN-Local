@@ -15,8 +15,9 @@ const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
 const Signals = Me.imports.modules.Signals.Signals;
 const ConnectionMenu = Me.imports.modules.ConnectionMenu.ConnectionMenu;
-const vpnStateManagement = Me.imports.modules.vpnStateManagement;
+const StateManager = Me.imports.modules.StateManager.StateManager;
 const CommonFavorite = Me.imports.modules.CommonFavorite.CommonFavorite;
+const PanelIcon = Me.imports.modules.PanelIcon.PanelIcon;
 
 let vpnIndicator;
 const indicatorName = `VPN Indicator`;
@@ -27,10 +28,17 @@ const VpnIndicator = GObject.registerClass({
         _init() {
             super._init(0, indicatorName, false);
             this.loggedin;
+            this.stateManager = new StateManager();
 
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
             this.settings.connect('changed', (settings, key)=>  {
                 switch(key){
+                    case 'panel-styles': 
+                    case 'common-panel-style':
+                        this._panelIcon.updateStyle();
+                        this._refresh();
+                    break;
+
                     case 'favorite-countries': 
                         this._countryMenu.updateFavorite();
                         this._commonFavorite.updateFavorite(); 
@@ -60,12 +68,12 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _setQuickRefresh(quick){
-            vpnStateManagement.setQuickRefresh(quick);
+            this.stateManager.setQuickRefresh(quick);
             this._refresh();
         }
 
         _overrideRefresh(state, overrideKeys) {
-            vpnStateManagement.refreshOverride(state, overrideKeys);
+            this.stateManager.refreshOverride(state, overrideKeys);
             this._refresh();
         }
 
@@ -75,24 +83,25 @@ const VpnIndicator = GObject.registerClass({
 
             let status = this._vpn.getStatus();
             status.loggedin = this.loggedin;
-            const currentVpnState = vpnStateManagement.resolveState(status);
-            if (currentVpnState !== vpnStateManagement.states['ERROR']) {
-                // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
-                // to provide available cities, countries, etc
+            status.currentState = this.stateManager.resolveState(status);
+
+            // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
+            // to provide available cities, countries, etc
+            if (status.currentState.stateName !== Constants.states['ERROR']) {
                 this._countryMenu.tryBuild();
                 this._cityMenu.tryBuild();
                 this._serverMenu.tryBuild();
             }
 
             // Update the menu and panel based on the current state
-            this._updateMenu(currentVpnState, status);
-            this._updatePanel(currentVpnState, status);
+            this._updateMenu(status);
+            this._panelIcon.update(status);
 
             // Start the refreshes again
-            this._setTimeout(currentVpnState.refreshTimeout);
+            this._setTimeout(status.currentState.refreshTimeout);
         }
 
-        _updateMenu(vpnStatus, status) {
+        _updateMenu(status) {
 
             // Set the status text on the menu
             this._statusLabel.text = status.connectStatus;
@@ -130,26 +139,15 @@ const VpnIndicator = GObject.registerClass({
             }
 
             // Activate / deactivate menu items
-            this._connectMenuItem.actor.visible = vpnStatus.canConnect;
-            this._disconnectMenuItem.actor.visible = vpnStatus.canDisconnect;
+            this._connectMenuItem.actor.visible = status.currentState.canConnect;
+            this._disconnectMenuItem.actor.visible = status.currentState.canDisconnect;
 
-            this._countryMenu.showHide(vpnStatus.showLists);
-            this._cityMenu.showHide(vpnStatus.showLists);
-            this._serverMenu.showHide(vpnStatus.showLists);
+            this._countryMenu.showHide(status.currentState.showLists);
+            this._cityMenu.showHide(status.currentState.showLists);
+            this._serverMenu.showHide(status.currentState.showLists);
 
             this._loginMenuItem.actor.visible = !status.loggedin;
             this._logoutMenuItem.actor.visible = status.loggedin;
-        }
-
-        _updatePanel(vpnState, status) {
-            let panelText;
-
-            // If connected, build up the panel text based on the server location and number
-            if (vpnState.panelShowServer) panelText = status.country + ` #` + status.serverNumber;
-
-            // Update the panel button
-            this._panelLabel.text = panelText || vpnState.panelText;
-            this._panelLabel.style_class = vpnState.styleClass;
         }
 
         _connect() {
@@ -202,12 +200,10 @@ const VpnIndicator = GObject.registerClass({
 
         _buildIndicatorMenu() {
             this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-
-            let that = this;
-            this._statusPopup._setOpenState = function(open){
-                this.setSubmenuShown(open);
-                that._setQuickRefresh(open);
-            }
+            this._statusPopup.menu.connect(`open-state-changed`, function (actor,event){
+                this._setQuickRefresh(event);
+            }.bind(this));
+         
 
             this.menu.addMenuItem(this._statusPopup);
 
@@ -276,20 +272,19 @@ const VpnIndicator = GObject.registerClass({
             this.menu.addMenuItem(this._logoutMenuItem);
 
 
+            this._panelIcon.build();
+            this.add_actor(this._panelIcon.button());
 
-            // Create and add the button with label for the panel
-            let button = new St.Bin({
-                style_class: `panel-button`,
-                reactive: true,
-                can_focus: true,
-                x_expand: true,
-                y_expand: false,
-                track_hover: true
-            });
+            this._panelIcon.button().connect(`button-press-event`, function (actor,event){
+                //Only checking login state when clicking on menu
+                //Cannot chech periodicaly because:
+                //If checking with 'nordvpn account' it fetches from a server that limit request
+                //If checking with 'nordvpn login' it generate a new url, preventing the use from login in
+                this.loggedin = this._vpn.checkLogin();
+                this._refresh();
+            }.bind(this));
 
-            this._panelLabel = new St.Label();
-            button.set_child(this._panelLabel);
-            this.add_actor(button);
+
             this.loggedin = this._vpn.checkLogin();
         }
 
@@ -305,6 +300,7 @@ const VpnIndicator = GObject.registerClass({
             this._countryMenu = new ConnectionMenu('Countries', 'countries', Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this));
             this._cityMenu = new ConnectionMenu('Cities', 'cities', Constants.favorites.favoriteCities, this._overrideRefresh.bind(this));
             this._serverMenu = new ConnectionMenu('Servers', 'servers', Constants.favorites.favoriteServers, this._overrideRefresh.bind(this));
+            this._panelIcon = new PanelIcon();
             this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
             this._vpn.applySettingsToNord();
@@ -324,22 +320,6 @@ const VpnIndicator = GObject.registerClass({
             this._serverMenu.disable();
             this._serverMenu.isAdded = false;
             this._signals.disconnectAll();
-        }
-
-        onOpen(){
-            this.loggedin = this._vpn.checkLogin();
-            this._refresh();
-        }
-
-        vfunc_event(event) {
-            if (this.menu &&
-                (event.type() == Clutter.EventType.TOUCH_BEGIN ||
-                 event.type() == Clutter.EventType.BUTTON_PRESS)){
-                if(!this.menu.isOpen) this.onOpen();
-                this.menu.toggle();
-            }
-
-            return Clutter.EVENT_PROPAGATE;
         }
     }
 );

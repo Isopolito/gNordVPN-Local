@@ -153,8 +153,6 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
             this.favList = {...this.favList, ...getFavReformat};
             
-            // log('[EXTENSION_LOG]', JSON.stringify(this.favList));
-
             for (const fav of Object.keys(getFav).sort()) {
                 const menuItem = this._buildFavoriteMenuItem(fav);
                 this.itemList[fav] = menuItem;
