@@ -52,15 +52,19 @@ const VpnIndicator = GObject.registerClass({
                         this._commonFavorite.updateFavorite(); 
                     break;
 
+                    case 'showlogin':
+                    case 'showlogout':
+                        this._refresh();
+                    break;
+
                     case 'number-cities-per-countries':
                     case 'countries-selected-for-cities': this._cityMenu.rebuild(); break;
                
                     case 'number-servers-per-countries':
                     case 'countries-selected-for-servers': this._serverMenu.rebuild(); break;
 
-                    case 'commonfavorite': {        
-                        if(settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show(); 
-                        else this._commonFavorite.menu.hide(); 
+                    case 'commonfavorite': {       
+                        this._commonFavorite.showHide(settings.get_boolean(`commonfavorite`)); 
                     }break;
                 }
 
@@ -145,9 +149,10 @@ const VpnIndicator = GObject.registerClass({
             this._countryMenu.showHide(status.currentState.showLists);
             this._cityMenu.showHide(status.currentState.showLists);
             this._serverMenu.showHide(status.currentState.showLists);
+            this._commonFavorite.showHide(status.currentState.showLists && this.settings.get_boolean(`commonfavorite`));
 
-            this._loginMenuItem.actor.visible = !status.loggedin;
-            this._logoutMenuItem.actor.visible = status.loggedin;
+            this._loginMenuItem.actor.visible = !status.loggedin && this.settings.get_boolean(`showlogin`);
+            this._logoutMenuItem.actor.visible = status.loggedin && this.settings.get_boolean(`showlogout`);
         }
 
         _connect() {

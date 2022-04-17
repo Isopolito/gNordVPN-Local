@@ -172,7 +172,7 @@ var Vpn = class Vpn {
         let url = this._getString(standardOut).replace(/\s+/g, ` `);
         url = url.substring(url.indexOf(ref)+ref.length).trim();
 
-        Gio.app_info_launch_default_for_uri( url, global.create_app_launch_context(0, -1) );
+        Gio.app_info_launch_default_for_uri( url, null );
     }
 
     logoutVpn(){

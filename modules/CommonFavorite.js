@@ -18,10 +18,12 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this.favList = {};
         this.itemList = {};
         this._destroyMap = {};
+        this.prevShowHide = true;
 
         this._favorites = new Favorites();
         this._vpn = new Vpn();
         this._signals = new Signals();
+
     }
 
     updateFavorite(){
@@ -44,7 +46,8 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         //favList-newFav
         let toRemoveFromFav = Object.keys(this.favList).filter(x => !Object.keys(newFav).includes(x))
         toRemoveFromFav.forEach(favorite => { this._toogleFavoriteMenuItem(favorite, false); })
-
+    
+        this.showHide(this.prevShowHide);
     }
 
     rebuild(){
@@ -167,5 +170,14 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         }
 
         this._isBuilt = true;
+    }
+
+    showHide(show=true){
+        this.prevShowHide = show;
+        if(Object.keys(this.favList).length < 1 || !show) {
+            this._favoriteMenu.hide();
+        }else{
+            this._favoriteMenu.show();
+        }
     }
 }

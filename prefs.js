@@ -10,12 +10,14 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
 
-function init() {
+function init(a,b,c) {
+    log(JSON.stringify(a));
 }
 
 
 function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap){
     resetGeneralSetting(settings);
+    resetAccountSetting(settings);
     resetConnectionSetting(settings, protoCbox, techCbox);
     resetCitySetting(settings, cityTreeView, cityTreeIterMap);
     resetServerSetting(settings, serverTreeView, serverTreeIterMap);
@@ -23,6 +25,10 @@ function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIt
 
 function resetGeneralSetting(settings){
     resetSetting(settings, ['autoconnect', 'commonfavorite']);
+}
+
+function resetAccountSetting(settings){
+    resetSetting(settings, ['showlogin', 'showlogout']);
 }
 
 
@@ -76,6 +82,8 @@ function saveStyle(styleItems){
 
         return true;
     });
+
+    log(JSON.stringify(data));
 
     this.settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', data));
 }
@@ -197,6 +205,168 @@ function buildPrefsWidget() {
 
 
 
+    const accountPage = new Gtk.Grid({
+        margin_start: 18,
+        margin_top: 10,
+        column_spacing: 12,
+        row_spacing: 12,
+        visible: true
+    });
+
+    // showlogin
+    const showLoginLabel = new Gtk.Label({
+        label: `Show login button in menu:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    accountPage.attach(showLoginLabel, 0, 0, 1, 1);
+
+    const showLoginToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`showlogin`),
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    accountPage.attach(showLoginToggle, 1, 0, 1, 1);
+
+    this.settings.bind(
+        `showlogin`,
+        showLoginToggle,
+        `active`,
+        Gio.SettingsBindFlags.DEFAULT
+    );
+
+    // showlogout
+    const showLogoutLabel = new Gtk.Label({
+        label: `Show logout button in menu:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    accountPage.attach(showLogoutLabel, 0, 1, 1, 1);
+
+    const showLogoutToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`showlogout`),
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    accountPage.attach(showLogoutToggle, 1, 1, 1, 1);
+
+    this.settings.bind(
+        `showlogout`,
+        showLogoutToggle,
+        `active`,
+        Gio.SettingsBindFlags.DEFAULT
+    );
+
+    const accountSaveLabel = new Gtk.Label({
+        label: `<b>* Changes applied on close</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    accountPage.attach(accountSaveLabel, 0, 2, 2, 1);
+
+    const accountInfo = new Gtk.Label({
+        label: `<b>Account Information</b>`,
+        halign: Gtk.Align.START,
+        visible: true,
+        use_markup: true,
+    });
+    accountPage.attach(accountInfo, 0, 3, 1, 1);
+
+
+    const accountEmailLabel = new Gtk.Label({
+        label: `Account email: `,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    accountPage.attach(accountEmailLabel, 0, 4, 1, 1);
+
+
+    const accountEmail = new Gtk.Label({
+        label: "",
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    accountPage.attach(accountEmail, 1, 4, 1, 1);
+
+
+    const accountStatusLabel = new Gtk.Label({
+        label: `Account status: `,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    accountPage.attach(accountStatusLabel, 0, 5, 1, 1);
+
+
+    const accountStatus = new Gtk.Label({
+        label: "",
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    accountPage.attach(accountStatus, 1, 5, 1, 1);
+
+
+    const login = new Gtk.Button({
+        label: `Login`,
+        visible: true
+    });
+    login.set_sensitive(false);
+    accountPage.attach(login, 0, 6, 1, 1);
+
+    login.connect(`clicked`, () => { 
+        this.vpn.loginVpn();
+    });
+
+    const logout = new Gtk.Button({
+        label: `Logout`,
+        visible: true
+    });
+    logout.set_sensitive(false);
+    accountPage.attach(logout, 1, 6, 1, 1);
+
+    logout.connect(`clicked`, () => { 
+        this.vpn.logoutVpn();
+    });
+
+
+    const refreshAccountBtn = new Gtk.Button({
+        label: `Refresh`,
+        visible: true
+    });
+    accountPage.attach(refreshAccountBtn, 0, 7, 1, 1);
+
+    refreshAccount();
+    refreshAccountBtn.connect(`clicked`, refreshAccount );
+
+    function refreshAccount(){ 
+        let account = vpn.getAccount();
+        let loggedin = !!account.emailAddress;
+
+        accountEmail.set_text(account.emailAddress || "");
+        accountStatus.set_text(account.vpnService || "");
+
+        login.set_sensitive(!loggedin);
+        logout.set_sensitive(loggedin);
+
+    }
+
+
+    notebook.append_page(accountPage, new Gtk.Label({
+        label: `<b>Account</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -273,7 +443,7 @@ function buildPrefsWidget() {
 
 
     const customStyle = new Gtk.Label({
-        label: '<h1>Edit style</h1>',
+        label: '<b>Edit style</b>',
         halign: Gtk.Align.START,
         use_markup: true,
         visible: true
