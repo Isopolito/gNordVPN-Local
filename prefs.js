@@ -10,8 +10,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
 
-function init(a,b,c) {
-    log(JSON.stringify(a));
+function init() {
 }
 
 
@@ -82,8 +81,6 @@ function saveStyle(styleItems){
 
         return true;
     });
-
-    log(JSON.stringify(data));
 
     this.settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', data));
 }
@@ -500,6 +497,7 @@ function buildPrefsWidget() {
     commonCss.get_buffer().set_text(cps, cps.length) 
     commonCss.connect(`changed`, () => {
         let gv = new GLib.Variant("s", commonCss.get_buffer().get_text());
+        log(JSON.stringify(commonCss.get_buffer().get_text()));
         settings.set_value(`common-panel-style`, gv);
     });
 

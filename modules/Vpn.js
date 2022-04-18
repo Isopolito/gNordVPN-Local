@@ -268,6 +268,8 @@ var Vpn = class Vpn {
     }
     
     getServers() {  
+        //Using nordvpn undocumented public api since the app does not give that information
+        //Usefull source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
 
         let countriesMax = this.settings.get_value('number-servers-per-countries').unpack();
         let countriesSaved = this.settings.get_value('countries-selected-for-servers').deep_unpack();

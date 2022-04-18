@@ -39,17 +39,3 @@ var states = {
     'LOGGING_IN':    'Status: Logging in',
     'LOGGING_OUT':   'Status: Logging out',
 }
-
-
-// var stateNames = [
-//     'Status: Connected',
-//     'Status: Connecting',
-//     'Status: Disconnected'
-//     'Status: Disconnecting'
-//     'Status: Reconnecting'
-//     'Status: Restarting'
-//     'ERROR'
-//     'LOGGED OUT'
-//     'Status: Logging in'
-//     'Status: Logging out'
-// ]
