@@ -6,9 +6,10 @@
     "3.38.1",
     "3.38.4",
     "40",
-    "40.5"
+    "41",
+    "42"
   ],
   "url": "https://github.com/Isopolito/gNordVPN-Local",
   "uuid": "gnordvpn-local@isopolito",
-  "version": 9
+  "version": 10
 }
