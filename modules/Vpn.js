@@ -92,28 +92,27 @@ var Vpn = class Vpn {
    setToDefaults() {
         this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
-    
+
+    // TODO: use results from vpn command to give details of error
     getStatus() {
         // Read the VPN status from the command line
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
 
         // Convert Uint8Array object to string and split up the different messages
         const allStatusMessages = this._getString(standardOut).split(`\n`);
-
-        // Grab the message for an available update
-        const updateMessage = allStatusMessages[0].includes(`new version`)
-            ? allStatusMessages.shift(1)
-            : null;
-
-        // Determine the correct state from the "Status: xxxx" line
-        // TODO: use results from vpn command to give details of error
-        let connectStatus = (allStatusMessages[0].match(/Status: \w+/) || [``])[0]
+        let connectStatus, updateMessage, country, serverNumber;
+        for (const msg of allStatusMessages) {
+            if (msg.includes('Status:')) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
+            else if (msg.includes('Country:')) country = msg.replace("Country: ", "").toUpperCase();
+            else if (msg.includes('Current server:')) serverNumber = msg.match(/\d+/);
+            else if (msg.includes('new version')) updateMessage = msg;
+        }
 
         return {
             updateMessage,
             connectStatus,
-            country: allStatusMessages.length > 2 && allStatusMessages[2].replace("Country: ", "").toUpperCase(),
-            serverNumber: allStatusMessages.length > 1 && allStatusMessages[1].match(/\d+/),
+            country,
+            serverNumber
         }
     }
 
