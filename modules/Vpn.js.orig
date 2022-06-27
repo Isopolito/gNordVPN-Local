@@ -101,7 +101,10 @@ var Vpn = class Vpn {
         this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
 
-    getAccount() {
+<<<<<<< HEAD
+    // TODO: use results from vpn command to give details of error
+=======
+    getAccount(){
         // Read the VPN status from the command line
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNACCOUNT);
         const allAccountMessages = this._getString(standardOut).split(`\n`);
@@ -121,39 +124,38 @@ var Vpn = class Vpn {
         return this._getString(standardOut).replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
+>>>>>>> 09b7c4bf0fdb1ec9f024102187518d96cd8d2600
     getStatus() {
         // Read the VPN status from the command line
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
 
         // Convert Uint8Array object to string and split up the different messages
         const allStatusMessages = this._getString(standardOut).split(`\n`);
-        let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer, uptime, currentServer;
+        let connectStatus, updateMessage, country, serverNumber;
         for (const msg of allStatusMessages) {
             if (msg.includes('Status:')) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
             else if (msg.includes('Country:')) country = msg.replace("Country: ", "").toUpperCase();
             else if (msg.includes('Current server:')) serverNumber = msg.match(/\d+/);
-            else if (msg.includes('Current server:')) currentServer = msg.replace("Current server: ", "");
-            else if (msg.includes('City: ')) city = msg.replace("City: ", "");
-            else if (msg.includes('Server IP: ')) serverIp = msg.replace("Server IP: ", "");
-            else if (msg.includes('Current protocol: ')) currentProtocol = msg.replace("Current protocol: ", "");
-            else if (msg.includes('Current technology: ')) currentTech = msg.replace("Current technology: ", "");
-            else if (msg.includes('Transfer: ')) transfer = msg.replace("Transfer: ", "");
-            else if (msg.includes('Uptime: ')) uptime = msg.replace("Uptime: ", "");
             else if (msg.includes('new version')) updateMessage = msg;
         }
 
         return {
             connectStatus,
-            updateMessage,
+<<<<<<< HEAD
             country,
-            city,
-            serverNumber,
-            currentServer,
-            serverIp,
-            currentTech,
-            currentProtocol,
-            transfer,
-            uptime
+            serverNumber
+=======
+            'currentServer': allStatusMessages.length > 1 && allStatusMessages[1].replace("Current server: ", ""),
+            'country': allStatusMessages.length > 2 && allStatusMessages[2].replace("Country: ", ""),
+            'city': allStatusMessages.length > 3 && allStatusMessages[3].replace("City: ", ""),
+            'serverIP': allStatusMessages.length > 4 && allStatusMessages[4].replace("Server IP: ", ""),
+            'currentTechnology': allStatusMessages.length > 5 && allStatusMessages[5].replace("Current technology: ", ""),
+            'currentProtocol': allStatusMessages.length > 6 && allStatusMessages[6].replace("Current protocol: ", ""),
+            'transfer': allStatusMessages.length > 7 && allStatusMessages[7].replace("Transfer: ", ""),
+            'uptime': allStatusMessages.length > 8 && allStatusMessages[8].replace("Uptime: ", ""),
+            'serverNumber': allStatusMessages.length > 1 && allStatusMessages[1].match(/\d+/),
+            updateMessage,
+>>>>>>> 09b7c4bf0fdb1ec9f024102187518d96cd8d2600
         }
     }
 
