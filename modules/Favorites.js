@@ -10,14 +10,14 @@ var Favorites = class Favorites {
     
     get(favoriteType, items=[]) {
         let favorites = {};
-        try{
+        try {
             let data = this._getData(favoriteType);
-            if(!data) data = '{}';
+            if (!data) data = '{}';
             favorites = JSON.parse(data);
         }catch(e){}
 
         for (const key of Object.keys(favorites)) 
-            if(key in items) delete items[key];
+            if (key in items) delete items[key];
 
         return {
             favorites,
@@ -28,9 +28,9 @@ var Favorites = class Favorites {
     remove(favoriteType, item) {
         if (!item) return;
 
-        try{
+        try {
             let data = this._getData(favoriteType);
-            if(!data) data = '{}';
+            if (!data) data = '{}';
 
             let favorites = JSON.parse(data);
             delete favorites[item];
@@ -47,13 +47,13 @@ var Favorites = class Favorites {
         if (!item || !item2) return;
 
         let favorites = {};
-        try{
+        try {
             let data = this._getData(favoriteType);
-            if(!data) data = '{}';
+            if (!data) data = '{}';
             favorites = JSON.parse(data);
         }catch(e){}
 
-        try{
+        try {
             favorites[item] = item2;
             this._setData(favoriteType, JSON.stringify(favorites));
         }catch(e){ 

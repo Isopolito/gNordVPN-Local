@@ -86,7 +86,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
 
     _toogleConnectionMenuItem(connection, isFavorite){
         let d = this._destroyMap[connection];
-        if(d){
+        if (d){
             this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
             d.icofavBtn.destroy();
             d.menuItem.destroy();
@@ -146,7 +146,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         else this._connectionMenu.menu.removeAll();
 
         this._connections = this._vpn.getConectionList(this._connectionType);
-        if(!this._connections) return;
+        if (!this._connections) return;
 
         this._connectionMenuItems = [];
         this._favConnectionItems = [];
@@ -170,7 +170,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
             this._connectionMenu.menu.addMenuItem(menuItem);
         }
 
-        if(Object.keys(this._connections).length < 1) {
+        if (Object.keys(this._connections).length < 1) {
             this._connectionMenu.hide();
         }else{
             this._connectionMenu.show();
@@ -180,7 +180,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
     }
 
     showHide(show=true){
-        if(Object.keys(this._connections).length < 1 || !show) {
+        if (Object.keys(this._connections).length < 1 || !show) {
             this._connectionMenu.hide();
         }else{
             this._connectionMenu.show();

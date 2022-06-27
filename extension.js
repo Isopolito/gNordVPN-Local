@@ -115,7 +115,7 @@ const VpnIndicator = GObject.registerClass({
             let hasItems = false;
             let statusToDisplay = ['country', 'city', 'currentServer', 'serverIP', 'transfer', 'uptime'];
             statusToDisplay.forEach(key => {
-                if(status[key]){
+                if (status[key]){
                     const label = key.replace(/([A-Z]+)/g, " $1").replace(/([A-Z][a-z])/g, " $1").replace(/^./, e => e.toUpperCase());
                     const menuItem = new PopupMenu.PopupMenuItem(label+": "+status[key]);
                     this._statusPopup.menu.addMenuItem(menuItem);
@@ -123,10 +123,10 @@ const VpnIndicator = GObject.registerClass({
                 }
             })
 
-            if(!this.loggedin){
+            if (!this.loggedin){
                 this._statusPopup.hide();
                 this._statusLabel.hide();
-            }else if(hasItems){
+            }else if (hasItems){
                 this._statusPopup.show();
                 this._statusLabel.hide();
             }else{
@@ -241,7 +241,7 @@ const VpnIndicator = GObject.registerClass({
             this._commonFavorite.build();
             this.menu.addMenuItem(this._commonFavorite.menu);
 
-            if(this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show(); 
+            if (this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show(); 
             else this._commonFavorite.menu.hide(); 
 
             this._countryMenu.tryBuild();

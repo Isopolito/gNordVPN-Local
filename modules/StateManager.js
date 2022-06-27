@@ -126,7 +126,7 @@ var StateManager = class StateManager {
 
     resolveState(status) {
         let vpnState = this.states[status.connectStatus] || this.states.ERROR;
-        if(!status.loggedin) vpnState = this.states['LOGGED OUT'];
+        if (!status.loggedin) vpnState = this.states['LOGGED OUT'];
 
         // If a state override is active, increment it and override the state if appropriate
         if (this.stateOverride) {
@@ -137,7 +137,7 @@ var StateManager = class StateManager {
                                   (this.stateOverride.overrideKeys[0] === 'cities'    && this.stateOverride.overrideKeys[1].replace(/_/g, " ") === status.city) || 
                                   (this.stateOverride.overrideKeys[0] === 'servers'   && this.stateOverride.overrideKeys[1] === status.currentServer.replace('.nordvpn.com',''))))
 
-            if(this.stateOverrideCounter > this.STATE_OVERRIDE_DURATION || 
+            if (this.stateOverrideCounter > this.STATE_OVERRIDE_DURATION || 
               (vpnState.clearsOverrideId == this.stateOverride.overrideId) || overrideFromKey){
                 // State override expired or cleared by current state, remove it
                 this.stateOverride = undefined;

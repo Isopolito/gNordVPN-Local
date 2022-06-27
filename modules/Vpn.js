@@ -108,7 +108,7 @@ var Vpn = class Vpn {
 
         let emailAddress;
         let vpnService;
-        if( allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`) ){
+        if ( allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`) ){
             emailAddress =  allAccountMessages[1].replace("Email Address: ", "");
             vpnService   =  allAccountMessages[2].replace("VPN Service: ", "")
         }
@@ -129,17 +129,19 @@ var Vpn = class Vpn {
         const allStatusMessages = this._getString(standardOut).split(`\n`);
         let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer, uptime, currentServer;
         for (const msg of allStatusMessages) {
-            if (msg.includes('Status:')) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
-            else if (msg.includes('Country:')) country = msg.replace("Country: ", "").toUpperCase();
-            else if (msg.includes('Current server:')) serverNumber = msg.match(/\d+/);
-            else if (msg.includes('Current server:')) currentServer = msg.replace("Current server: ", "");
-            else if (msg.includes('City: ')) city = msg.replace("City: ", "");
-            else if (msg.includes('Server IP: ')) serverIp = msg.replace("Server IP: ", "");
-            else if (msg.includes('Current protocol: ')) currentProtocol = msg.replace("Current protocol: ", "");
-            else if (msg.includes('Current technology: ')) currentTech = msg.replace("Current technology: ", "");
-            else if (msg.includes('Transfer: ')) transfer = msg.replace("Transfer: ", "");
-            else if (msg.includes('Uptime: ')) uptime = msg.replace("Uptime: ", "");
-            else if (msg.includes('new version')) updateMessage = msg;
+            if (msg.includes("Status:")) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
+            else if (msg.includes("Country:")) country = msg.replace("Country: ", "").toUpperCase();
+            else if (msg.includes("City:")) city = msg.replace("City: ", "");
+            else if (msg.includes("Server IP:")) serverIp = msg.replace("Server IP: ", "");
+            else if (msg.includes("Current protocol:")) currentProtocol = msg.replace("Current protocol: ", "");
+            else if (msg.includes("Current technology:")) currentTech = msg.replace("Current technology: ", "");
+            else if (msg.includes("Transfer:")) transfer = msg.replace("Transfer: ", "");
+            else if (msg.includes("Uptime:")) uptime = msg.replace("Uptime: ", "");
+            else if (msg.includes("new version")) updateMessage = msg;
+            else if (msg.includes("Current server:")) {
+                serverNumber = msg.match(/\d+/);
+                currentServer = msg.replace("Current server: ", "")
+            }
         }
 
         return {
@@ -198,11 +200,11 @@ var Vpn = class Vpn {
         return null;
     }
     getCountries(withId=false) {
-        if(withId){
+        if (withId){
             this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
             this.session.send_message (this.message);
             let countrieNames, countrieMap;
-            try{
+            try {
                 let data = JSON.parse(this.message.response_body_data.get_data());
                 countrieMap = data.reduce((acc, v) => {
                     acc[v['name']] = v['id'];
@@ -258,7 +260,7 @@ var Vpn = class Vpn {
                 .sort();
 
             for (let j = 3; j < cities.length; j++) {
-                if(j-3>citiesMax) break;
+                if (j-3>citiesMax) break;
                 // All cities should be capitalized in output
                 if (!this._stringStartsWithCapitalLetter(cities[j])) continue;
                 if (cities[j].startsWith("A new version")) continue;
@@ -281,18 +283,18 @@ var Vpn = class Vpn {
 
         let url = "https://api.nordvpn.com/v1/servers/recommendations?limit="+countriesMax
         let technology = this.settings.get_string(`technology`);
-        if(technology == 'NORDLYNX'){
+        if (technology == 'NORDLYNX'){
             url += "&filters[servers_technologies][identifier]=wireguard_udp";
 
-        }else if(technology == 'OPENVPN'){
+        }else if (technology == 'OPENVPN'){
             let obfuscate = this.settings.get_boolean(`obfuscate`);
             let protocol = this.settings.get_string(`protocol`);
             
-            if(protocol == "UDP"){
-                if(obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_udp";
+            if (protocol == "UDP"){
+                if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_udp";
                 else          url += "&filters[servers_technologies][identifier]=openvpn_udp";
-            }else if(protocol == "TCP"){
-                if(obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_tcp";
+            }else if (protocol == "TCP"){
+                if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_tcp";
                 else          url += "&filters[servers_technologies][identifier]=openvpn_tcp";
             }
         }
@@ -301,7 +303,7 @@ var Vpn = class Vpn {
 
 
         let servers = {}
-        try{
+        try {
             for(let i=0; i<countriesSaved.length; i++){
                 this.message = Soup.Message.new("GET", url+"&filters[country_id]="+countriesSaved[i]);
                 this.session.send_message (this.message);

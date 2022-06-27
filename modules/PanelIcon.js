@@ -35,7 +35,7 @@ var PanelIcon = class PanelIcon {
         let config = this.uiMap[status.currentState.stateName];
 
         let msg = config.panelText
-        if(status.currentState.stateName == 'Status: Connected')
+        if (status.currentState.stateName == 'Status: Connected')
             msg = msg.replaceAll('{country}',      status.country)
                      .replaceAll('{COUNTRY}',      status.country.toUpperCase())
                      .replaceAll('{ctry}',         status.currentServer.replace(/(\d|.nordvpn.com)/g, '').toUpperCase())

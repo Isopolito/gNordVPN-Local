@@ -90,7 +90,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
     _toogleFavoriteMenuItem(favorite, toAdd){
         let d = this._destroyMap[favorite];
-        if(d){
+        if (d){
             this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
             d.icofavBtn.destroy();
             d.menuItem.destroy();
@@ -111,7 +111,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
         let byType = {}
         Object.keys(this.favList).forEach(key => {
-            if(!byType[this.favList[key].type]) byType[this.favList[key].type] = [];
+            if (!byType[this.favList[key].type]) byType[this.favList[key].type] = [];
             byType[this.favList[key].type].push(key);
         })
         Object.keys(byType).forEach(key => byType[key]);
@@ -120,8 +120,8 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         let typeFound;
         let typeList = Object.keys(Constants.favorites).map(e => Constants.favorites[e]);
         typeList.every(type => {
-            if(!byType[type]) byType[type] = [];
-            if(type === this.favList[favorite].type) typeFound = type;
+            if (!byType[type]) byType[type] = [];
+            if (type === this.favList[favorite].type) typeFound = type;
             else idx += byType[type].length;
         
             return !typeFound;
@@ -163,7 +163,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
             }
         })
 
-        if(Object.keys(this.favList).length < 1) {
+        if (Object.keys(this.favList).length < 1) {
             this._favoriteMenu.hide();
         }else{
             this._favoriteMenu.show();
@@ -174,7 +174,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
     showHide(show=true){
         this.prevShowHide = show;
-        if(Object.keys(this.favList).length < 1 || !show) {
+        if (Object.keys(this.favList).length < 1 || !show) {
             this._favoriteMenu.hide();
         }else{
             this._favoriteMenu.show();

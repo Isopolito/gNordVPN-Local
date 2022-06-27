@@ -825,13 +825,13 @@ function buildPrefsWidget() {
 
     let cityTreeIterMap = {}
     let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
-    if(this.countrieNames){
+    if (this.countrieNames){
         this.countrieNames.forEach(country => {
             let iter = cityStore.append(null);
             cityStore.set(iter, [0], [country]);
             cityTreeIterMap[country] = iter;
 
-            if(cityCountries.includes(this.countrieMap[country])){
+            if (cityCountries.includes(this.countrieMap[country])){
                 cityTreeView.get_selection().select_iter(iter);
             }
         });
@@ -940,13 +940,13 @@ function buildPrefsWidget() {
     
     let serverTreeIterMap = {}
     let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
-    if(this.countrieNames){
+    if (this.countrieNames){
         this.countrieNames.forEach(country => {
             let iter = serverStore.append(null);
             serverStore.set(iter, [0], [country]);
             serverTreeIterMap[country] = iter;
 
-            if(serverCountries.includes(this.countrieMapWithID[country])){
+            if (serverCountries.includes(this.countrieMapWithID[country])){
                 serverTreeView.get_selection().select_iter(iter);
             }
         });
@@ -1056,7 +1056,7 @@ function buildPrefsWidget() {
         let isAlt = altToggle.get_active();
         let style = isAlt ? styleAltCss : styleCss;
         Object.keys(style).forEach(key => {
-            if(isMono) style[key].css = isAlt ? altMonoCss : monoCss;
+            if (isMono) style[key].css = isAlt ? altMonoCss : monoCss;
             style[key].panelText = panelTexts[key];
         });
 
