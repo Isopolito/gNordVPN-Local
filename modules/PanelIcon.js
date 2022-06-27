@@ -19,7 +19,7 @@ var PanelIcon = class PanelIcon {
     }
 
 
-    updateStyle(){
+    updateStyle() {
         let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
 
         this.uiMap = {};
@@ -31,7 +31,7 @@ var PanelIcon = class PanelIcon {
 
     }
 
-    update(status){
+    update(status) {
         let config = this.uiMap[status.currentState.stateName];
 
         let msg = config.panelText
@@ -62,11 +62,11 @@ var PanelIcon = class PanelIcon {
 
     }
 
-    button(){
+    button() {
         return this._button;
     }
 
-    build(){
+    build() {
         this._button = new St.Bin({
             reactive: true,
             can_focus: true,

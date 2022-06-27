@@ -14,7 +14,7 @@ function init() {
 }
 
 
-function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap){
+function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap) {
     resetGeneralSetting(settings);
     resetAccountSetting(settings);
     resetConnectionSetting(settings, protoCbox, techCbox);
@@ -22,11 +22,11 @@ function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIt
     resetServerSetting(settings, serverTreeView, serverTreeIterMap);
 }
 
-function resetGeneralSetting(settings){
+function resetGeneralSetting(settings) {
     resetSetting(settings, ['autoconnect', 'commonfavorite']);
 }
 
-function resetAccountSetting(settings){
+function resetAccountSetting(settings) {
     resetSetting(settings, ['showlogin', 'showlogout']);
 }
 
@@ -41,7 +41,7 @@ function resetConnectionSetting(settings, protoCbox, techCbox) {
     techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
 }
 
-function resetCitySetting(settings, cityTreeView, cityTreeIterMap){
+function resetCitySetting(settings, cityTreeView, cityTreeIterMap) {
     resetSetting(settings, ['number-cities-per-countries', 'countries-selected-for-cities']);
 
     let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
@@ -53,7 +53,7 @@ function resetCitySetting(settings, cityTreeView, cityTreeIterMap){
 
 }
 
-function resetServerSetting(settings, serverTreeView, serverTreeIterMap){
+function resetServerSetting(settings, serverTreeView, serverTreeIterMap) {
     resetSetting(settings, ['number-servers-per-countries', 'countries-selected-for-servers']);
 
     let serverCountries = this.settings.get_value('countries-selected-for-servers').deep_unpack();
@@ -64,13 +64,13 @@ function resetServerSetting(settings, serverTreeView, serverTreeIterMap){
     })
 }
 
-function resetSetting(settings, keys){
+function resetSetting(settings, keys) {
     keys.forEach(key => {
         settings.set_value(key, settings.get_default_value(key));
     })
 }
 
-function saveStyle(styleItems){
+function saveStyle(styleItems) {
 
     let data = {};
     let invalid = false;
@@ -86,7 +86,7 @@ function saveStyle(styleItems){
 }
 
 
-function loadStyle(data, styleItems){
+function loadStyle(data, styleItems) {
 
     styleItems.forEach(item => {
 
@@ -335,7 +335,7 @@ function buildPrefsWidget() {
     refreshAccount();
     refreshAccountBtn.connect(`clicked`, refreshAccount );
 
-    function refreshAccount(){ 
+    function refreshAccount() { 
         let account = vpn.getAccount();
         let loggedin = !!account.emailAddress;
 
@@ -825,7 +825,7 @@ function buildPrefsWidget() {
 
     let cityTreeIterMap = {}
     let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
-    if (this.countrieNames){
+    if (this.countrieNames) {
         this.countrieNames.forEach(country => {
             let iter = cityStore.append(null);
             cityStore.set(iter, [0], [country]);
@@ -940,7 +940,7 @@ function buildPrefsWidget() {
     
     let serverTreeIterMap = {}
     let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
-    if (this.countrieNames){
+    if (this.countrieNames) {
         this.countrieNames.forEach(country => {
             let iter = serverStore.append(null);
             serverStore.set(iter, [0], [country]);
@@ -1018,7 +1018,7 @@ function buildPrefsWidget() {
 
 
 
-    function loadGeneratedStyle(panelTexts, monoToggle, altToggle){
+    function loadGeneratedStyle(panelTexts, monoToggle, altToggle) {
 
         let styleCss = {
             'CONNECTED':     {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);' },

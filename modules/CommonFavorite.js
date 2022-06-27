@@ -26,7 +26,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
     }
 
-    updateFavorite(){
+    updateFavorite() {
 
         let newFav = {};
 
@@ -50,7 +50,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this.showHide(this.prevShowHide);
     }
 
-    rebuild(){
+    rebuild() {
         this._isBuilt = false;
         this.build();
     }
@@ -88,9 +88,9 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         return menuItem;
     }
 
-    _toogleFavoriteMenuItem(favorite, toAdd){
+    _toogleFavoriteMenuItem(favorite, toAdd) {
         let d = this._destroyMap[favorite];
-        if (d){
+        if (d) {
             this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
             d.icofavBtn.destroy();
             d.menuItem.destroy();
@@ -172,7 +172,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this._isBuilt = true;
     }
 
-    showHide(show=true){
+    showHide(show=true) {
         this.prevShowHide = show;
         if (Object.keys(this.favList).length < 1 || !show) {
             this._favoriteMenu.hide();

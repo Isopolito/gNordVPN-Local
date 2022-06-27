@@ -108,7 +108,7 @@ var Vpn = class Vpn {
 
         let emailAddress;
         let vpnService;
-        if ( allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`) ){
+        if ( allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`) ) {
             emailAddress =  allAccountMessages[1].replace("Email Address: ", "");
             vpnService   =  allAccountMessages[2].replace("VPN Service: ", "")
         }
@@ -116,7 +116,7 @@ var Vpn = class Vpn {
         return { emailAddress, vpnService };
     }
     
-    checkLogin(){
+    checkLogin() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
         return this._getString(standardOut).replace(/\s+/g, ` `).includes('You are already logged in.');
     }
@@ -172,7 +172,7 @@ var Vpn = class Vpn {
     }
 
 
-    loginVpn(){
+    loginVpn() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
 
         const ref = "Continue in the browser: ";
@@ -182,13 +182,13 @@ var Vpn = class Vpn {
         Gio.app_info_launch_default_for_uri( url, null );
     }
 
-    logoutVpn(){
+    logoutVpn() {
         this.executeCommandAsync(CMD_LOGOUT);
     }
 
 
 
-    getConectionList(connectionType){
+    getConectionList(connectionType) {
         switch(connectionType) {
           case 'countries':
             return this.getCountries();
@@ -200,7 +200,7 @@ var Vpn = class Vpn {
         return null;
     }
     getCountries(withId=false) {
-        if (withId){
+        if (withId) {
             this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
             this.session.send_message (this.message);
             let countrieNames, countrieMap;
@@ -210,7 +210,7 @@ var Vpn = class Vpn {
                     acc[v['name']] = v['id'];
                     return acc;
                 }, {}); 
-            }catch(e){
+            } catch(e) {
                 return [null, null];
             }
 
@@ -249,7 +249,7 @@ var Vpn = class Vpn {
 
         let processedCities = {};
 
-        for(let i=0; i<citiesSaved.length; i++){
+        for(let i=0; i<citiesSaved.length; i++) {
 
             const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
 
@@ -283,17 +283,17 @@ var Vpn = class Vpn {
 
         let url = "https://api.nordvpn.com/v1/servers/recommendations?limit="+countriesMax
         let technology = this.settings.get_string(`technology`);
-        if (technology == 'NORDLYNX'){
+        if (technology == 'NORDLYNX') {
             url += "&filters[servers_technologies][identifier]=wireguard_udp";
 
-        }else if (technology == 'OPENVPN'){
+        }else if (technology == 'OPENVPN') {
             let obfuscate = this.settings.get_boolean(`obfuscate`);
             let protocol = this.settings.get_string(`protocol`);
             
-            if (protocol == "UDP"){
+            if (protocol == "UDP") {
                 if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_udp";
                 else          url += "&filters[servers_technologies][identifier]=openvpn_udp";
-            }else if (protocol == "TCP"){
+            }else if (protocol == "TCP") {
                 if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_tcp";
                 else          url += "&filters[servers_technologies][identifier]=openvpn_tcp";
             }
@@ -304,7 +304,7 @@ var Vpn = class Vpn {
 
         let servers = {}
         try {
-            for(let i=0; i<countriesSaved.length; i++){
+            for(let i=0; i<countriesSaved.length; i++) {
                 this.message = Soup.Message.new("GET", url+"&filters[country_id]="+countriesSaved[i]);
                 this.session.send_message (this.message);
                 let data = this.message.response_body_data.get_data();
@@ -312,7 +312,7 @@ var Vpn = class Vpn {
                     servers[e['name']] = e['hostname'].replace('.nordvpn.com','');
                 });
             }
-        }catch(e){
+        } catch(e) {
             return null;
         }
 

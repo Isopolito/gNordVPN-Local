@@ -32,7 +32,7 @@ const VpnIndicator = GObject.registerClass({
 
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
             this.settings.connect('changed', (settings, key)=>  {
-                switch(key){
+                switch(key) {
                     case 'panel-styles': 
                     case 'common-panel-style':
                         this._panelIcon.updateStyle();
@@ -71,7 +71,7 @@ const VpnIndicator = GObject.registerClass({
             });
         }
 
-        _setQuickRefresh(quick){
+        _setQuickRefresh(quick) {
             this.stateManager.setQuickRefresh(quick);
             this._refresh();
         }
@@ -115,7 +115,7 @@ const VpnIndicator = GObject.registerClass({
             let hasItems = false;
             let statusToDisplay = ['country', 'city', 'currentServer', 'serverIP', 'transfer', 'uptime'];
             statusToDisplay.forEach(key => {
-                if (status[key]){
+                if (status[key]) {
                     const label = key.replace(/([A-Z]+)/g, " $1").replace(/([A-Z][a-z])/g, " $1").replace(/^./, e => e.toUpperCase());
                     const menuItem = new PopupMenu.PopupMenuItem(label+": "+status[key]);
                     this._statusPopup.menu.addMenuItem(menuItem);
@@ -123,10 +123,10 @@ const VpnIndicator = GObject.registerClass({
                 }
             })
 
-            if (!this.loggedin){
+            if (!this.loggedin) {
                 this._statusPopup.hide();
                 this._statusLabel.hide();
-            }else if (hasItems){
+            }else if (hasItems) {
                 this._statusPopup.show();
                 this._statusLabel.hide();
             }else{
@@ -170,14 +170,14 @@ const VpnIndicator = GObject.registerClass({
             this._overrideRefresh(Constants.status.disconnecting)
         }
 
-        _login(){
+        _login() {
             this._vpn.loginVpn();
 
             // Set an override on the status as the command line status takes a while to catch up
             this._overrideRefresh(Constants.status.login)
         }
 
-        _logout(){
+        _logout() {
             this._vpn.logoutVpn();
 
             // Set an override on the status as the command line status takes a while to catch up
@@ -205,7 +205,7 @@ const VpnIndicator = GObject.registerClass({
 
         _buildIndicatorMenu() {
             this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-            this._statusPopup.menu.connect(`open-state-changed`, function (actor,event){
+            this._statusPopup.menu.connect(`open-state-changed`, function (actor,event) {
                 this._setQuickRefresh(event);
             }.bind(this));
          
@@ -280,7 +280,7 @@ const VpnIndicator = GObject.registerClass({
             this._panelIcon.build();
             this.add_actor(this._panelIcon.button());
 
-            this._panelIcon.button().connect(`button-press-event`, function (actor,event){
+            this._panelIcon.button().connect(`button-press-event`, function (actor,event) {
                 //Only checking login state when clicking on menu
                 //Cannot chech periodicaly because:
                 //If checking with 'nordvpn account' it fetches from a server that limit request

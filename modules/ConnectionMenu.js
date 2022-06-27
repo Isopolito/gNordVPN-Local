@@ -30,7 +30,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._favoritesKey = favoritesKey;
     }
 
-    updateFavorite(){
+    updateFavorite() {
         const connectionFavs = this._favorites.get(this._favoritesKey).favorites;
 
         //connectionFavs-favConnectionItems
@@ -43,14 +43,14 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
 
     }
 
-    rebuild(){
+    rebuild() {
         this._isBuilt = false;
         this._connectionMenu.menu.removeAll();
         this._connectionMenu.menu.addMenuItem(this._buildPlaceHolderMenuItem());
         this.tryBuild();
     }
     
-    _buildPlaceHolderMenuItem(){
+    _buildPlaceHolderMenuItem() {
         return new PopupMenu.PopupMenuItem("Loading...");
     }
 
@@ -84,9 +84,9 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         return menuItem;
     }
 
-    _toogleConnectionMenuItem(connection, isFavorite){
+    _toogleConnectionMenuItem(connection, isFavorite) {
         let d = this._destroyMap[connection];
-        if (d){
+        if (d) {
             this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
             d.icofavBtn.destroy();
             d.menuItem.destroy();
@@ -179,7 +179,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._isBuilt = true;
     }
 
-    showHide(show=true){
+    showHide(show=true) {
         if (Object.keys(this._connections).length < 1 || !show) {
             this._connectionMenu.hide();
         }else{
