@@ -199,6 +199,7 @@ var Vpn = class Vpn {
         } 
         return null;
     }
+    
     getCountries(withId=false) {
         if (withId) {
             this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
@@ -210,28 +211,30 @@ var Vpn = class Vpn {
                     acc[v['name']] = v['id'];
                     return acc;
                 }, {}); 
-            } catch(e) {
+            }catch(e) {
                 return [null, null];
             }
 
             return countrieMap;
         }
 
+        let didProcessFirstCountry = false;
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
-
         const countries = this._getString(standardOut)
-            .replace(/A new version.*?\./g, ``)
             .replace(/\s+/g, ` `)
             .split(` `)
+            .filter(word => {
+                // Ignore any messages preceding first country
+                if (word.includes('Albania')) didProcessFirstCountry = true;
+
+                // Another safety check -- all countries should be capitalized in output
+                return didProcessFirstCountry && this._stringStartsWithCapitalLetter(word);
+            })
             .sort();
 
         let processedCountries = {};
-        for (let i = 3; i < countries.length; i++) {
-            // All countries should be capitalized in output
-            if (!this._stringStartsWithCapitalLetter(countries[i])) continue;
-            if (countries[i].startsWith("A new version")) continue;
-
-            let c = countries[i].replace(",", "");
+        for (let country of countries) {
+            let c = country.replace(",", "");
             processedCountries[c.replace(/_/g, " ")] = c;
         }
 
@@ -243,7 +246,6 @@ var Vpn = class Vpn {
     }
 
     getCities() {
-
         let citiesMax = this.settings.get_value('number-cities-per-countries').unpack();
         let citiesSaved = this.settings.get_value('countries-selected-for-cities').deep_unpack();
 
@@ -312,7 +314,7 @@ var Vpn = class Vpn {
                     servers[e['name']] = e['hostname'].replace('.nordvpn.com','');
                 });
             }
-        } catch(e) {
+        }catch(e) {
             return null;
         }
 
