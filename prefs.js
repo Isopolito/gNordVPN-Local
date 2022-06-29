@@ -13,7 +13,6 @@ const Constants = Me.imports.modules.constants;
 function init() {
 }
 
-
 function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap) {
     resetGeneralSetting(settings);
     resetAccountSetting(settings);
@@ -29,7 +28,6 @@ function resetGeneralSetting(settings) {
 function resetAccountSetting(settings) {
     resetSetting(settings, ['showlogin', 'showlogout']);
 }
-
 
 function resetConnectionSetting(settings, protoCbox, techCbox) {
     resetSetting(settings, ['cybersec','firewall','killswitch','obfuscate','notify','ipv6', 'protocol', 'technology']);
@@ -50,7 +48,6 @@ function resetCitySetting(settings, cityTreeView, cityTreeIterMap) {
     cityCountries.forEach(country => {
         cityTreeView.get_selection().select_iter(cityTreeIterMap[country.replace(/_/g, " ")]);
     })
-
 }
 
 function resetServerSetting(settings, serverTreeView, serverTreeIterMap) {
@@ -85,11 +82,8 @@ function saveStyle(styleItems) {
     this.settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', data));
 }
 
-
 function loadStyle(data, styleItems) {
-
     styleItems.forEach(item => {
-
         let panelText = data[item.state].panelText;
         item.format.get_buffer().set_text(panelText, panelText.length);
 
@@ -98,8 +92,6 @@ function loadStyle(data, styleItems) {
 
     })
 }
-
-
 
 function buildPrefsWidget() {
     this.normalRender = new Gtk.CellRendererText();
@@ -111,9 +103,6 @@ function buildPrefsWidget() {
     this.countrieMap = this.vpn.getCountries();
     this.countrieMapWithID = this.vpn.getCountries(true);
     this.countrieNames = Object.keys(this.countrieMap);
-
-
-
 
     const notebook = new Gtk.Notebook()
 
@@ -169,14 +158,12 @@ function buildPrefsWidget() {
         Gio.SettingsBindFlags.DEFAULT
     );
 
-
     // Reset to defaults
     const resetAll = new Gtk.Button({
         label: `Reset All Settings`,
         visible: true
     });
     generalPage.attach(resetAll, 0, 2, 1, 1);
-
 
     const generalSaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
@@ -193,15 +180,7 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-
-
-
-
-
-
-
-
-
+    // *** ACCOUNTS
     const accountPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -278,7 +257,6 @@ function buildPrefsWidget() {
     });
     accountPage.attach(accountEmailLabel, 0, 4, 1, 1);
 
-
     const accountEmail = new Gtk.Label({
         label: "",
         halign: Gtk.Align.START,
@@ -294,14 +272,12 @@ function buildPrefsWidget() {
     });
     accountPage.attach(accountStatusLabel, 0, 5, 1, 1);
 
-
     const accountStatus = new Gtk.Label({
         label: "",
         halign: Gtk.Align.START,
         visible: true
     });
     accountPage.attach(accountStatus, 1, 5, 1, 1);
-
 
     const login = new Gtk.Button({
         label: `Login`,
@@ -325,7 +301,6 @@ function buildPrefsWidget() {
         this.vpn.logoutVpn();
     });
 
-
     const refreshAccountBtn = new Gtk.Button({
         label: `Refresh`,
         visible: true
@@ -344,9 +319,7 @@ function buildPrefsWidget() {
 
         login.set_sensitive(!loggedin);
         logout.set_sensitive(loggedin);
-
     }
-
 
     notebook.append_page(accountPage, new Gtk.Label({
         label: `<b>Account</b>`,
@@ -355,18 +328,7 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-
-
-
-
-
-
-
-
-
-
-
-
+// *** STYLES
     const stylePage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -437,8 +399,6 @@ function buildPrefsWidget() {
     });
     stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
 
-
-
     const customStyle = new Gtk.Label({
         label: '<b>Edit style</b>',
         halign: Gtk.Align.START,
@@ -446,7 +406,6 @@ function buildPrefsWidget() {
         visible: true
     });
     stylePage.attach(customStyle, 0, 3, 1, 1);
-
 
     const displayMsg = new Gtk.Label({
         label: '<b>Display Msg</b>',
@@ -467,7 +426,6 @@ function buildPrefsWidget() {
     let row = 5;
     let styleItems = [];
     Object.keys(Constants.states).forEach(state => {
-
         const label = new Gtk.Label({
             label: state,
             halign: Gtk.Align.START,
@@ -483,7 +441,6 @@ function buildPrefsWidget() {
 
         styleItems.push({state, format, css});
     });
-
 
     const commonCsslabel = new Gtk.Label({
         label: "Common CSS",
@@ -503,12 +460,8 @@ function buildPrefsWidget() {
 
     stylePage.attach(commonCss, 1, row++, 4, 1);
 
-
     let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
     loadStyle(savedStyle, styleItems)
-
-    
-
 
     const connectedKeyLabel = new Gtk.Label({
         label: `<b>* Available keys for CONNECTED: {country},{COUNTRY},{ctry},{city},{CITY},{number},{server},{ip},{tech},{protocol},{transfer},{transferUp},{transferDown},{uptime},{uptimeHr},{uptimeMin},{uptimeSec}</b>`,
@@ -535,24 +488,7 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// *** CONNECTIONS
     const connectionPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -745,7 +681,6 @@ function buildPrefsWidget() {
     });
     connectionPage.attach(resetConnection, 0, 6, 1, 1);
 
-
     const connectionSaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
         halign: Gtk.Align.START,
@@ -761,13 +696,7 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-
-
-
-
-
-
-
+// *** CITIES
     const cityPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -797,7 +726,6 @@ function buildPrefsWidget() {
         `value`,
         Gio.SettingsBindFlags.DEFAULT
     );
-
 
     const citySelectLabel = new Gtk.Label({
         label: `Select countries to list in cities tab:`,
@@ -857,8 +785,6 @@ function buildPrefsWidget() {
 
     cityPage.attach(this.cityScroll, 1, 1, 1, 1);
 
-
-
     const citySaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
         halign: Gtk.Align.START,
@@ -875,14 +801,7 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-
-
-
-
-
-
-
-
+// *** SERVERS
     const serverPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -912,7 +831,6 @@ function buildPrefsWidget() {
         `value`,
         Gio.SettingsBindFlags.DEFAULT
     );
-
 
     const serverSelectLabel = new Gtk.Label({
         label: `Select countries to list in servers tab:`,
@@ -972,8 +890,6 @@ function buildPrefsWidget() {
 
     serverPage.attach(this.serverScroll, 1, 1, 1, 1);
 
-
-
     const serverSaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
         halign: Gtk.Align.START,
@@ -990,21 +906,10 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-
-
-
-
-
-
-
-
-
     // Apply settings when prefs window is closed
     notebook.connect('unmap', function() {
         this.vpn.applySettingsToNord();
     }.bind(this));
-
-
 
     resetAll.connect(`clicked`, () => { 
         resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
@@ -1014,12 +919,7 @@ function buildPrefsWidget() {
         resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
     });
 
-
-
-
-
     function loadGeneratedStyle(panelTexts, monoToggle, altToggle) {
-
         let styleCss = {
             'CONNECTED':     {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);' },
             'CONNECTING':    {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
@@ -1066,8 +966,6 @@ function buildPrefsWidget() {
         loadStyle(style, styleItems);
     }
 
-
-
     styleExtraLarge.connect(`clicked`, () => {
 
         let panelTexts = {
@@ -1086,7 +984,6 @@ function buildPrefsWidget() {
     });
 
     styleLarge.connect(`clicked`, () => {
-
         let panelTexts = {
             'CONNECTED':     '{country} #{number}',
             'CONNECTING':    'CONNECTING',
@@ -1103,7 +1000,6 @@ function buildPrefsWidget() {
     });
 
     styleMedium.connect(`clicked`, () => {
-
         let panelTexts = {
             'CONNECTED':     '{ctry}#{number}',
             'CONNECTING':    '...',
@@ -1121,7 +1017,6 @@ function buildPrefsWidget() {
     });
  
     styleSmall.connect(`clicked`, () => {
-
         let panelTexts = {
             'CONNECTED':     '{ctry}',
             'CONNECTING':    '.',
