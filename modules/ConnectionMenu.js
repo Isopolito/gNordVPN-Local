@@ -145,7 +145,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         if (!this._connectionMenu) this._connectionMenu = new PopupMenu.PopupSubMenuMenuItem(this._connectionLabel);
         else this._connectionMenu.menu.removeAll();
 
-        this._connections = this._vpn.getConectionList(this._connectionType);
+        this._connections = this._vpn.getConnectionList(this._connectionType);
         if (!this._connections) return;
 
         this._connectionMenuItems = [];
@@ -172,7 +172,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
 
         if (Object.keys(this._connections).length < 1) {
             this._connectionMenu.hide();
-        }else{
+        } else {
             this._connectionMenu.show();
         }
 
@@ -182,7 +182,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
     showHide(show=true) {
         if (Object.keys(this._connections).length < 1 || !show) {
             this._connectionMenu.hide();
-        }else{
+        } else {
             this._connectionMenu.show();
         }
     }

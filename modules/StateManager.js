@@ -1,13 +1,9 @@
 // noinspection ES6ConvertVarToLetConst
-
 'use strict';
-
 const ExtensionUtils = imports.misc.extensionUtils;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const Constants = Me.imports.modules.constants;
-
-
 
 var StateManager = class StateManager {
     constructor() {
@@ -123,7 +119,6 @@ var StateManager = class StateManager {
         this.stateOverrideCounter = 0;
     }
 
-
     resolveState(status) {
         let vpnState = this.states[status.connectStatus] || this.states.ERROR;
         if (!status.loggedin) vpnState = this.states['LOGGED OUT'];
@@ -143,7 +138,7 @@ var StateManager = class StateManager {
                 this.stateOverride = undefined;
                 this.stateOverrideCounter = 0;
 
-            }else{ 
+            } else { 
                // State override still active
                 vpnState = this.stateOverride;
             }
@@ -151,7 +146,5 @@ var StateManager = class StateManager {
         
         return {...vpnState, 'refreshTimeout': this.quickRefresh ? this.QUICK_REFRESH_TIMEOUT : vpnState['refreshTimeout'] };
     }
-
-
 }
 

@@ -23,7 +23,6 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this._favorites = new Favorites();
         this._vpn = new Vpn();
         this._signals = new Signals();
-
     }
 
     updateFavorite() {
@@ -41,11 +40,11 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
         //newFav-favList
         let toAddToFav = Object.keys(newFav).filter(x => !Object.keys(this.favList).includes(x));
-        toAddToFav.forEach(favorite => { this.favList[favorite] = newFav[favorite]; this._toogleFavoriteMenuItem(favorite, true); })
+        toAddToFav.forEach(favorite => { this.favList[favorite] = newFav[favorite]; this._toggleFavoriteMenuItem(favorite, true); })
 
         //favList-newFav
         let toRemoveFromFav = Object.keys(this.favList).filter(x => !Object.keys(newFav).includes(x))
-        toRemoveFromFav.forEach(favorite => { this._toogleFavoriteMenuItem(favorite, false); })
+        toRemoveFromFav.forEach(favorite => { this._toggleFavoriteMenuItem(favorite, false); })
     
         this.showHide(this.prevShowHide);
     }
@@ -75,7 +74,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this._destroyMap[favorite] = {menuItemClickId, menuItem, icofavBtn};
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, function () {
                 this._favorites.remove(this.favList[favorite].type, favorite); 
-                this._toogleFavoriteMenuItem(favorite, false); 
+                this._toggleFavoriteMenuItem(favorite, false); 
 
             }.bind(this)
         );
@@ -84,18 +83,16 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
             icofavBtn.disconnect(menuItem.favoritePressId)
         }.bind(this));
 
-
         return menuItem;
     }
 
-    _toogleFavoriteMenuItem(favorite, toAdd) {
+    _toggleFavoriteMenuItem(favorite, toAdd) {
         let d = this._destroyMap[favorite];
         if (d) {
             this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
             d.icofavBtn.destroy();
             d.menuItem.destroy();
         }
-
 
         if (toAdd) { 
             const newMenuItem = this._buildFavoriteMenuItem(favorite);
@@ -106,9 +103,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         }
     }
 
-
     _addFavoriteMenuItem(favorite, newMenuItem) {
-
         let byType = {}
         Object.keys(this.favList).forEach(key => {
             if (!byType[this.favList[key].type]) byType[this.favList[key].type] = [];
@@ -165,7 +160,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
         if (Object.keys(this.favList).length < 1) {
             this._favoriteMenu.hide();
-        }else{
+        } else {
             this._favoriteMenu.show();
         }
 
@@ -176,7 +171,7 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this.prevShowHide = show;
         if (Object.keys(this.favList).length < 1 || !show) {
             this._favoriteMenu.hide();
-        }else{
+        } else {
             this._favoriteMenu.show();
         }
     }

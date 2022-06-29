@@ -1,23 +1,17 @@
-
-
 const St = imports.gi.St;
 const ExtensionUtils = imports.misc.extensionUtils;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const Constants = Me.imports.modules.constants;
 
-
-
 var PanelIcon = class PanelIcon {
     constructor() {
-        
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
         this.uiMap = {};
         this.commonStyle = "";
         this.updateStyle();
     }
-
 
     updateStyle() {
         let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
@@ -28,7 +22,6 @@ var PanelIcon = class PanelIcon {
         });
 
         this.commonStyle = this.settings.get_string(`common-panel-style`);
-
     }
 
     update(status) {
@@ -55,11 +48,9 @@ var PanelIcon = class PanelIcon {
                      .replaceAll('{uptimeSec}',    (status.uptime?.match(/\d+ seconds/g) || ['00'])[0]?.replace(' seconds', '')?.padStart(2, '0') );
 
         this._label.text = msg || "Style Missing MSG";
-
         let style = this.commonStyle;
         style += config.css;
         this._label.set_style(style); 
-
     }
 
     button() {
@@ -77,6 +68,5 @@ var PanelIcon = class PanelIcon {
 
         this._label = new St.Label();
         this._button.set_child(this._label);
-         
     }
 }

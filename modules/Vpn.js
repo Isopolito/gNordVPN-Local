@@ -20,18 +20,22 @@ var Vpn = class Vpn {
         this.executeCommandSync = GLib.spawn_command_line_sync;
         this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-        
+
         this.session = Soup.Session.new();
     }
-    
-    _stringStartsWithCapitalLetter = country => country && country.charCodeAt(0) >= 65 && country.charCodeAt(0) <= 90;
-    
+
+    // Remove the junk that shows up from messages in the nordvpn output
+    _processCityCountryOutput = (input) => {
+        const match = input.match(/(^\w+?,\s(\w+?,\s)+?(\w+?$)|^\s*?\w+?\s*?$)/gm);
+        return match && match.length === 1
+            ? match[0].split(',').map(c => c.trim()).sort()
+            : [];
+    }
+
     _getString = (data) => {
-        if (data instanceof Uint8Array) {
-            return imports.byteArray.toString(data);
-        } else {
-            return data.toString();
-        }
+        return data instanceof Uint8Array
+            ? imports.byteArray.toString(data)
+            : data.toString();
     }
 
     _resolveSettingsValue(text) {
@@ -50,20 +54,20 @@ var Vpn = class Vpn {
 
         if (normalizedText === `firewall`) return `firewall`;
         if (normalizedText.includes(`tech`)) return `technology`;
-        if (normalizedText === `protocol`)return `protocol`;
+        if (normalizedText === `protocol`) return `protocol`;
         if (normalizedText === `kill switch`) return `killswitch`;
         if (normalizedText === `cybersec`) return `cybersec`;
         if (normalizedText === `obfuscate`) return `obfuscate`;
         if (normalizedText === `notify`) return `notify`;
         if (normalizedText === `auto-connect`) return `autoconnect`;
-        
+
         // Currently these settings are not supported in this extension
         //if (normalizedText === `ipv6`) return `ipv6`;
         //if (normalizedText === `dns`) return `dns`;
-        
+
         return null;
     }
-    
+
     setSettingsFromNord() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_FETCH_SETTINGS);
         const normalizedOut = this._getString(standardOut);
@@ -92,12 +96,12 @@ var Vpn = class Vpn {
         this.executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
-        
+
         // TODO: Why is this 2nd call to firewall needed to make things work?
         this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
     }
-    
-   setToDefaults() {
+
+    setToDefaults() {
         this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
 
@@ -108,26 +112,25 @@ var Vpn = class Vpn {
 
         let emailAddress;
         let vpnService;
-        if ( allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`) ) {
-            emailAddress =  allAccountMessages[1].replace("Email Address: ", "");
-            vpnService   =  allAccountMessages[2].replace("VPN Service: ", "")
+        if (allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`)) {
+            emailAddress = allAccountMessages[1].replace("Email Address: ", "");
+            vpnService = allAccountMessages[2].replace("VPN Service: ", "")
         }
 
-        return { emailAddress, vpnService };
+        return {emailAddress, vpnService};
     }
-    
+
     checkLogin() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
         return this._getString(standardOut).replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
     getStatus() {
-        // Read the VPN status from the command line
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
 
-        // Convert Uint8Array object to string and split up the different messages
         const allStatusMessages = this._getString(standardOut).split(`\n`);
-        let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer, uptime, currentServer;
+        let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer,
+            uptime, currentServer;
         for (const msg of allStatusMessages) {
             if (msg.includes("Status:")) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
             else if (msg.includes("Country:")) country = msg.replace("Country: ", "").toUpperCase();
@@ -171,71 +174,56 @@ var Vpn = class Vpn {
         this.executeCommandAsync(CMD_DISCONNECT);
     }
 
-
     loginVpn() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
 
         const ref = "Continue in the browser: ";
         let url = this._getString(standardOut).replace(/\s+/g, ` `);
-        url = url.substring(url.indexOf(ref)+ref.length).trim();
+        url = url.substring(url.indexOf(ref) + ref.length).trim();
 
-        Gio.app_info_launch_default_for_uri( url, null );
+        Gio.app_info_launch_default_for_uri(url, null);
     }
 
     logoutVpn() {
         this.executeCommandAsync(CMD_LOGOUT);
     }
 
-
-
-    getConectionList(connectionType) {
-        switch(connectionType) {
-          case 'countries':
-            return this.getCountries();
-          case 'cities':
-            return this.getCities();
-          case 'servers':
-            return this.getServers();
-        } 
+    getConnectionList(connectionType) {
+        switch (connectionType) {
+            case 'countries':
+                return this.getCountries();
+            case 'cities':
+                return this.getCities();
+            case 'servers':
+                return this.getServers();
+        }
         return null;
     }
-    
-    getCountries(withId=false) {
+
+    getCountries(withId = false) {
         if (withId) {
             this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
-            this.session.send_message (this.message);
+            this.session.send_message(this.message);
             let countrieNames, countrieMap;
             try {
                 let data = JSON.parse(this.message.response_body_data.get_data());
                 countrieMap = data.reduce((acc, v) => {
                     acc[v['name']] = v['id'];
                     return acc;
-                }, {}); 
-            }catch(e) {
+                }, {});
+            } catch (e) {
                 return [null, null];
             }
 
             return countrieMap;
         }
 
-        let didProcessFirstCountry = false;
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
-        const countries = this._getString(standardOut)
-            .replace(/\s+/g, ` `)
-            .split(` `)
-            .filter(word => {
-                // Ignore any messages preceding first country
-                if (word.includes('Albania')) didProcessFirstCountry = true;
-
-                // Another safety check -- all countries should be capitalized in output
-                return didProcessFirstCountry && this._stringStartsWithCapitalLetter(word);
-            })
-            .sort();
-
+        const countries = this._processCityCountryOutput(this._getString(standardOut));
+        
         let processedCountries = {};
         for (let country of countries) {
-            let c = country.replace(",", "");
-            processedCountries[c.replace(/_/g, " ")] = c;
+            processedCountries[country.replace(/_/g, " ")] = country;
         }
 
         // If the list of countries from NordVpn cli is less then 5 there's most likely a problem with the connection.
@@ -246,28 +234,18 @@ var Vpn = class Vpn {
     }
 
     getCities() {
-        let citiesMax = this.settings.get_value('number-cities-per-countries').unpack();
+        let citiesMax = this.settings.get_value('number-cities-per-countries').unpack() - 1;
         let citiesSaved = this.settings.get_value('countries-selected-for-cities').deep_unpack();
 
         let processedCities = {};
 
-        for(let i=0; i<citiesSaved.length; i++) {
-
+        for (let i = 0; i < citiesSaved.length; i++) {
             const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
-
-            const cities = this._getString(standardOut)
-                .replace(/A new version.*?\./g, ``)
-                .replace(/\s+/g, ` `)
-                .split(` `)
-                .sort();
-
-            for (let j = 3; j < cities.length; j++) {
-                if (j-3>citiesMax) break;
-                // All cities should be capitalized in output
-                if (!this._stringStartsWithCapitalLetter(cities[j])) continue;
-                if (cities[j].startsWith("A new version")) continue;
-
-                let c = (citiesSaved[i]+", "+cities[j].replace(",", "")).replace(/_/g, " ");
+            const cities = this._processCityCountryOutput(this._getString(standardOut));
+            
+            for (let j = 0; j < cities.length; j++) {
+                if (j > citiesMax) break;
+                let c = (citiesSaved[i] + ", " + cities[j].replace(",", "")).replace(/_/g, " ");
                 let d = cities[j].replace(",", "");
                 processedCities[c] = d;
             }
@@ -275,51 +253,49 @@ var Vpn = class Vpn {
 
         return processedCities;
     }
-    
-    getServers() {  
+
+    getServers() {
         //Using nordvpn undocumented public api since the app does not give that information
         //Usefull source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
 
         let countriesMax = this.settings.get_value('number-servers-per-countries').unpack();
         let countriesSaved = this.settings.get_value('countries-selected-for-servers').deep_unpack();
 
-        let url = "https://api.nordvpn.com/v1/servers/recommendations?limit="+countriesMax
+        let url = "https://api.nordvpn.com/v1/servers/recommendations?limit=" + countriesMax
         let technology = this.settings.get_string(`technology`);
         if (technology == 'NORDLYNX') {
             url += "&filters[servers_technologies][identifier]=wireguard_udp";
 
-        }else if (technology == 'OPENVPN') {
+        } else if (technology == 'OPENVPN') {
             let obfuscate = this.settings.get_boolean(`obfuscate`);
             let protocol = this.settings.get_string(`protocol`);
-            
+
             if (protocol == "UDP") {
                 if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_udp";
-                else          url += "&filters[servers_technologies][identifier]=openvpn_udp";
-            }else if (protocol == "TCP") {
+                else url += "&filters[servers_technologies][identifier]=openvpn_udp";
+            } else if (protocol == "TCP") {
                 if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_tcp";
-                else          url += "&filters[servers_technologies][identifier]=openvpn_tcp";
+                else url += "&filters[servers_technologies][identifier]=openvpn_tcp";
             }
         }
 
         url += "&filters[servers_groups][identifier]=legacy_standard";
 
-
         let servers = {}
         try {
-            for(let i=0; i<countriesSaved.length; i++) {
-                this.message = Soup.Message.new("GET", url+"&filters[country_id]="+countriesSaved[i]);
-                this.session.send_message (this.message);
+            for (let i = 0; i < countriesSaved.length; i++) {
+                this.message = Soup.Message.new("GET", url + "&filters[country_id]=" + countriesSaved[i]);
+                this.session.send_message(this.message);
                 let data = this.message.response_body_data.get_data();
                 JSON.parse(this._getString(data)).forEach(e => {
-                    servers[e['name']] = e['hostname'].replace('.nordvpn.com','');
+                    servers[e['name']] = e['hostname'].replace('.nordvpn.com', '');
                 });
             }
-        }catch(e) {
+        } catch (e) {
             return null;
         }
 
         return servers;
-
 
         //TODO maybe async      
         // this.session.send_async(this.message, null, (session,result) => {
@@ -329,6 +305,5 @@ var Vpn = class Vpn {
         //     let out = data_input_stream.read_line(null);
         // });
         // let data = this.message.response_body_data.get_data();
-
     }
 };

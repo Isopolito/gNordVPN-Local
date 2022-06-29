@@ -126,10 +126,10 @@ const VpnIndicator = GObject.registerClass({
             if (!this.loggedin) {
                 this._statusPopup.hide();
                 this._statusLabel.hide();
-            }else if (hasItems) {
+            } else if (hasItems) {
                 this._statusPopup.show();
                 this._statusLabel.hide();
-            }else{
+            } else {
                 this._statusPopup.hide();
                 this._statusLabel.show();
             }
@@ -208,7 +208,6 @@ const VpnIndicator = GObject.registerClass({
             this._statusPopup.menu.connect(`open-state-changed`, function (actor,event) {
                 this._setQuickRefresh(event);
             }.bind(this));
-         
 
             this.menu.addMenuItem(this._statusPopup);
 
@@ -236,7 +235,6 @@ const VpnIndicator = GObject.registerClass({
                 this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)
             }.bind(this));
             this.menu.addMenuItem(this._disconnectMenuItem);
-            
 
             this._commonFavorite.build();
             this.menu.addMenuItem(this._commonFavorite.menu);
@@ -276,7 +274,6 @@ const VpnIndicator = GObject.registerClass({
             }.bind(this));
             this.menu.addMenuItem(this._logoutMenuItem);
 
-
             this._panelIcon.build();
             this.add_actor(this._panelIcon.button());
 
@@ -288,7 +285,6 @@ const VpnIndicator = GObject.registerClass({
                 this.loggedin = this._vpn.checkLogin();
                 this._refresh();
             }.bind(this));
-
 
             this.loggedin = this._vpn.checkLogin();
         }
