@@ -8,35 +8,55 @@ var Favorites = class Favorites {
     _getData(a) { return this._settings.get_string(a); }
     _setData(a, b) { return this._settings.set_string(a, b); }
     
-    get(favoriteType, items) {
-        const favorites = this._getData(favoriteType)
-            ?.split(`,`)
-            ?.map(i => i.trim())
-            ?.filter(i => i && i.length > 0);
+    get(favoriteType, items=[]) {
+        let favorites = {};
+        try {
+            let data = this._getData(favoriteType);
+            if (!data) data = '{}';
+            favorites = JSON.parse(data);
+        } catch(e) {}
+
+        for (const key of Object.keys(favorites)) 
+            if (key in items) delete items[key];
 
         return {
-            favorites: favorites?.sort() ?? [],
-            itemsMinusFavorites: items.filter(i => !favorites?.includes(i)),
+            favorites,
+            itemsMinusFavorites: items,
         }
     }
     
     remove(favoriteType, item) {
-        const favorites = this._getData(favoriteType)
-            ?.split(`,`)
-            ?.map(i => i?.trim());
-        if (!favorites) return;
-        
-        this._setData(favoriteType, favorites.filter(favorite => favorite !== item).join(`,`));
-    }
-
-    add(favoriteType, item) {
         if (!item) return;
 
-        const favorites = this._getData(favoriteType);
-        if (favorites && !favorites.includes(item)) {
-            this._setData(favoriteType, `${favorites},${item}`);
-        } else {
-            this._setData(favoriteType, item);
+        try {
+            let data = this._getData(favoriteType);
+            if (!data) data = '{}';
+
+            let favorites = JSON.parse(data);
+            delete favorites[item];
+
+            this._setData(favoriteType, JSON.stringify(favorites));
+
+        } catch(e) {
+            log('gnordvpn: ', e);
+        }
+    }
+
+    add(favoriteType, item, item2) {
+        if (!item || !item2) return;
+
+        let favorites = {};
+        try {
+            let data = this._getData(favoriteType);
+            if (!data) data = '{}';
+            favorites = JSON.parse(data);
+        } catch(e) {}
+
+        try {
+            favorites[item] = item2;
+            this._setData(favoriteType, JSON.stringify(favorites));
+        } catch(e) { 
+            log('gnordvpn: ', e);
         }
     }
 }
