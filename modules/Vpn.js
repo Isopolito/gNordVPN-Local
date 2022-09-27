@@ -3,8 +3,6 @@ const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
 
-// Force version 2.x to avoid compatibility issues with certain distros that are using Soup 3.x by default
-imports.gi.versions.Soup = "2.4";
 const Soup = imports.gi.Soup;
 
 const CMD_VPNSTATUS = `nordvpn status`;
