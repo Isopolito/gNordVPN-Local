@@ -25,6 +25,13 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this._signals = new Signals();
     }
 
+    disable() {
+        this._isBuilt = false;
+        this._destroyMap = {};
+        this.favList = {};
+        this.itemList = {};
+    }
+    
     updateFavorite() {
 
         let newFav = {};
