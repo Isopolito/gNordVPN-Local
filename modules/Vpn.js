@@ -2,7 +2,6 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
-
 const Soup = imports.gi.Soup;
 
 const CMD_VPNSTATUS = `nordvpn status`;
@@ -204,8 +203,8 @@ var Vpn = class Vpn {
     getCountries(withId = false) {
         if (withId) {
             this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
-            this.session.send_message(this.message);
-            let countrieNames, countrieMap;
+            this.session.send(this.message, null);
+            let countrieMap;
             try {
                 let data = JSON.parse(this.message.response_body_data.get_data());
                 countrieMap = data.reduce((acc, v) => {
@@ -286,7 +285,7 @@ var Vpn = class Vpn {
         try {
             for (let i = 0; i < countriesSaved.length; i++) {
                 this.message = Soup.Message.new("GET", url + "&filters[country_id]=" + countriesSaved[i]);
-                this.session.send_message(this.message);
+                this.session.send(this.message, null);
                 let data = this.message.response_body_data.get_data();
                 JSON.parse(this._getString(data)).forEach(e => {
                     servers[e['name']] = e['hostname'].replace('.nordvpn.com', '');
