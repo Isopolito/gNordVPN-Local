@@ -2,6 +2,9 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
+
+// Force version 2.x to avoid compatibility issues with certain distros that are using Soup 3.x by default
+imports.gi.versions.Soup = "2.4";
 const Soup = imports.gi.Soup;
 
 const CMD_VPNSTATUS = `nordvpn status`;
@@ -131,11 +134,14 @@ var Vpn = class Vpn {
         const allStatusMessages = this._getString(standardOut).split(`\n`);
         let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer,
             uptime, currentServer;
+
+        // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
         for (const msg of allStatusMessages) {
             if (msg.includes("Status:")) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
             else if (msg.includes("Country:")) country = msg.replace("Country: ", "").toUpperCase();
             else if (msg.includes("City:")) city = msg.replace("City: ", "");
             else if (msg.includes("Server IP:")) serverIp = msg.replace("Server IP: ", "");
+            else if (msg.includes("IP:")) serverIp = msg.replace("IP: ", "");
             else if (msg.includes("Current protocol:")) currentProtocol = msg.replace("Current protocol: ", "");
             else if (msg.includes("Current technology:")) currentTech = msg.replace("Current technology: ", "");
             else if (msg.includes("Transfer:")) transfer = msg.replace("Transfer: ", "");
@@ -144,6 +150,9 @@ var Vpn = class Vpn {
             else if (msg.includes("Current server:")) {
                 serverNumber = msg.match(/\d+/);
                 currentServer = msg.replace("Current server: ", "")
+            } else if (msg.includes("Hostname:")) {
+                serverNumber = msg.match(/\d+/);
+                currentServer = msg.replace("Hostname: ", "")
             }
         }
 
@@ -203,8 +212,8 @@ var Vpn = class Vpn {
     getCountries(withId = false) {
         if (withId) {
             this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
-            this.session.send(this.message, null);
-            let countrieMap;
+            this.session.send_message(this.message);
+            let countrieNames, countrieMap;
             try {
                 let data = JSON.parse(this.message.response_body_data.get_data());
                 countrieMap = data.reduce((acc, v) => {
@@ -220,7 +229,7 @@ var Vpn = class Vpn {
 
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
         const countries = this._processCityCountryOutput(this._getString(standardOut));
-        
+
         let processedCountries = {};
         for (let country of countries) {
             processedCountries[country.replace(/_/g, " ")] = country;
@@ -242,7 +251,7 @@ var Vpn = class Vpn {
         for (let i = 0; i < citiesSaved.length; i++) {
             const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
             const cities = this._processCityCountryOutput(this._getString(standardOut));
-            
+
             for (let j = 0; j < cities.length; j++) {
                 if (j > citiesMax) break;
                 let c = (citiesSaved[i] + ", " + cities[j].replace(",", "")).replace(/_/g, " ");
@@ -285,7 +294,7 @@ var Vpn = class Vpn {
         try {
             for (let i = 0; i < countriesSaved.length; i++) {
                 this.message = Soup.Message.new("GET", url + "&filters[country_id]=" + countriesSaved[i]);
-                this.session.send(this.message, null);
+                this.session.send_message(this.message);
                 let data = this.message.response_body_data.get_data();
                 JSON.parse(this._getString(data)).forEach(e => {
                     servers[e['name']] = e['hostname'].replace('.nordvpn.com', '');
