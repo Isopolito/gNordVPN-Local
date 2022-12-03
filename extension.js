@@ -31,7 +31,7 @@ const VpnIndicator = GObject.registerClass({
             this.stateManager = new StateManager();
 
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-            this.settings.connect('changed', (settings, key)=>  {
+            this.settings.connect('changed', (settings, key) =>  {
                 switch(key) {
                     case 'panel-styles': 
                     case 'common-panel-style':
@@ -87,7 +87,10 @@ const VpnIndicator = GObject.registerClass({
 
             let status = this._vpn.getStatus();
             status.loggedin = this.loggedin;
-            status.currentState = this.stateManager.resolveState(status);
+            
+            status.currentState = this._vpn.isNordVpnRunning()
+                ? this.stateManager.resolveState(status)
+                : this.stateManager.resolveState(null);
 
             // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
             // to provide available cities, countries, etc
@@ -106,7 +109,6 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _updateMenu(status) {
-
             // Set the status text on the menu
             this._statusLabel.text = status.connectStatus;
             this._statusPopup.get_label_actor().set_text(status.connectStatus);

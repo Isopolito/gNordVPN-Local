@@ -128,6 +128,11 @@ var Vpn = class Vpn {
         return this._getString(standardOut).replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
+    isNordVpnRunning() {
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
+        return exitStatus === 0;
+    }
+
     getStatus() {
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
 
@@ -157,17 +162,17 @@ var Vpn = class Vpn {
         }
 
         return {
-            connectStatus,
-            updateMessage,
-            country,
-            city,
-            serverNumber,
-            currentServer,
-            serverIp,
-            currentTech,
-            currentProtocol,
-            transfer,
-            uptime
+            connectStatus: connectStatus || 'N/A',
+            updateMessage: updateMessage || 'N/A',
+            country: country || 'N/A',
+            city: city || 'N/A',
+            serverNumber: serverNumber || 'N/A',
+            currentServer: currentServer || 'N/A',
+            serverIp: serverIp || 'N/A',
+            currentTech: currentTech || 'N/A',
+            currentProtocol: currentProtocol || 'N/A',
+            transfer: transfer || 'N/A',
+            uptime: uptime || 'N/A'
         }
     }
 

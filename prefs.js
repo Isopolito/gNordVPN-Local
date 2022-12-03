@@ -89,7 +89,6 @@ function loadStyle(data, styleItems) {
 
         let css = data[item.state].css;
         item.css.get_buffer().set_text(css, css.length);
-
     })
 }
 
@@ -104,7 +103,7 @@ function buildPrefsWidget() {
     this.countrieMapWithID = this.vpn.getCountries(true);
     this.countrieNames = Object.keys(this.countrieMap);
 
-    const notebook = new Gtk.Notebook()
+    const notebook = new Gtk.Notebook();
 
     const generalPage = new Gtk.Grid({
         margin_start: 18,
