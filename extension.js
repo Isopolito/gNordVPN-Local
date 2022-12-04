@@ -308,6 +308,7 @@ const VpnIndicator = GObject.registerClass({
 
             this._vpn.applySettingsToNord();
             this._buildIndicatorMenu();
+            
             this._refresh();
         }
 

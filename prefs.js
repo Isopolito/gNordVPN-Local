@@ -9,6 +9,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Vpn = Me.imports.modules.Vpn.Vpn;
 const Constants = Me.imports.modules.constants;
+const Common = Me.imports.modules.common;
 
 function init() {
 }
@@ -101,7 +102,7 @@ function buildPrefsWidget() {
 
     this.countrieMap = this.vpn.getCountries();
     this.countrieMapWithID = this.vpn.getCountries(true);
-    this.countrieNames = Object.keys(this.countrieMap);
+    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
 
     const notebook = new Gtk.Notebook();
 
@@ -424,7 +425,7 @@ function buildPrefsWidget() {
 
     let row = 5;
     let styleItems = [];
-    Object.keys(Constants.states).forEach(state => {
+    Common.safeObjectKeys(Constants.states).forEach(state => {
         const label = new Gtk.Label({
             label: state,
             halign: Gtk.Align.START,
@@ -954,7 +955,7 @@ function buildPrefsWidget() {
         let isMono = monoToggle.get_active();
         let isAlt = altToggle.get_active();
         let style = isAlt ? styleAltCss : styleCss;
-        Object.keys(style).forEach(key => {
+        Common.safeObjectKeys(style).forEach(key => {
             if (isMono) style[key].css = isAlt ? altMonoCss : monoCss;
             style[key].panelText = panelTexts[key];
         });

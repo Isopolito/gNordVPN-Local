@@ -7,6 +7,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 imports.gi.versions.Soup = "2.4";
 const Soup = imports.gi.Soup;
 
+const CMD_NORDEXISTS = `command -v nordvpn`;
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
 const CMD_COUNTRIES = `nordvpn countries`;
@@ -71,8 +72,23 @@ var Vpn = class Vpn {
         return null;
     }
 
-    setSettingsFromNord() {
+    _executeCommand(command) {
+        if (!this.isNordVpnRunning()) return "";
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_FETCH_SETTINGS);
+        return standardOut;
+    }
+
+    isNordVpnRunning() {
+        try {
+            [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
+            return exitStatus === 0;
+        } catch {
+            return false;
+        }
+    }
+
+    setSettingsFromNord() {
+        const standardOut = this._executeCommand(CMD_FETCH_SETTINGS);
         const normalizedOut = this._getString(standardOut);
 
         for (const line of normalizedOut.split(`\n`)) {
@@ -89,7 +105,10 @@ var Vpn = class Vpn {
         }
     }
 
+
     applySettingsToNord() {
+        if (!this.isNordVpnRunning()) return;
+
         this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
@@ -110,7 +129,7 @@ var Vpn = class Vpn {
 
     getAccount() {
         // Read the VPN status from the command line
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNACCOUNT);
+        const standardOut = this._executeCommand(CMD_VPNACCOUNT);
         const allAccountMessages = this._getString(standardOut).split(`\n`);
 
         let emailAddress;
@@ -124,19 +143,15 @@ var Vpn = class Vpn {
     }
 
     checkLogin() {
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
+        const standardOut = this._executeCommand(CMD_LOGIN);
         return this._getString(standardOut).replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
-    isNordVpnRunning() {
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
-        return exitStatus === 0;
-    }
 
     getStatus() {
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
-
+        const standardOut = this._executeCommand(CMD_VPNSTATUS);
         const allStatusMessages = this._getString(standardOut).split(`\n`);
+
         let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer,
             uptime, currentServer;
 
@@ -163,7 +178,7 @@ var Vpn = class Vpn {
 
         return {
             connectStatus: connectStatus || 'N/A',
-            updateMessage: updateMessage || 'N/A',
+            updateMessage,
             country: country || 'N/A',
             city: city || 'N/A',
             serverNumber: serverNumber || 'N/A',
@@ -189,7 +204,7 @@ var Vpn = class Vpn {
     }
 
     loginVpn() {
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_LOGIN);
+        const standardOut = this._executeCommand(CMD_LOGIN);
 
         const ref = "Continue in the browser: ";
         let url = this._getString(standardOut).replace(/\s+/g, ` `);
@@ -232,7 +247,7 @@ var Vpn = class Vpn {
             return countrieMap;
         }
 
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_COUNTRIES);
+        const standardOut = this._executeCommand(CMD_COUNTRIES);
         const countries = this._processCityCountryOutput(this._getString(standardOut));
 
         let processedCountries = {};
@@ -254,7 +269,7 @@ var Vpn = class Vpn {
         let processedCities = {};
 
         for (let i = 0; i < citiesSaved.length; i++) {
-            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
+            const standardOut = this._executeCommand(`${CMD_CITIES} ${citiesSaved[i]}`);
             const cities = this._processCityCountryOutput(this._getString(standardOut));
 
             for (let j = 0; j < cities.length; j++) {
