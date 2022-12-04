@@ -120,11 +120,11 @@ var StateManager = class StateManager {
     }
 
     resolveState(status) {
-        let vpnState = this.states[status.connectStatus] || this.states.ERROR;
-        if (!status.loggedin) vpnState = this.states['LOGGED OUT'];
+        let vpnState = (status && this.states[status.connectStatus]) || this.states.ERROR;
+        if (status && !status.loggedin) vpnState = this.states['LOGGED OUT'];
 
         // If a state override is active, increment it and override the state if appropriate
-        if (this.stateOverride) {
+        if (status && this.stateOverride) {
             this.stateOverrideCounter += 1;
 
             let overrideFromKey = (this.stateOverride.overrideKeys && (

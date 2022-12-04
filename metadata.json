@@ -3,9 +3,11 @@
   "description": "A Gnome extension that shows the NordVPN status in the top bar and provides the ability to configure certain aspects of the connection.",
   "name": "gNordVPN-Local",
   "shell-version": [
-    "43"
+    "40",
+    "41",
+    "42"
   ],
   "url": "https://github.com/Isopolito/gNordVPN-Local",
   "uuid": "gnordvpn-local@isopolito",
-  "version": 13
+  "version": 15
 }

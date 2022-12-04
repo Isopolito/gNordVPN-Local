@@ -9,6 +9,7 @@ const Constants = Me.imports.modules.constants;
 const Signals = Me.imports.modules.Signals.Signals;
 const MenuBase = Me.imports.modules.MenuBase.MenuBase;
 const Favorites = Me.imports.modules.Favorites.Favorites;
+const Common = Me.imports.modules.common;
 
 var ConnectionMenu = class ConnectionMenu extends MenuBase {
     constructor(connectionLabel, connectionType, favoritesKey, connectionCallback) {
@@ -34,11 +35,11 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         const connectionFavs = this._favorites.get(this._favoritesKey).favorites;
 
         //connectionFavs-favConnectionItems
-        let toAddToFav = Object.keys(connectionFavs).filter(x => !this._favConnectionItems.includes(x));
+        let toAddToFav = Common.safeObjectKeys(connectionFavs).filter(x => !this._favConnectionItems.includes(x));
         toAddToFav.forEach(connection => { this._toogleConnectionMenuItem(connection, !true); })
 
         //_favConnectionItems-connectionFavs
-        let toRemoveFromFav = this._favConnectionItems.filter(x => !Object.keys(connectionFavs).includes(x))
+        let toRemoveFromFav = this._favConnectionItems.filter(x => !Common.safeObjectKeys(connectionFavs).includes(x))
         toRemoveFromFav.forEach(connection => { this._toogleConnectionMenuItem(connection, !false); })
 
     }
@@ -154,7 +155,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         const connectionFavs = this._favorites.get(this._favoritesKey, this._connections);
         this._connections = {...connectionFavs.favorites, ...connectionFavs.itemsMinusFavorites};
         
-        for (const connection of Object.keys(connectionFavs.favorites).sort()) {
+        for (const connection of Common.safeObjectKeys(connectionFavs.favorites).sort()) {
             const menuItem = this._buildConnectionMenuItem(connection, true);
             this._favConnectionItems.push(connection);
             this._connectionMenu.menu.addMenuItem(menuItem);
@@ -164,13 +165,13 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._connectionMenu.menu.addMenuItem(this._menuSeperator);
 
 
-        for (const connection of Object.keys(connectionFavs.itemsMinusFavorites).sort()) {
+        for (const connection of Common.safeObjectKeys(connectionFavs.itemsMinusFavorites).sort()) {
             const menuItem = this._buildConnectionMenuItem(connection, false);
             this._connectionMenuItems.push(connection);
             this._connectionMenu.menu.addMenuItem(menuItem);
         }
 
-        if (Object.keys(this._connections).length < 1) {
+        if (Common.safeObjectKeys(this._connections).length < 1) {
             this._connectionMenu.hide();
         } else {
             this._connectionMenu.show();
@@ -180,7 +181,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
     }
 
     showHide(show=true) {
-        if (Object.keys(this._connections).length < 1 || !show) {
+        if (Common.safeObjectKeys(this._connections).length < 1 || !show) {
             this._connectionMenu.hide();
         } else {
             this._connectionMenu.show();
