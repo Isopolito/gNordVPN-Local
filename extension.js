@@ -87,7 +87,6 @@ const VpnIndicator = GObject.registerClass({
 
             let status = this._vpn.getStatus();
             status.loggedin = this.loggedin;
-            
             status.currentState = this._vpn.isNordVpnRunning()
                 ? this.stateManager.resolveState(status)
                 : this.stateManager.resolveState(null);
@@ -308,7 +307,6 @@ const VpnIndicator = GObject.registerClass({
 
             this._vpn.applySettingsToNord();
             this._buildIndicatorMenu();
-            
             this._refresh();
         }
 
