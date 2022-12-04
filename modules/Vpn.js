@@ -7,7 +7,6 @@ const ExtensionUtils = imports.misc.extensionUtils;
 imports.gi.versions.Soup = "2.4";
 const Soup = imports.gi.Soup;
 
-const CMD_NORDEXISTS = `command -v nordvpn`;
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
 const CMD_COUNTRIES = `nordvpn countries`;
@@ -74,13 +73,13 @@ var Vpn = class Vpn {
 
     _executeCommand(command) {
         if (!this.isNordVpnRunning()) return "";
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_FETCH_SETTINGS);
-        return standardOut;
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(command);
+        return this._getString(standardOut);
     }
 
     isNordVpnRunning() {
         try {
-            [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
+            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
             return exitStatus === 0;
         } catch {
             return false;
@@ -89,9 +88,7 @@ var Vpn = class Vpn {
 
     setSettingsFromNord() {
         const standardOut = this._executeCommand(CMD_FETCH_SETTINGS);
-        const normalizedOut = this._getString(standardOut);
-
-        for (const line of normalizedOut.split(`\n`)) {
+        for (const line of standardOut.split(`\n`)) {
             let parts = line.split(`:`);
             const settingName = this._resolveSettingsKey(parts[0]);
             const settingValue = this._resolveSettingsValue(parts[1]);
@@ -130,7 +127,7 @@ var Vpn = class Vpn {
     getAccount() {
         // Read the VPN status from the command line
         const standardOut = this._executeCommand(CMD_VPNACCOUNT);
-        const allAccountMessages = this._getString(standardOut).split(`\n`);
+        const allAccountMessages = standardOut.split(`\n`);
 
         let emailAddress;
         let vpnService;
@@ -144,13 +141,13 @@ var Vpn = class Vpn {
 
     checkLogin() {
         const standardOut = this._executeCommand(CMD_LOGIN);
-        return this._getString(standardOut).replace(/\s+/g, ` `).includes('You are already logged in.');
+        return standardOut.replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
 
     getStatus() {
         const standardOut = this._executeCommand(CMD_VPNSTATUS);
-        const allStatusMessages = this._getString(standardOut).split(`\n`);
+        const allStatusMessages = standardOut.split(`\n`);
 
         let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer,
             uptime, currentServer;
@@ -207,7 +204,7 @@ var Vpn = class Vpn {
         const standardOut = this._executeCommand(CMD_LOGIN);
 
         const ref = "Continue in the browser: ";
-        let url = this._getString(standardOut).replace(/\s+/g, ` `);
+        let url = standardOut.replace(/\s+/g, ` `);
         url = url.substring(url.indexOf(ref) + ref.length).trim();
 
         Gio.app_info_launch_default_for_uri(url, null);
@@ -248,7 +245,7 @@ var Vpn = class Vpn {
         }
 
         const standardOut = this._executeCommand(CMD_COUNTRIES);
-        const countries = this._processCityCountryOutput(this._getString(standardOut));
+        const countries = this._processCityCountryOutput(standardOut);
 
         let processedCountries = {};
         for (let country of countries) {
@@ -270,7 +267,7 @@ var Vpn = class Vpn {
 
         for (let i = 0; i < citiesSaved.length; i++) {
             const standardOut = this._executeCommand(`${CMD_CITIES} ${citiesSaved[i]}`);
-            const cities = this._processCityCountryOutput(this._getString(standardOut));
+            const cities = this._processCityCountryOutput(standardOut);
 
             for (let j = 0; j < cities.length; j++) {
                 if (j > citiesMax) break;
