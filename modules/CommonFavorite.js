@@ -25,7 +25,15 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this._signals = new Signals();
     }
 
+    disable() {
+        this._isBuilt = false;
+        this._destroyMap = {};
+        this.favList = {};
+        this.itemList = {};
+    }
+    
     updateFavorite() {
+
         let newFav = {};
 
         Object.keys(Constants.favorites).forEach(key => {
@@ -173,12 +181,5 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         } else {
             this._favoriteMenu.show();
         }
-    }
-
-    disable() {
-        this._isBuilt = false;
-        this._destroyMap = {};
-        this.favList = {};
-        this.itemList = {};
     }
 }

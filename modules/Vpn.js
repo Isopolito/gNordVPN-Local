@@ -3,6 +3,7 @@ const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Soup = imports.gi.Soup;
+
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
 const CMD_COUNTRIES = `nordvpn countries`;
@@ -20,7 +21,7 @@ var Vpn = class Vpn {
         this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
         this.session = Soup.Session.new();
-        this.soupVersion = Soup.get_major_version(); 
+        this.soupVersion = Soup.get_major_version();
     }
 
     _httpGet = (url) => {
@@ -35,7 +36,7 @@ var Vpn = class Vpn {
         }
         return JSON.parse(this._getString(msg.response_body_data.get_data()));
     }
-    
+
     // Remove the junk that shows up from messages in the nordvpn output
     _processCityCountryOutput = (input) => {
         const match = input.match(/(^\w+?,\s(\w+?,\s)+?(\w+?$)|^\s*?\w+?\s*?$)/gm);
@@ -111,7 +112,6 @@ var Vpn = class Vpn {
         }
     }
 
-
     applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
@@ -134,7 +134,6 @@ var Vpn = class Vpn {
     }
 
     getAccount() {
-        // Read the VPN status from the command line
         const standardOut = this._executeCommand(CMD_VPNACCOUNT);
         const allAccountMessages = standardOut.split(`\n`);
 
@@ -152,7 +151,6 @@ var Vpn = class Vpn {
         const standardOut = this._executeCommand(CMD_LOGIN);
         return standardOut.replace(/\s+/g, ` `).includes('You are already logged in.');
     }
-
 
     getStatus() {
         const standardOut = this._executeCommand(CMD_VPNSTATUS);
@@ -273,8 +271,8 @@ var Vpn = class Vpn {
         let processedCities = {};
 
         for (let i = 0; i < citiesSaved.length; i++) {
-            const standardOut = this._executeCommand(`${CMD_CITIES} ${citiesSaved[i]}`);
-            const cities = this._processCityCountryOutput(standardOut);
+            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
+            const cities = this._processCityCountryOutput(this._getString(standardOut));
 
             for (let j = 0; j < cities.length; j++) {
                 if (j > citiesMax) break;
