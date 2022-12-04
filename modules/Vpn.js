@@ -2,11 +2,7 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
-
-// Force version 2.x to avoid compatibility issues with certain distros that are using Soup 3.x by default
-imports.gi.versions.Soup = "2.4";
 const Soup = imports.gi.Soup;
-
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
 const CMD_COUNTRIES = `nordvpn countries`;
@@ -23,10 +19,23 @@ var Vpn = class Vpn {
         this.executeCommandSync = GLib.spawn_command_line_sync;
         this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-
         this.session = Soup.Session.new();
+        this.soupVersion = Soup.get_major_version(); 
     }
 
+    _httpGet = (url) => {
+        const msg = Soup.Message.new("GET", url);
+        switch (this.soupVersion) {
+            case 2:
+                this.session.send_message(msg);
+                break;
+            default:
+                this.session.send(msg, null);
+                break;
+        }
+        return JSON.parse(this._getString(msg.response_body_data.get_data()));
+    }
+    
     // Remove the junk that shows up from messages in the nordvpn output
     _processCityCountryOutput = (input) => {
         const match = input.match(/(^\w+?,\s(\w+?,\s)+?(\w+?$)|^\s*?\w+?\s*?$)/gm);
@@ -228,11 +237,9 @@ var Vpn = class Vpn {
 
     getCountries(withId = false) {
         if (withId) {
-            this.message = Soup.Message.new("GET", "https://api.nordvpn.com/v1/servers/countries");
-            this.session.send_message(this.message);
-            let countrieNames, countrieMap;
+            let countrieMap;
             try {
-                let data = JSON.parse(this.message.response_body_data.get_data());
+                let data = this._httpGet("https://api.nordvpn.com/v1/servers/countries");
                 countrieMap = data.reduce((acc, v) => {
                     acc[v['name']] = v['id'];
                     return acc;
@@ -310,10 +317,8 @@ var Vpn = class Vpn {
         let servers = {}
         try {
             for (let i = 0; i < countriesSaved.length; i++) {
-                this.message = Soup.Message.new("GET", url + "&filters[country_id]=" + countriesSaved[i]);
-                this.session.send_message(this.message);
-                let data = this.message.response_body_data.get_data();
-                JSON.parse(this._getString(data)).forEach(e => {
+                let data = this._httpGet(url + "&filters[country_id]=" + countriesSaved[i]);
+                data.forEach(e => {
                     servers[e['name']] = e['hostname'].replace('.nordvpn.com', '');
                 });
             }
