@@ -120,31 +120,34 @@ var StateManager = class StateManager {
     }
 
     resolveState(status) {
-        let vpnState = this.states[status.connectStatus] || this.states.ERROR;
-        if (!status.loggedin) vpnState = this.states['LOGGED OUT'];
+        let vpnState = (status && this.states[status.connectStatus]) || this.states.ERROR;
+        if (status && !status.loggedin) vpnState = this.states['LOGGED OUT'];
 
         // If a state override is active, increment it and override the state if appropriate
-        if (this.stateOverride) {
+        if (status && this.stateOverride) {
             this.stateOverrideCounter += 1;
 
             let overrideFromKey = (this.stateOverride.overrideKeys && (
-                                  (this.stateOverride.overrideKeys[0] === 'countries' && this.stateOverride.overrideKeys[1].replace(/_/g, " ") === status.country) || 
-                                  (this.stateOverride.overrideKeys[0] === 'cities'    && this.stateOverride.overrideKeys[1].replace(/_/g, " ") === status.city) || 
-                                  (this.stateOverride.overrideKeys[0] === 'servers'   && this.stateOverride.overrideKeys[1] === status.currentServer.replace('.nordvpn.com',''))))
+                (this.stateOverride.overrideKeys[0] === 'countries' && this.stateOverride.overrideKeys[1].replace(/_/g, " ") === status.country) ||
+                (this.stateOverride.overrideKeys[0] === 'cities' && this.stateOverride.overrideKeys[1].replace(/_/g, " ") === status.city) ||
+                (this.stateOverride.overrideKeys[0] === 'servers' && this.stateOverride.overrideKeys[1] === status.currentServer.replace('.nordvpn.com', ''))))
 
-            if (this.stateOverrideCounter > this.STATE_OVERRIDE_DURATION || 
-              (vpnState.clearsOverrideId == this.stateOverride.overrideId) || overrideFromKey) {
+            if (this.stateOverrideCounter > this.STATE_OVERRIDE_DURATION ||
+                (vpnState.clearsOverrideId == this.stateOverride.overrideId) || overrideFromKey) {
                 // State override expired or cleared by current state, remove it
                 this.stateOverride = undefined;
                 this.stateOverrideCounter = 0;
 
-            } else { 
-               // State override still active
+            } else {
+                // State override still active
                 vpnState = this.stateOverride;
             }
-        } 
-        
-        return {...vpnState, 'refreshTimeout': this.quickRefresh ? this.QUICK_REFRESH_TIMEOUT : vpnState['refreshTimeout'] };
+        }
+
+        return {
+            ...vpnState,
+            'refreshTimeout': this.quickRefresh ? this.QUICK_REFRESH_TIMEOUT : vpnState['refreshTimeout']
+        };
     }
 }
 
