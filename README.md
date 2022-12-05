@@ -36,3 +36,7 @@ Manual install:
 ## Development
 
 Contributions welcome! If you find any issues or think of any cool features, check it's not already been raised under Issues and raise it.
+
+## Thanks
+
+Thanks [TheRobVK](https://github.com/ThatRobVK) for creating the original version of this extension. Also thanks to all who have contributed, it's much appreciated!
