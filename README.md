@@ -17,7 +17,7 @@
 - 🌍 **VPN Server Status**: View your current connection status and server details.
 - ⭐ **Favorites**: Easy access to your favorite servers.
 - 🛠️ **Custom Panel Positioning**: Adjust the extension's panel position to left, center, or right.
-- 🎨 **CSS Restyling**: Completely restyle the extension to your liking via CSS settings (See `prefs.js` for more details).
+- 🎨 **CSS Restyling**: Completely restyle the extension to your liking via CSS settings
 
 ## Installation
 This extension uses the NordVPN command line client, which can be set up as follows.
