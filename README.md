@@ -1,23 +1,25 @@
-# gNordVPN-Local
+# gNordVPN-Local: GNOME Interface for NordVPN
+
 <img align="right" src="img/screenshot.png">
-A Gnome extension that shows the NordVPN status in the top bar, features a menu showing the current status and a button to Connect / Disconnect, in addition to other functionality.
 
-###### Note
-If the extension is in an error state, first check via the command line that nordvpn is functioning correctly (`nordvpn status`), if the service is unavailable or not installed then the extension will not work properly.
+## Overview
 
-## What it does
-When disconnected, the top bar will show a red button reading `UNPROTECTED`--as a reminder that there is no connection to the VPN. When connecting or disconnecting the button turns amber, and once connected it will turn green showing the country and server number of the connection, e.g. `UNITED KINGDOM #813`. Clicking the button will show the full command-line output of the command `nordvpn status` in the menu. Undearneath the status is a button to connect / disconnect. Below that is a menu for selecting the Country. 
+**gNordVPN-Local** is a GNOME Shell extension designed to provide seamless integration with NordVPN. Manage VPN connections directly from the GNOME top bar with intuitive menus and status indicators.
 
-When updates are available a message will display in the menu.
+## Prerequisites
 
-### How it's different 
-gNordVPN-Local is a fork of NordVPN-Local. That extension is loosely based on Quadipedia's NordVPN Status extension (found on the Gnome extensions site), kudos to them for creating the original. Their version works by reading the server list from NordVPN's API and comparing the computer's public IP against this list. It was found to often not pick up active connections, possibly due to incorrect API data.
+- NordVPN account and the NordVPN CLI tool installed
+- GNOME Shell (version 42 and above)
 
-This version uses the NordVPN command-line tools to determine the status. It updates on connect / disconnect, and it refreshes every 30 seconds in case you change your connection external to the plugin.
+## Features
 
-Note that due to using the local command-line tools, this only works when using NordVPN locally (hence the title). If the VPN connection is established outside of the computer, e.g. on your router, then this plugin __will not__ detect the VPN connection. Use Quasipedia's version instead, which will detect that, if it finds your public IP in the NordVPN server list.
+- 🌐 **Quick Connect/Disconnect**: Toggle your VPN connection with a single click.
+- 🌍 **VPN Server Status**: View your current connection status and server details.
+- ⭐ **Favorites**: Easy access to your favorite servers.
+- 🛠️ **Custom Panel Positioning**: Adjust the extension's panel position to left, center, or right.
+- 🎨 **CSS Restyling**: Completely restyle the extension to your liking via CSS settings (See `prefs.js` for more details).
 
-## How to Install
+## Installation
 This extension uses the NordVPN command line client, which can be set up as follows.
 
 ### Install NordVPN
@@ -25,18 +27,27 @@ This extension uses the NordVPN command line client, which can be set up as foll
 2. Configure your credentials with `nordvpn login`, following the prompts.
 3. Check NordVPN is set up with `nordvpn c`, if it connects successfully then you're good to go.
 
-Install the extension
-Easiest way: enable on gnome-extensions at [gNordVPN Local on gnome extensions](https://extensions.gnome.org/extension/2569/gnordvpn-local/)
+### Install the extension
+#### Easiest way: 
+Enable on gnome-extensions at [gNordVPN Local on gnome extensions](https://extensions.gnome.org/extension/2569/gnordvpn-local/)
 
-Manual install:  
+#### Manual install:
 1. Create a folder for the extension with `mkdir ~/.local/share/gnome-shell/extensions/gnordvpn-local@isopolito`
 2. Copy the files from this repo into that folder
 3. Enable the extension using `Tweaks` (if you don't have it, install via `sudo apt install gnome-tweaks`)
 
+## Troubleshooting
+
+If the extension shows an error state, make sure NordVPN CLI is functioning (`nordvpn status`). The extension relies on NordVPN CLI being operational.
+
 ## Development
 
-Contributions welcome! If you find any issues or think of any cool features, check it's not already been raised under Issues and raise it.
+Contributions welcome! If you find any issues or think of any cool features, check to see if it's already documented under Issues, if not--raise it.
 
 ## Thanks
 
 Thanks [TheRobVK](https://github.com/ThatRobVK) for creating the original version of this extension. Also thanks to all who have contributed, it's much appreciated!
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
