@@ -1,6 +1,6 @@
 # gNordVPN-Local: GNOME Interface for NordVPN
 
-<img align="right" src="img/screenshot.png">
+<img align="right" src="img/screenshot1.png">
 
 ## Overview
 
