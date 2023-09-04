@@ -123,32 +123,26 @@ function buildPrefsWidget() {
 
     generalPage.attach(panelPositionLabel, 0, 0, 1, 1);
 
-// Create ListStore Model
-let panelPositionModel = new Gtk.ListStore();
-panelPositionModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
+    let panelPositionModel = new Gtk.ListStore();
+    panelPositionModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
 
-// Create ComboBox and set the model
-this.panelPositionCbox = new Gtk.ComboBox({model: panelPositionModel});
+    this.panelPositionCbox = new Gtk.ComboBox({model: panelPositionModel});
 
-// Create and add the text renderer
-let panelPositionRenderer = new Gtk.CellRendererText();
-this.panelPositionCbox.pack_start(panelPositionRenderer, true);
-this.panelPositionCbox.add_attribute(panelPositionRenderer, 'text', 1);
+    let panelPositionRenderer = new Gtk.CellRendererText();
+    this.panelPositionCbox.pack_start(panelPositionRenderer, true);
+    this.panelPositionCbox.add_attribute(panelPositionRenderer, 'text', 1);
 
-// Populate the model
-panelPositionModel.set(panelPositionModel.append(), [0, 1], ['left', 'Left']);
-panelPositionModel.set(panelPositionModel.append(), [0, 1], ['center', 'Center']);
-panelPositionModel.set(panelPositionModel.append(), [0, 1], ['right', 'Right']);
+    panelPositionModel.set(panelPositionModel.append(), [0, 1], ['left', 'Left']);
+    panelPositionModel.set(panelPositionModel.append(), [0, 1], ['center', 'Center']);
+    panelPositionModel.set(panelPositionModel.append(), [0, 1], ['right', 'Right']);
 
-// Set initial ComboBox selection based on GSettings
-let initialPosition = this.settings.get_string('panel-position');
-let initialIndex = initialPosition === 'left' ? 0 : initialPosition === 'center' ? 1 : 2;
-this.panelPositionCbox.set_active(initialIndex);
+    let initialPosition = this.settings.get_string('panel-position');
+    let initialIndex = initialPosition === 'left' ? 0 : initialPosition === 'center' ? 1 : 2;
+    this.panelPositionCbox.set_active(initialIndex);
 
-// Update GSettings when ComboBox selection changes
-this.panelPositionCbox.connect('changed', function() {
-    let [success, iter] = this.panelPositionCbox.get_active_iter();
-    if (!success) return;
+    this.panelPositionCbox.connect('changed', function() {
+        let [success, iter] = this.panelPositionCbox.get_active_iter();
+        if (!success) return;
         let newPosition = panelPositionModel.get_value(iter, 0);
         this.settings.set_string('panel-position', newPosition);
     }.bind(this));

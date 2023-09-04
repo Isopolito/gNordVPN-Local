@@ -35,7 +35,7 @@ const VpnIndicator = GObject.registerClass({
                 switch(key) {
                     case 'panel-position':
                     	if (Main.panel.statusArea[indicatorName]) {
-                    		 Main.panel.statusArea[indicatorName].disable();
+                    		Main.panel.statusArea[indicatorName].disable();
                 			Main.panel.statusArea[indicatorName].destroy();
             			}
 		 				vpnIndicator = new VpnIndicator();
