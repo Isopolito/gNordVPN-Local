@@ -5,6 +5,9 @@
         <key name="panel-styles" type="a{sa{ss}}">
             <default>{"CONNECTED":{"panelText":"{country} #{number}","css":"background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);"},"CONNECTING":{"panelText":"CONNECTING","css":"background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);"},"DISCONNECTED":{"panelText":"DISCONNECTED","css":"background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);"},"DISCONNECTING":{"panelText":"DISCONNECTING","css":"background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);"},"RECONNECTING":{"panelText":"RECONNECTING","css":"background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);"},"RESTARTING":{"panelText":"RESTARTING","css":"background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);"},"ERROR":{"panelText":"ERROR","css":"background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);"},"LOGGED_OUT":{"panelText":"LOGGED OUT","css":"background-color: rgba(48,26,208,0.7); color: rgba(255,255,255,1);"},"LOGGING_IN":{"panelText":"LOGGING IN","css":"background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);"},"LOGGING_OUT":{"panelText":"LOGGING OUT","css":"background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);"}}</default>
         </key>
+        <key name="panel-position" type="s">
+            <default>"left"</default>
+        </key>
         <key name="common-panel-style" type="s">
             <default>"font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;"</default>
         </key>

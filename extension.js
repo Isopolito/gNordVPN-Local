@@ -33,7 +33,16 @@ const VpnIndicator = GObject.registerClass({
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
             this.settings.connect('changed', (settings, key) =>  {
                 switch(key) {
-                    case 'panel-styles': 
+                    case 'panel-position':
+                    	if (Main.panel.statusArea[indicatorName]) {
+                    		Main.panel.statusArea[indicatorName].disable();
+                			Main.panel.statusArea[indicatorName].destroy();
+            			}
+		 				vpnIndicator = new VpnIndicator();
+    					vpnIndicator.enable();
+						Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0 ,vpnIndicator.settings.get_string('panel-position'));
+                    break;      
+                    case 'panel-styles':             
                     case 'common-panel-style':
                         this._panelIcon.updateStyle();
                         this._refresh();
@@ -332,7 +341,7 @@ function init() {
 function enable() {
     vpnIndicator = new VpnIndicator();
     vpnIndicator.enable();
-    Main.panel.addToStatusArea(indicatorName, vpnIndicator, 1);
+	Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0 ,vpnIndicator.settings.get_string('panel-position'));
 }
 
 function disable() {
