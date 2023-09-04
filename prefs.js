@@ -114,20 +114,63 @@ function buildPrefsWidget() {
         visible: true
     });
 
+    // Panel Position Label
+    const panelPositionLabel = new Gtk.Label({
+        label: `Select Panel Position:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+
+    generalPage.attach(panelPositionLabel, 0, 0, 1, 1);
+
+// Create ListStore Model
+let panelPositionModel = new Gtk.ListStore();
+panelPositionModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
+
+// Create ComboBox and set the model
+this.panelPositionCbox = new Gtk.ComboBox({model: panelPositionModel});
+
+// Create and add the text renderer
+let panelPositionRenderer = new Gtk.CellRendererText();
+this.panelPositionCbox.pack_start(panelPositionRenderer, true);
+this.panelPositionCbox.add_attribute(panelPositionRenderer, 'text', 1);
+
+// Populate the model
+panelPositionModel.set(panelPositionModel.append(), [0, 1], ['left', 'Left']);
+panelPositionModel.set(panelPositionModel.append(), [0, 1], ['center', 'Center']);
+panelPositionModel.set(panelPositionModel.append(), [0, 1], ['right', 'Right']);
+
+// Set initial ComboBox selection based on GSettings
+let initialPosition = this.settings.get_string('panel-position');
+let initialIndex = initialPosition === 'left' ? 0 : initialPosition === 'center' ? 1 : 2;
+this.panelPositionCbox.set_active(initialIndex);
+
+// Update GSettings when ComboBox selection changes
+this.panelPositionCbox.connect('changed', function() {
+    let [success, iter] = this.panelPositionCbox.get_active_iter();
+    if (!success) return;
+        let newPosition = panelPositionModel.get_value(iter, 0);
+        this.settings.set_string('panel-position', newPosition);
+    }.bind(this));
+
+    // Show ComboBox and attach to stylePage
+    this.panelPositionCbox.show();
+    generalPage.attach(this.panelPositionCbox, 1, 0, 1, 1);
+
     // autoconnect
     const toggleLabel = new Gtk.Label({
         label: `Autoconnect to VPN on startup:`,
         halign: Gtk.Align.START,
         visible: true
     });
-    generalPage.attach(toggleLabel, 0, 0, 1, 1);
+    generalPage.attach(toggleLabel, 0, 1, 1, 1);
 
     const autoConnectToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`autoconnect`),
         halign: Gtk.Align.END,
         visible: true
     });
-    generalPage.attach(autoConnectToggle, 1, 0, 1, 1);
+    generalPage.attach(autoConnectToggle, 1, 1, 1, 1);
 
     this.settings.bind(
         `autoconnect`,
@@ -142,14 +185,14 @@ function buildPrefsWidget() {
         halign: Gtk.Align.START,
         visible: true
     });
-    generalPage.attach(commonFavLabel, 0, 1, 1, 1);
+    generalPage.attach(commonFavLabel, 0, 2, 1, 1);
 
     const commonFavToggle = new Gtk.Switch({
         active: this.settings.get_boolean(`commonfavorite`),
         halign: Gtk.Align.END,
         visible: true
     });
-    generalPage.attach(commonFavToggle, 1, 1, 1, 1);
+    generalPage.attach(commonFavToggle, 1, 2, 1, 1);
 
     this.settings.bind(
         `commonfavorite`,
@@ -163,7 +206,7 @@ function buildPrefsWidget() {
         label: `Reset All Settings`,
         visible: true
     });
-    generalPage.attach(resetAll, 0, 2, 1, 1);
+    generalPage.attach(resetAll, 0, 3, 1, 1);
 
     const generalSaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
@@ -171,7 +214,7 @@ function buildPrefsWidget() {
         use_markup: true,
         visible: true
     });
-    generalPage.attach(generalSaveLabel, 0, 3, 2, 1);
+    generalPage.attach(generalSaveLabel, 0, 4, 2, 1);
 
     notebook.append_page(generalPage, new Gtk.Label({
         label: `<b>General</b>`,
