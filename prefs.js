@@ -345,35 +345,7 @@ function createAccountsPage() {
     return accountPage;
 }
 
-function buildPrefsWidget() {
-    this.normalRender = new Gtk.CellRendererText();
-
-    this.vpn = new Vpn();
-    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-    this.vpn.setSettingsFromNord();
-
-    this.countrieMap = this.vpn.getCountries();
-    this.countrieMapWithID = this.vpn.getCountries(true);
-    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
-
-    const notebook = new Gtk.Notebook()
-
-    const {generalPage, resetAll} = createGeneralPage.call(this);
-    notebook.append_page(generalPage, new Gtk.Label({
-        label: `<b>General</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
-    const accountPage = createAccountsPage.call(this);
-    notebook.append_page(accountPage, new Gtk.Label({
-        label: `<b>Account</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
+function createStylesPage() {
     // *** STYLES
     const stylePage = new Gtk.Grid({
         margin_start: 18,
@@ -526,7 +498,59 @@ function buildPrefsWidget() {
         visible: true
     });
     stylePage.attach(styleSaveLabel, 0, row, 2, 1);
+    return {
+        stylePage,
+        monoToggle,
+        altToggle,
+        styleSmall,
+        styleMedium,
+        styleLarge,
+        styleExtraLarge,
+        styleItems,
+        commonCss
+    };
+}
 
+function buildPrefsWidget() {
+    this.normalRender = new Gtk.CellRendererText();
+
+    this.vpn = new Vpn();
+    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    this.vpn.setSettingsFromNord();
+
+    this.countrieMap = this.vpn.getCountries();
+    this.countrieMapWithID = this.vpn.getCountries(true);
+    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
+
+    const notebook = new Gtk.Notebook()
+
+    const {generalPage, resetAll} = createGeneralPage.call(this);
+    notebook.append_page(generalPage, new Gtk.Label({
+        label: `<b>General</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    const accountPage = createAccountsPage.call(this);
+    notebook.append_page(accountPage, new Gtk.Label({
+        label: `<b>Account</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    let {
+        stylePage,
+        monoToggle,
+        altToggle,
+        styleSmall,
+        styleMedium,
+        styleLarge,
+        styleExtraLarge,
+        styleItems,
+        commonCss
+    } = createStylesPage.call(this);
     notebook.append_page(stylePage, new Gtk.Label({
         label: `<b>Style</b>`,
         halign: Gtk.Align.START,
@@ -534,7 +558,7 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-// *** CONNECTIONS
+    // *** CONNECTIONS
     const connectionPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
