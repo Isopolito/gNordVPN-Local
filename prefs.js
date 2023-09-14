@@ -201,7 +201,6 @@ function createGeneralPage() {
 }
 
 function createAccountsPage() {
-    // *** ACCOUNTS
     const accountPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -346,7 +345,6 @@ function createAccountsPage() {
 }
 
 function createStylesPage() {
-    // *** STYLES
     const stylePage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -511,54 +509,7 @@ function createStylesPage() {
     };
 }
 
-function buildPrefsWidget() {
-    this.normalRender = new Gtk.CellRendererText();
-
-    this.vpn = new Vpn();
-    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-    this.vpn.setSettingsFromNord();
-
-    this.countrieMap = this.vpn.getCountries();
-    this.countrieMapWithID = this.vpn.getCountries(true);
-    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
-
-    const notebook = new Gtk.Notebook()
-
-    const {generalPage, resetAll} = createGeneralPage.call(this);
-    notebook.append_page(generalPage, new Gtk.Label({
-        label: `<b>General</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
-    const accountPage = createAccountsPage.call(this);
-    notebook.append_page(accountPage, new Gtk.Label({
-        label: `<b>Account</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
-    let {
-        stylePage,
-        monoToggle,
-        altToggle,
-        styleSmall,
-        styleMedium,
-        styleLarge,
-        styleExtraLarge,
-        styleItems,
-        commonCss
-    } = createStylesPage.call(this);
-    notebook.append_page(stylePage, new Gtk.Label({
-        label: `<b>Style</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
-    // *** CONNECTIONS
+function createConnectionsPage() {
     const connectionPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -567,7 +518,7 @@ function buildPrefsWidget() {
         visible: true
     });
 
-    // Currently a bug in nordvpn where notify doesn't reflect in settings output, hiding for now to 
+    // Currently a bug in nordvpn where notify doesn't reflect in settings output, hiding for now to
     // not confuse people.
     // Notify
     // const notifyLabel = new Gtk.Label({
@@ -758,15 +709,10 @@ function buildPrefsWidget() {
         visible: true
     });
     connectionPage.attach(connectionSaveLabel, 0, 7, 2, 1);
+    return {connectionPage, resetConnection};
+}
 
-    notebook.append_page(connectionPage, new Gtk.Label({
-        label: `<b>Connection</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
-// *** CITIES
+function createCitiesPage() {
     const cityPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -862,16 +808,10 @@ function buildPrefsWidget() {
         visible: true
     });
     cityPage.attach(citySaveLabel, 0, 2, 2, 1);
+    return {cityPage, cityTreeView, cityTreeIterMap};
+}
 
-
-    notebook.append_page(cityPage, new Gtk.Label({
-        label: `<b>City</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
-// *** SERVERS
+function createServersPage() {
     const serverPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -967,8 +907,79 @@ function buildPrefsWidget() {
         visible: true
     });
     serverPage.attach(serverSaveLabel, 0, 2, 2, 1);
+    return {serverPage, serverTreeView, serverTreeIterMap};
+}
 
+function buildPrefsWidget() {
+    this.normalRender = new Gtk.CellRendererText();
 
+    this.vpn = new Vpn();
+    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    this.vpn.setSettingsFromNord();
+
+    this.countrieMap = this.vpn.getCountries();
+    this.countrieMapWithID = this.vpn.getCountries(true);
+    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
+
+    const notebook = new Gtk.Notebook()
+
+    // *** GENERAL
+    const {generalPage, resetAll} = createGeneralPage.call(this);
+    notebook.append_page(generalPage, new Gtk.Label({
+        label: `<b>General</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    // *** ACCOUNTS
+    const accountPage = createAccountsPage.call(this);
+    notebook.append_page(accountPage, new Gtk.Label({
+        label: `<b>Account</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    // *** STYLES
+    let {
+        stylePage,
+        monoToggle,
+        altToggle,
+        styleSmall,
+        styleMedium,
+        styleLarge,
+        styleExtraLarge,
+        styleItems,
+        commonCss
+    } = createStylesPage.call(this);
+    notebook.append_page(stylePage, new Gtk.Label({
+        label: `<b>Style</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    // *** CONNECTIONS
+    const {connectionPage, resetConnection} = createConnectionsPage.call(this);
+    notebook.append_page(connectionPage, new Gtk.Label({
+        label: `<b>Connection</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    // *** CITIES
+    let {cityPage, cityTreeView, cityTreeIterMap} = createCitiesPage.call(this);
+    notebook.append_page(cityPage, new Gtk.Label({
+        label: `<b>City</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    // *** SERVERS
+    let {serverPage, serverTreeView, serverTreeIterMap} = createServersPage.call(this);
     notebook.append_page(serverPage, new Gtk.Label({
         label: `<b>Server</b>`,
         halign: Gtk.Align.START,
