@@ -910,6 +910,53 @@ function createServersPage() {
     return {serverPage, serverTreeView, serverTreeIterMap};
 }
 
+function loadGeneratedStyle(panelTexts, monoToggle, altToggle) {
+    let styleCss = {
+        'CONNECTED': {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);'},
+        'CONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'DISCONNECTED': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
+        'DISCONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'RECONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'RESTARTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'ERROR': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
+        'LOGGED_OUT': {css: 'background-color: rgba(48,26,208,0.7); color: rgba(255,255,255,1);'},
+        'LOGGING_IN': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'LOGGING_OUT': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+    };
+
+    let styleAltCss = {
+        'CONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(0,255,0,0.7);'},
+        'CONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'DISCONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
+        'DISCONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'RECONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'RESTARTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'ERROR': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
+        'LOGGED_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(48,26,208,0.7);'},
+        'LOGGING_IN': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'LOGGING_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+    }
+
+    let monoCss = "background-color: rgba(255,255,255,0.7); color: rgba(0,0,0,1);";
+    let altMonoCss = "background-color: rgba(0,0,0,0.7); color: rgba(255,255,255,1);";
+
+    let ccss = "font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;";
+    let altCcss = "font-weight: bold; border-radius: 5px; padding: 3px 10px 0; margin: 3px 0px 3px 0px; border: 1px solid white;";
+
+    let isMono = monoToggle.get_active();
+    let isAlt = altToggle.get_active();
+    let style = isAlt ? styleAltCss : styleCss;
+    Common.safeObjectKeys(style).forEach(key => {
+        if (isMono) style[key].css = isAlt ? altMonoCss : monoCss;
+        style[key].panelText = panelTexts[key];
+    });
+
+    let _ccss = altToggle.get_active() ? altCcss : ccss;
+    commonCss.get_buffer().set_text(_ccss, _ccss.length);
+
+    loadStyle(style, styleItems);
+}
+
 function buildPrefsWidget() {
     this.normalRender = new Gtk.CellRendererText();
 
@@ -1000,55 +1047,7 @@ function buildPrefsWidget() {
         resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
     });
 
-    function loadGeneratedStyle(panelTexts, monoToggle, altToggle) {
-        let styleCss = {
-            'CONNECTED': {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);'},
-            'CONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'DISCONNECTED': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
-            'DISCONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'RECONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'RESTARTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'ERROR': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
-            'LOGGED_OUT': {css: 'background-color: rgba(48,26,208,0.7); color: rgba(255,255,255,1);'},
-            'LOGGING_IN': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'LOGGING_OUT': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-        };
-
-        let styleAltCss = {
-            'CONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(0,255,0,0.7);'},
-            'CONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'DISCONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
-            'DISCONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'RECONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'RESTARTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'ERROR': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
-            'LOGGED_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(48,26,208,0.7);'},
-            'LOGGING_IN': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'LOGGING_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-        }
-
-        let monoCss = "background-color: rgba(255,255,255,0.7); color: rgba(0,0,0,1);";
-        let altMonoCss = "background-color: rgba(0,0,0,0.7); color: rgba(255,255,255,1);";
-
-        let ccss = "font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;";
-        let altCcss = "font-weight: bold; border-radius: 5px; padding: 3px 10px 0; margin: 3px 0px 3px 0px; border: 1px solid white;";
-
-        let isMono = monoToggle.get_active();
-        let isAlt = altToggle.get_active();
-        let style = isAlt ? styleAltCss : styleCss;
-        Common.safeObjectKeys(style).forEach(key => {
-            if (isMono) style[key].css = isAlt ? altMonoCss : monoCss;
-            style[key].panelText = panelTexts[key];
-        });
-
-        let _ccss = altToggle.get_active() ? altCcss : ccss;
-        commonCss.get_buffer().set_text(_ccss, _ccss.length);
-
-        loadStyle(style, styleItems);
-    }
-
     styleExtraLarge.connect(`clicked`, () => {
-
         let panelTexts = {
             'CONNECTED': '{city}, {country}  -  {uptimeHr}:{uptimeMin}:{uptimeSec}  -  ↑{transferUp} ↓{transferDown}',
             'CONNECTING': 'VPN CONNECTING',
