@@ -488,25 +488,90 @@ function createStylesPage() {
     connectedKeyLabel.set_selectable(true);
     stylePage.attach(connectedKeyLabel, 0, row++, 5, 1);
 
-
     const styleSaveLabel = new Gtk.Label({
         label: `<b>* Changes applied on close</b>`,
         halign: Gtk.Align.START,
         use_markup: true,
         visible: true
     });
+
     stylePage.attach(styleSaveLabel, 0, row, 2, 1);
-    return {
-        stylePage,
-        monoToggle,
-        altToggle,
-        styleSmall,
-        styleMedium,
-        styleLarge,
-        styleExtraLarge,
-        styleItems,
-        commonCss
-    };
+
+    styleExtraLarge.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{city}, {country}  -  {uptimeHr}:{uptimeMin}:{uptimeSec}  -  ↑{transferUp} ↓{transferDown}',
+            'CONNECTING': 'VPN CONNECTING',
+            'DISCONNECTED': 'VPN DISCONNECTED',
+            'DISCONNECTING': 'VPN DISCONNECTING ',
+            'RECONNECTING': 'VPN RECONNECTING',
+            'RESTARTING': 'VPN RESTARTING',
+            'ERROR': 'VPN ERROR',
+            'LOGGED_OUT': 'VPN LOGGED OUT',
+            'LOGGING_IN': 'VPN LOGGING IN',
+            'LOGGING_OUT': 'VPN LOGGING OUT',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleLarge.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{country} #{number}',
+            'CONNECTING': 'CONNECTING',
+            'DISCONNECTED': 'DISCONNECTED',
+            'DISCONNECTING': 'DISCONNECTING',
+            'RECONNECTING': 'RECONNECTING',
+            'RESTARTING': 'RESTARTING',
+            'ERROR': 'ERROR',
+            'LOGGED_OUT': 'LOGGED OUT',
+            'LOGGING_IN': 'LOGGING IN',
+            'LOGGING_OUT': 'LOGGING OUT',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleMedium.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{ctry}#{number}',
+            'CONNECTING': '...',
+            'DISCONNECTED': 'OFF',
+            'DISCONNECTING': '...',
+            'RECONNECTING': '...',
+            'RESTARTING': '...',
+            'ERROR': 'ERR',
+            'LOGGED_OUT': 'OUT',
+            'LOGGING_IN': '...',
+            'LOGGING_OUT': '...',
+
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleSmall.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{ctry}',
+            'CONNECTING': '.',
+            'DISCONNECTED': '∅',
+            'DISCONNECTING': '.',
+            'RECONNECTING': '.',
+            'RESTARTING': '.',
+            'ERROR': '⚠',
+            'LOGGED_OUT': '?',
+            'LOGGING_IN': '.',
+            'LOGGING_OUT': '.',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss,styleItems);
+    });
+
+    styleItems.forEach(item => {
+        item.format.connect(`changed`, () => {
+            saveStyle(styleItems);
+        });
+        item.css.connect(`changed`, () => {
+            saveStyle(styleItems);
+        });
+    });
+
+    return stylePage;
 }
 
 function createConnectionsPage() {
@@ -910,7 +975,7 @@ function createServersPage() {
     return {serverPage, serverTreeView, serverTreeIterMap};
 }
 
-function loadGeneratedStyle(panelTexts, monoToggle, altToggle) {
+function loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems) {
     let styleCss = {
         'CONNECTED': {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);'},
         'CONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
@@ -989,17 +1054,7 @@ function buildPrefsWidget() {
     }))
 
     // *** STYLES
-    let {
-        stylePage,
-        monoToggle,
-        altToggle,
-        styleSmall,
-        styleMedium,
-        styleLarge,
-        styleExtraLarge,
-        styleItems,
-        commonCss
-    } = createStylesPage.call(this);
+    let stylePage = createStylesPage.call(this);
     notebook.append_page(stylePage, new Gtk.Label({
         label: `<b>Style</b>`,
         halign: Gtk.Align.START,
@@ -1045,80 +1100,6 @@ function buildPrefsWidget() {
 
     resetConnection.connect(`clicked`, () => {
         resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
-    });
-
-    styleExtraLarge.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{city}, {country}  -  {uptimeHr}:{uptimeMin}:{uptimeSec}  -  ↑{transferUp} ↓{transferDown}',
-            'CONNECTING': 'VPN CONNECTING',
-            'DISCONNECTED': 'VPN DISCONNECTED',
-            'DISCONNECTING': 'VPN DISCONNECTING ',
-            'RECONNECTING': 'VPN RECONNECTING',
-            'RESTARTING': 'VPN RESTARTING',
-            'ERROR': 'VPN ERROR',
-            'LOGGED_OUT': 'VPN LOGGED OUT',
-            'LOGGING_IN': 'VPN LOGGING IN',
-            'LOGGING_OUT': 'VPN LOGGING OUT',
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle);
-    });
-
-    styleLarge.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{country} #{number}',
-            'CONNECTING': 'CONNECTING',
-            'DISCONNECTED': 'DISCONNECTED',
-            'DISCONNECTING': 'DISCONNECTING',
-            'RECONNECTING': 'RECONNECTING',
-            'RESTARTING': 'RESTARTING',
-            'ERROR': 'ERROR',
-            'LOGGED_OUT': 'LOGGED OUT',
-            'LOGGING_IN': 'LOGGING IN',
-            'LOGGING_OUT': 'LOGGING OUT',
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle);
-    });
-
-    styleMedium.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{ctry}#{number}',
-            'CONNECTING': '...',
-            'DISCONNECTED': 'OFF',
-            'DISCONNECTING': '...',
-            'RECONNECTING': '...',
-            'RESTARTING': '...',
-            'ERROR': 'ERR',
-            'LOGGED_OUT': 'OUT',
-            'LOGGING_IN': '...',
-            'LOGGING_OUT': '...',
-
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle);
-    });
-
-    styleSmall.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{ctry}',
-            'CONNECTING': '.',
-            'DISCONNECTED': '∅',
-            'DISCONNECTING': '.',
-            'RECONNECTING': '.',
-            'RESTARTING': '.',
-            'ERROR': '⚠',
-            'LOGGED_OUT': '?',
-            'LOGGING_IN': '.',
-            'LOGGING_OUT': '.',
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle);
-    });
-
-    styleItems.forEach(item => {
-        item.format.connect(`changed`, () => {
-            saveStyle(styleItems);
-        });
-        item.css.connect(`changed`, () => {
-            saveStyle(styleItems);
-        });
     });
 
     return notebook;
