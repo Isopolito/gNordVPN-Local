@@ -93,19 +93,7 @@ function loadStyle(data, styleItems) {
     })
 }
 
-function buildPrefsWidget() {
-    this.normalRender = new Gtk.CellRendererText();
-
-    this.vpn = new Vpn();
-    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-    this.vpn.setSettingsFromNord();
-
-    this.countrieMap = this.vpn.getCountries();
-    this.countrieMapWithID = this.vpn.getCountries(true);
-    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
-
-    const notebook = new Gtk.Notebook()
-
+function createGeneralPage() {
     const generalPage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
@@ -140,7 +128,7 @@ function buildPrefsWidget() {
     let initialIndex = initialPosition === 'left' ? 0 : initialPosition === 'center' ? 1 : 2;
     this.panelPositionCbox.set_active(initialIndex);
 
-    this.panelPositionCbox.connect('changed', function() {
+    this.panelPositionCbox.connect('changed', function () {
         let [success, iter] = this.panelPositionCbox.get_active_iter();
         if (!success) return;
         let newPosition = panelPositionModel.get_value(iter, 0);
@@ -209,7 +197,23 @@ function buildPrefsWidget() {
         visible: true
     });
     generalPage.attach(generalSaveLabel, 0, 4, 2, 1);
+    return {generalPage, resetAll};
+}
 
+function buildPrefsWidget() {
+    this.normalRender = new Gtk.CellRendererText();
+
+    this.vpn = new Vpn();
+    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    this.vpn.setSettingsFromNord();
+
+    this.countrieMap = this.vpn.getCountries();
+    this.countrieMapWithID = this.vpn.getCountries(true);
+    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
+
+    const notebook = new Gtk.Notebook()
+
+    const {generalPage, resetAll} = createGeneralPage.call(this);
     notebook.append_page(generalPage, new Gtk.Label({
         label: `<b>General</b>`,
         halign: Gtk.Align.START,
