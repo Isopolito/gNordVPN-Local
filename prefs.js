@@ -200,27 +200,7 @@ function createGeneralPage() {
     return {generalPage, resetAll};
 }
 
-function buildPrefsWidget() {
-    this.normalRender = new Gtk.CellRendererText();
-
-    this.vpn = new Vpn();
-    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-    this.vpn.setSettingsFromNord();
-
-    this.countrieMap = this.vpn.getCountries();
-    this.countrieMapWithID = this.vpn.getCountries(true);
-    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
-
-    const notebook = new Gtk.Notebook()
-
-    const {generalPage, resetAll} = createGeneralPage.call(this);
-    notebook.append_page(generalPage, new Gtk.Label({
-        label: `<b>General</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    }))
-
+function createAccountsPage() {
     // *** ACCOUNTS
     const accountPage = new Gtk.Grid({
         margin_start: 18,
@@ -362,6 +342,31 @@ function buildPrefsWidget() {
         logout.set_sensitive(loggedin);
     }
 
+    return accountPage;
+}
+
+function buildPrefsWidget() {
+    this.normalRender = new Gtk.CellRendererText();
+
+    this.vpn = new Vpn();
+    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    this.vpn.setSettingsFromNord();
+
+    this.countrieMap = this.vpn.getCountries();
+    this.countrieMapWithID = this.vpn.getCountries(true);
+    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
+
+    const notebook = new Gtk.Notebook()
+
+    const {generalPage, resetAll} = createGeneralPage.call(this);
+    notebook.append_page(generalPage, new Gtk.Label({
+        label: `<b>General</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    }))
+
+    const accountPage = createAccountsPage.call(this);
     notebook.append_page(accountPage, new Gtk.Label({
         label: `<b>Account</b>`,
         halign: Gtk.Align.START,
@@ -369,7 +374,7 @@ function buildPrefsWidget() {
         visible: true
     }))
 
-// *** STYLES
+    // *** STYLES
     const stylePage = new Gtk.Grid({
         margin_start: 18,
         margin_top: 10,
