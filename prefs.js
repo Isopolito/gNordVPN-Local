@@ -1,5 +1,6 @@
 `use strict`;
 
+const {Adw} = imports.gi;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
@@ -70,96 +71,68 @@ function resetSetting(settings, keys) {
 
 function createStylesPage() {
     const stylePage = new Gtk.Grid({
-        margin_start: 18,
-        margin_top: 10,
-        column_spacing: 12,
-        row_spacing: 12,
-        visible: true
+        margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
     const monoLabel = new Gtk.Label({
-        label: `Build as monochrome:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Build as monochrome:`, halign: Gtk.Align.START, visible: true
     });
     stylePage.attach(monoLabel, 0, 0, 1, 1);
 
     const monoToggle = new Gtk.Switch({
-        active: false,
-        halign: Gtk.Align.END,
-        visible: true
+        active: false, halign: Gtk.Align.END, visible: true
     });
     stylePage.attach(monoToggle, 1, 0, 1, 1);
 
     const altLabel = new Gtk.Label({
-        label: `Build with alt style:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Build with alt style:`, halign: Gtk.Align.START, visible: true
     });
     stylePage.attach(altLabel, 0, 1, 1, 1);
 
     const altToggle = new Gtk.Switch({
-        active: false,
-        halign: Gtk.Align.END,
-        visible: true
+        active: false, halign: Gtk.Align.END, visible: true
     });
     stylePage.attach(altToggle, 1, 1, 1, 1);
 
 
     const loadDefault = new Gtk.Label({
-        label: '<b>Build default: </b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: '<b>Build default: </b>', halign: Gtk.Align.START, use_markup: true, visible: true
     });
     stylePage.attach(loadDefault, 0, 2, 1, 1);
 
 
     const styleSmall = new Gtk.Button({
-        label: `Small default`,
-        visible: true
+        label: `Small default`, visible: true
     });
     stylePage.attach(styleSmall, 1, 2, 1, 1);
 
     const styleMedium = new Gtk.Button({
-        label: `Medium default`,
-        visible: true
+        label: `Medium default`, visible: true
     });
     stylePage.attach(styleMedium, 2, 2, 1, 1);
 
     const styleLarge = new Gtk.Button({
-        label: `Large default`,
-        visible: true
+        label: `Large default`, visible: true
     });
     stylePage.attach(styleLarge, 3, 2, 1, 1);
 
     const styleExtraLarge = new Gtk.Button({
-        label: `Extra Large default`,
-        visible: true
+        label: `Extra Large default`, visible: true
     });
     stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
 
     const customStyle = new Gtk.Label({
-        label: '<b>Edit style</b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: '<b>Edit style</b>', halign: Gtk.Align.START, use_markup: true, visible: true
     });
     stylePage.attach(customStyle, 0, 3, 1, 1);
 
     const displayMsg = new Gtk.Label({
-        label: '<b>Display Msg</b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: '<b>Display Msg</b>', halign: Gtk.Align.START, use_markup: true, visible: true
     });
     stylePage.attach(displayMsg, 1, 4, 1, 1);
 
     const textColor = new Gtk.Label({
-        label: '<b>CSS Style</b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: '<b>CSS Style</b>', halign: Gtk.Align.START, use_markup: true, visible: true
     });
     stylePage.attach(textColor, 2, 4, 1, 1);
 
@@ -167,9 +140,7 @@ function createStylesPage() {
     let styleItems = [];
     Common.safeObjectKeys(Constants.states).forEach(state => {
         const label = new Gtk.Label({
-            label: state,
-            halign: Gtk.Align.START,
-            visible: true
+            label: state, halign: Gtk.Align.START, visible: true
         });
         stylePage.attach(label, 0, row, 1, 1);
 
@@ -183,9 +154,7 @@ function createStylesPage() {
     });
 
     const commonCsslabel = new Gtk.Label({
-        label: "Common CSS",
-        halign: Gtk.Align.START,
-        visible: true
+        label: "Common CSS", halign: Gtk.Align.START, visible: true
     });
     stylePage.attach(commonCsslabel, 0, row, 1, 1);
 
@@ -213,10 +182,7 @@ function createStylesPage() {
     stylePage.attach(connectedKeyLabel, 0, row++, 5, 1);
 
     const styleSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     });
 
     stylePage.attach(styleSaveLabel, 0, row, 2, 1);
@@ -283,7 +249,7 @@ function createStylesPage() {
             'LOGGING_IN': '.',
             'LOGGING_OUT': '.',
         }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss,styleItems);
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
     });
 
     styleItems.forEach(item => {
@@ -371,214 +337,132 @@ function loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleI
 }
 
 function createGeneralPage() {
-    const generalPage = new Gtk.Grid({
-        margin_start: 18,
-        margin_top: 10,
-        column_spacing: 12,
-        row_spacing: 12,
-        visible: true
+    const generalGrid = new Gtk.Grid({
+        column_spacing: 12, row_spacing: 12, margin_top: 10, margin_bottom: 10, margin_start: 10, margin_end: 10
     });
 
-    // Panel Position Label
-    const panelPositionLabel = new Gtk.Label({
-        label: `Select Panel Position:`,
-        halign: Gtk.Align.START,
-        visible: true
-    });
+    // Panel Position Label and ComboBox
+    const panelPositionLabel = new Gtk.Label({label: "Select Panel Position:", halign: Gtk.Align.START});
+    generalGrid.attach(panelPositionLabel, 0, 0, 1, 1);
 
-    generalPage.attach(panelPositionLabel, 0, 0, 1, 1);
-
-    let panelPositionModel = new Gtk.ListStore();
-    panelPositionModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-
-    this.panelPositionCbox = new Gtk.ComboBox({model: panelPositionModel});
-
-    let panelPositionRenderer = new Gtk.CellRendererText();
-    this.panelPositionCbox.pack_start(panelPositionRenderer, true);
-    this.panelPositionCbox.add_attribute(panelPositionRenderer, 'text', 1);
-
-    panelPositionModel.set(panelPositionModel.append(), [0, 1], ['left', 'Left']);
-    panelPositionModel.set(panelPositionModel.append(), [0, 1], ['center', 'Center']);
-    panelPositionModel.set(panelPositionModel.append(), [0, 1], ['right', 'Right']);
+    const panelPositionCombo = new Gtk.ComboBoxText();
+    panelPositionCombo.append("left", "Left");
+    panelPositionCombo.append("center", "Center");
+    panelPositionCombo.append("right", "Right");
+    generalGrid.attach(panelPositionCombo, 1, 0, 1, 1);
 
     let initialPosition = this.settings.get_string('panel-position');
-    let initialIndex = initialPosition === 'left' ? 0 : initialPosition === 'center' ? 1 : 2;
-    this.panelPositionCbox.set_active(initialIndex);
+    panelPositionCombo.set_active_id(initialPosition);
 
-    this.panelPositionCbox.connect('changed', function () {
-        let [success, iter] = this.panelPositionCbox.get_active_iter();
-        if (!success) return;
-        let newPosition = panelPositionModel.get_value(iter, 0);
+    panelPositionCombo.connect('changed', function () {
+        const newPosition = panelPositionCombo.get_active_id();
         this.settings.set_string('panel-position', newPosition);
     }.bind(this));
 
-    // Show ComboBox and attach to stylePage
-    this.panelPositionCbox.show();
-    generalPage.attach(this.panelPositionCbox, 1, 0, 1, 1);
+    // Autoconnect Toggle
+    const autoConnectLabel = new Gtk.Label({label: "Autoconnect to VPN on startup:", halign: Gtk.Align.START});
+    const autoConnectToggle = new Gtk.Switch({active: this.settings.get_boolean(`autoconnect`), halign: Gtk.Align.START, visible: true});
+    this.settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
-    // autoconnect
-    const toggleLabel = new Gtk.Label({
-        label: `Autoconnect to VPN on startup:`,
-        halign: Gtk.Align.START,
-        visible: true
+    autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
+    generalGrid.attach(autoConnectLabel, 0, 1, 1, 1);
+    generalGrid.attach(autoConnectToggle, 1, 1, 1, 1);
+
+    // Common Favorite Toggle
+    const commonFavLabel = new Gtk.Label({label: "Display a common favorite tab:", halign: Gtk.Align.START});
+    const commonFavToggle = new Gtk.Switch({active: this.settings.get_boolean(`commonfavorite`), halign: Gtk.Align.START, visible: true});
+    this.settings.bind(`commonfavorite`, commonFavToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+
+    commonFavToggle.set_hexpand(false);  // Don't expand horizontally
+    generalGrid.attach(commonFavLabel, 0, 2, 1, 1);
+    generalGrid.attach(commonFavToggle, 1, 2, 1, 1);
+
+    // Reset All Settings Button
+    const resetAll = new Gtk.Button({label: "Reset All Settings"});
+    generalGrid.attach(resetAll, 0, 3, 2, 1);
+
+    // Changes Applied on Close Label
+    const changesAppliedLabel = new Gtk.Label({
+        label: "<b>* Changes applied on close</b>", use_markup: true, halign: Gtk.Align.START
     });
-    generalPage.attach(toggleLabel, 0, 1, 1, 1);
+    generalGrid.attach(changesAppliedLabel, 0, 4, 2, 1);
 
-    const autoConnectToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`autoconnect`),
-        halign: Gtk.Align.END,
-        visible: true
-    });
-    generalPage.attach(autoConnectToggle, 1, 1, 1, 1);
-
-    this.settings.bind(
-        `autoconnect`,
-        autoConnectToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
-
-    // common favorite
-    const commonFavLabel = new Gtk.Label({
-        label: `Display a common favorite tab:`,
-        halign: Gtk.Align.START,
-        visible: true
-    });
-    generalPage.attach(commonFavLabel, 0, 2, 1, 1);
-
-    const commonFavToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`commonfavorite`),
-        halign: Gtk.Align.END,
-        visible: true
-    });
-    generalPage.attach(commonFavToggle, 1, 2, 1, 1);
-
-    this.settings.bind(
-        `commonfavorite`,
-        commonFavToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
-
-    // Reset to defaults
-    const resetAll = new Gtk.Button({
-        label: `Reset All Settings`,
-        visible: true
-    });
-    generalPage.attach(resetAll, 0, 3, 1, 1);
-
-    const generalSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    });
-    generalPage.attach(generalSaveLabel, 0, 4, 2, 1);
-    return {generalPage, resetAll};
+    return {generalGrid, resetAll};
 }
 
 function createAccountsPage() {
+    const accountsGrid = new Gtk.Label({
+        label: "<b>* Changes applied on close</b>", use_markup: true, halign: Gtk.Align.START
+    });
+
+    return accountsGrid;
+}
+
+function createAccountsPageOld() {
     const accountPage = new Gtk.Grid({
-        margin_start: 18,
-        margin_top: 10,
-        column_spacing: 12,
-        row_spacing: 12,
-        visible: true
+        margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
     // showlogin
     const showLoginLabel = new Gtk.Label({
-        label: `Show login button in menu:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Show login button in menu:`, halign: Gtk.Align.START, visible: true
     });
     accountPage.attach(showLoginLabel, 0, 0, 1, 1);
 
     const showLoginToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`showlogin`),
-        halign: Gtk.Align.END,
-        visible: true
+        active: this.settings.get_boolean(`showlogin`), halign: Gtk.Align.END, visible: true
     });
     accountPage.attach(showLoginToggle, 1, 0, 1, 1);
 
-    this.settings.bind(
-        `showlogin`,
-        showLoginToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`showlogin`, showLoginToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // showlogout
     const showLogoutLabel = new Gtk.Label({
-        label: `Show logout button in menu:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Show logout button in menu:`, halign: Gtk.Align.START, visible: true
     });
     accountPage.attach(showLogoutLabel, 0, 1, 1, 1);
 
     const showLogoutToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`showlogout`),
-        halign: Gtk.Align.END,
-        visible: true
+        active: this.settings.get_boolean(`showlogout`), halign: Gtk.Align.END, visible: true
     });
     accountPage.attach(showLogoutToggle, 1, 1, 1, 1);
 
-    this.settings.bind(
-        `showlogout`,
-        showLogoutToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`showlogout`, showLogoutToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     const accountSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     });
     accountPage.attach(accountSaveLabel, 0, 2, 2, 1);
 
     const accountInfo = new Gtk.Label({
-        label: `<b>Account Information</b>`,
-        halign: Gtk.Align.START,
-        visible: true,
-        use_markup: true,
+        label: `<b>Account Information</b>`, halign: Gtk.Align.START, visible: true, use_markup: true,
     });
     accountPage.attach(accountInfo, 0, 3, 1, 1);
 
 
     const accountEmailLabel = new Gtk.Label({
-        label: `Account email: `,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Account email: `, halign: Gtk.Align.START, visible: true
     });
     accountPage.attach(accountEmailLabel, 0, 4, 1, 1);
 
     const accountEmail = new Gtk.Label({
-        label: "",
-        halign: Gtk.Align.START,
-        visible: true
+        label: "", halign: Gtk.Align.START, visible: true
     });
     accountPage.attach(accountEmail, 1, 4, 1, 1);
 
 
     const accountStatusLabel = new Gtk.Label({
-        label: `Account status: `,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Account status: `, halign: Gtk.Align.START, visible: true
     });
     accountPage.attach(accountStatusLabel, 0, 5, 1, 1);
 
     const accountStatus = new Gtk.Label({
-        label: "",
-        halign: Gtk.Align.START,
-        visible: true
+        label: "", halign: Gtk.Align.START, visible: true
     });
     accountPage.attach(accountStatus, 1, 5, 1, 1);
 
     const login = new Gtk.Button({
-        label: `Login`,
-        visible: true
+        label: `Login`, visible: true
     });
     login.set_sensitive(false);
     accountPage.attach(login, 0, 6, 1, 1);
@@ -588,8 +472,7 @@ function createAccountsPage() {
     });
 
     const logout = new Gtk.Button({
-        label: `Logout`,
-        visible: true
+        label: `Logout`, visible: true
     });
     logout.set_sensitive(false);
     accountPage.attach(logout, 1, 6, 1, 1);
@@ -599,8 +482,7 @@ function createAccountsPage() {
     });
 
     const refreshAccountBtn = new Gtk.Button({
-        label: `Refresh`,
-        visible: true
+        label: `Refresh`, visible: true
     });
     accountPage.attach(refreshAccountBtn, 0, 7, 1, 1);
 
@@ -623,11 +505,7 @@ function createAccountsPage() {
 
 function createConnectionsPage() {
     const connectionPage = new Gtk.Grid({
-        margin_start: 18,
-        margin_top: 10,
-        column_spacing: 12,
-        row_spacing: 12,
-        visible: true
+        margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
     // Currently a bug in nordvpn where notify doesn't reflect in settings output, hiding for now to
@@ -656,97 +534,59 @@ function createConnectionsPage() {
 
     // CyberSec
     const cybersecLabel = new Gtk.Label({
-        label: `Enable CyberSec:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Enable CyberSec:`, halign: Gtk.Align.START, visible: true
     });
     connectionPage.attach(cybersecLabel, 0, 0, 1, 1);
 
     const cyberSecToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`cybersec`),
-        halign: Gtk.Align.END,
-        visible: true
+        active: this.settings.get_boolean(`cybersec`), halign: Gtk.Align.END, visible: true
     });
     connectionPage.attach(cyberSecToggle, 1, 0, 1, 1);
 
-    this.settings.bind(
-        `cybersec`,
-        cyberSecToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`cybersec`, cyberSecToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Firewall
     const firewallLabel = new Gtk.Label({
-        label: `Enable Firewall:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Enable Firewall:`, halign: Gtk.Align.START, visible: true
     });
     connectionPage.attach(firewallLabel, 0, 1, 1, 1);
 
     const firewallToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`firewall`),
-        halign: Gtk.Align.END,
-        visible: true
+        active: this.settings.get_boolean(`firewall`), halign: Gtk.Align.END, visible: true
     });
     connectionPage.attach(firewallToggle, 1, 1, 1, 1);
 
-    this.settings.bind(
-        `firewall`,
-        firewallToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Killswitch
     const killswitchLabel = new Gtk.Label({
-        label: `Enable Killswitch:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Enable Killswitch:`, halign: Gtk.Align.START, visible: true
     });
     connectionPage.attach(killswitchLabel, 0, 2, 1, 1);
 
     const killswitchToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`killswitch`),
-        halign: Gtk.Align.END,
-        visible: true
+        active: this.settings.get_boolean(`killswitch`), halign: Gtk.Align.END, visible: true
     });
     connectionPage.attach(killswitchToggle, 1, 2, 1, 1);
 
-    this.settings.bind(
-        `killswitch`,
-        killswitchToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Obfuscate
     const obfuscateLabel = new Gtk.Label({
-        label: `Enable Obfuscate:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Enable Obfuscate:`, halign: Gtk.Align.START, visible: true
     });
     connectionPage.attach(obfuscateLabel, 0, 3, 1, 1);
 
     const obfuscateToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`obfuscate`),
-        halign: Gtk.Align.END,
-        visible: true
+        active: this.settings.get_boolean(`obfuscate`), halign: Gtk.Align.END, visible: true
     });
     connectionPage.attach(obfuscateToggle, 1, 3, 1, 1);
 
-    this.settings.bind(
-        `obfuscate`,
-        obfuscateToggle,
-        `active`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`obfuscate`, obfuscateToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Protocol
     const protocolLabel = new Gtk.Label({
-        label: `Select Protocol:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Select Protocol:`, halign: Gtk.Align.START, visible: true
     });
     connectionPage.attach(protocolLabel, 0, 4, 1, 1);
 
@@ -776,9 +616,7 @@ function createConnectionsPage() {
 
     // Technology
     const techLabel = new Gtk.Label({
-        label: `Select Technology:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Select Technology:`, halign: Gtk.Align.START, visible: true
     });
     connectionPage.attach(techLabel, 0, 5, 1, 1);
 
@@ -809,16 +647,12 @@ function createConnectionsPage() {
 
     // Reset connection settings
     const resetConnection = new Gtk.Button({
-        label: `Reset Connection Settings`,
-        visible: true
+        label: `Reset Connection Settings`, visible: true
     });
     connectionPage.attach(resetConnection, 0, 6, 1, 1);
 
     const connectionSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     });
     connectionPage.attach(connectionSaveLabel, 0, 7, 2, 1);
     return {connectionPage, resetConnection};
@@ -826,17 +660,11 @@ function createConnectionsPage() {
 
 function createCitiesPage() {
     const cityPage = new Gtk.Grid({
-        margin_start: 18,
-        margin_top: 10,
-        column_spacing: 12,
-        row_spacing: 12,
-        visible: true
+        margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
     const maxCityPerCountryLabel = new Gtk.Label({
-        label: `Max cities per country displayed:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Max cities per country displayed:`, halign: Gtk.Align.START, visible: true
     });
     cityPage.attach(maxCityPerCountryLabel, 0, 0, 1, 1);
 
@@ -848,24 +676,15 @@ function createCitiesPage() {
 
     cityPage.attach(maxCityPerCountryInput, 1, 0, 1, 1);
 
-    this.settings.bind(
-        `number-cities-per-countries`,
-        maxCityPerCountryInput,
-        `value`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`number-cities-per-countries`, maxCityPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const citySelectLabel = new Gtk.Label({
-        label: `Select countries to list in cities tab:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Select countries to list in cities tab:`, halign: Gtk.Align.START, visible: true
     });
     cityPage.attach(citySelectLabel, 0, 1, 1, 1);
 
     let cityStore = new Gtk.TreeStore();
-    cityStore.set_column_types([
-        GObject.TYPE_STRING
-    ]);
+    cityStore.set_column_types([GObject.TYPE_STRING]);
 
     let cityColumn = new Gtk.TreeViewColumn({
         title: "Countries"
@@ -914,10 +733,7 @@ function createCitiesPage() {
     cityPage.attach(this.cityScroll, 1, 1, 1, 1);
 
     const citySaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     });
     cityPage.attach(citySaveLabel, 0, 2, 2, 1);
     return {cityPage, cityTreeView, cityTreeIterMap};
@@ -925,17 +741,11 @@ function createCitiesPage() {
 
 function createServersPage() {
     const serverPage = new Gtk.Grid({
-        margin_start: 18,
-        margin_top: 10,
-        column_spacing: 12,
-        row_spacing: 12,
-        visible: true
+        margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
     const maxServerPerCountryLabel = new Gtk.Label({
-        label: `Max server per country displayed:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Max server per country displayed:`, halign: Gtk.Align.START, visible: true
     });
     serverPage.attach(maxServerPerCountryLabel, 0, 0, 1, 1);
 
@@ -947,24 +757,15 @@ function createServersPage() {
 
     serverPage.attach(maxServerPerCountryInput, 1, 0, 1, 1);
 
-    this.settings.bind(
-        `number-servers-per-countries`,
-        maxServerPerCountryInput,
-        `value`,
-        Gio.SettingsBindFlags.DEFAULT
-    );
+    this.settings.bind(`number-servers-per-countries`, maxServerPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const serverSelectLabel = new Gtk.Label({
-        label: `Select countries to list in servers tab:`,
-        halign: Gtk.Align.START,
-        visible: true
+        label: `Select countries to list in servers tab:`, halign: Gtk.Align.START, visible: true
     });
     serverPage.attach(serverSelectLabel, 0, 1, 1, 1);
 
     let serverStore = new Gtk.TreeStore();
-    serverStore.set_column_types([
-        GObject.TYPE_STRING
-    ]);
+    serverStore.set_column_types([GObject.TYPE_STRING]);
 
     let serverColumn = new Gtk.TreeViewColumn({
         title: "Countries"
@@ -1013,17 +814,14 @@ function createServersPage() {
     serverPage.attach(this.serverScroll, 1, 1, 1, 1);
 
     const serverSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     });
     serverPage.attach(serverSaveLabel, 0, 2, 2, 1);
     return {serverPage, serverTreeView, serverTreeIterMap};
 }
 
-function buildPrefsWidget() {
-    this.normalRender = new Adw.TextView();
+function fillPreferencesWindow(window) {
+    //this.normalRender = new Adw.TextView();
 
     this.vpn = new Vpn();
     this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
@@ -1033,21 +831,28 @@ function buildPrefsWidget() {
     this.countryMapWithID = this.vpn.getCountries(true);
     this.countryNames = Common.safeObjectKeys(this.countryMap);
 
-    const preferencesWindow = new Adw.PreferencesWindow();
+    // *** GENERAL
     const generalPage = new Adw.PreferencesPage();
+    generalPage.set_title("General");
+    generalPage.set_icon_name("emblem-system-symbolic");
     const generalGroup = new Adw.PreferencesGroup();
-
-    // Create widgets for general settings and add them to generalGroup
-    const { generalWidgets, resetAll } = createGeneralPage.call(this);
-    generalWidgets.forEach((widget) => {
-        generalGroup.add(widget);
-    });
-
+    const {generalGrid, resetAll} = createGeneralPage.call(this);
+    generalGroup.add(generalGrid);
     generalPage.add(generalGroup);
-    preferencesWindow.add(generalPage);
+    window.add(generalPage);
+
+    // *** ACCOUNTS
+    const accountsPage = new Adw.PreferencesPage();
+    accountsPage.set_title("Account");
+    accountsPage.set_icon_name("user-home-symbolic");
+    const accountsGroup = new Adw.PreferencesGroup();
+    const accountsGrid = createAccountsPage.call(this);
+    accountsGroup.add(accountsGrid);
+    accountsPage.add(accountsGroup);
+    window.add(accountsPage);
 
     // Apply settings when prefs window is closed
-    preferencesWindow.connect('hide', function() {
+    window.connect('hide', function () {
         this.vpn.applySettingsToNord();
     }.bind(this));
 
@@ -1055,13 +860,12 @@ function buildPrefsWidget() {
     //     resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
     // });
 
-    resetConnection.connect('clicked', () => {
-        resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
-    });
+    // resetConnection.connect('clicked', () => {
+    //     resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
+    // });
 
-    return preferencesWindow;
+    return window;
 }
-
 
 function buildPrefsWidgetOld() {
     this.normalRender = new Gtk.CellRendererText();
@@ -1079,55 +883,37 @@ function buildPrefsWidgetOld() {
     // *** GENERAL
     const {generalPage, resetAll} = createGeneralPage.call(this);
     notebook.append_page(generalPage, new Gtk.Label({
-        label: `<b>General</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>General</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     }))
 
     // *** ACCOUNTS
     const accountPage = createAccountsPage.call(this);
     notebook.append_page(accountPage, new Gtk.Label({
-        label: `<b>Account</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>Account</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     }))
 
     // *** STYLES
     let stylePage = createStylesPage.call(this);
     notebook.append_page(stylePage, new Gtk.Label({
-        label: `<b>Style</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>Style</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     }))
 
     // *** CONNECTIONS
     const {connectionPage, resetConnection} = createConnectionsPage.call(this);
     notebook.append_page(connectionPage, new Gtk.Label({
-        label: `<b>Connection</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>Connection</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     }))
 
     // *** CITIES
     let {cityPage, cityTreeView, cityTreeIterMap} = createCitiesPage.call(this);
     notebook.append_page(cityPage, new Gtk.Label({
-        label: `<b>City</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>City</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     }))
 
     // *** SERVERS
     let {serverPage, serverTreeView, serverTreeIterMap} = createServersPage.call(this);
     notebook.append_page(serverPage, new Gtk.Label({
-        label: `<b>Server</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
+        label: `<b>Server</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
     }))
 
     // Apply settings when prefs window is closed
