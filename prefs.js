@@ -68,6 +68,236 @@ function resetSetting(settings, keys) {
     })
 }
 
+function createStylesPage() {
+    const stylePage = new Gtk.Grid({
+        margin_start: 18,
+        margin_top: 10,
+        column_spacing: 12,
+        row_spacing: 12,
+        visible: true
+    });
+
+    const monoLabel = new Gtk.Label({
+        label: `Build as monochrome:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    stylePage.attach(monoLabel, 0, 0, 1, 1);
+
+    const monoToggle = new Gtk.Switch({
+        active: false,
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    stylePage.attach(monoToggle, 1, 0, 1, 1);
+
+    const altLabel = new Gtk.Label({
+        label: `Build with alt style:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    stylePage.attach(altLabel, 0, 1, 1, 1);
+
+    const altToggle = new Gtk.Switch({
+        active: false,
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    stylePage.attach(altToggle, 1, 1, 1, 1);
+
+
+    const loadDefault = new Gtk.Label({
+        label: '<b>Build default: </b>',
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    stylePage.attach(loadDefault, 0, 2, 1, 1);
+
+
+    const styleSmall = new Gtk.Button({
+        label: `Small default`,
+        visible: true
+    });
+    stylePage.attach(styleSmall, 1, 2, 1, 1);
+
+    const styleMedium = new Gtk.Button({
+        label: `Medium default`,
+        visible: true
+    });
+    stylePage.attach(styleMedium, 2, 2, 1, 1);
+
+    const styleLarge = new Gtk.Button({
+        label: `Large default`,
+        visible: true
+    });
+    stylePage.attach(styleLarge, 3, 2, 1, 1);
+
+    const styleExtraLarge = new Gtk.Button({
+        label: `Extra Large default`,
+        visible: true
+    });
+    stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
+
+    const customStyle = new Gtk.Label({
+        label: '<b>Edit style</b>',
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    stylePage.attach(customStyle, 0, 3, 1, 1);
+
+    const displayMsg = new Gtk.Label({
+        label: '<b>Display Msg</b>',
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    stylePage.attach(displayMsg, 1, 4, 1, 1);
+
+    const textColor = new Gtk.Label({
+        label: '<b>CSS Style</b>',
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+    stylePage.attach(textColor, 2, 4, 1, 1);
+
+    let row = 5;
+    let styleItems = [];
+    Common.safeObjectKeys(Constants.states).forEach(state => {
+        const label = new Gtk.Label({
+            label: state,
+            halign: Gtk.Align.START,
+            visible: true
+        });
+        stylePage.attach(label, 0, row, 1, 1);
+
+        const format = new Gtk.Entry();
+        stylePage.attach(format, 1, row, 1, 1);
+
+        const css = new Gtk.Entry();
+        stylePage.attach(css, 2, row++, 3, 1);
+
+        styleItems.push({state, format, css});
+    });
+
+    const commonCsslabel = new Gtk.Label({
+        label: "Common CSS",
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    stylePage.attach(commonCsslabel, 0, row, 1, 1);
+
+    const commonCss = new Gtk.Entry();
+    let cps = this.settings.get_string(`common-panel-style`);
+    commonCss.get_buffer().set_text(cps, cps.length)
+    commonCss.connect(`changed`, () => {
+        let gv = new GLib.Variant("s", commonCss.get_buffer().get_text());
+        log(JSON.stringify(commonCss.get_buffer().get_text()));
+        settings.set_value(`common-panel-style`, gv);
+    });
+
+    stylePage.attach(commonCss, 1, row++, 4, 1);
+
+    let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
+    loadStyle(savedStyle, styleItems)
+
+    const connectedKeyLabel = new Gtk.Label({
+        label: `<b>* Available keys for CONNECTED: {country},{COUNTRY},{ctry},{city},{CITY},{number},{server},{ip},{tech},{protocol},{transfer},{transferUp},{transferDown},{uptime},{uptimeHr},{uptimeMin},{uptimeSec}</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true,
+    });
+    connectedKeyLabel.set_selectable(true);
+    stylePage.attach(connectedKeyLabel, 0, row++, 5, 1);
+
+    const styleSaveLabel = new Gtk.Label({
+        label: `<b>* Changes applied on close</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true
+    });
+
+    stylePage.attach(styleSaveLabel, 0, row, 2, 1);
+
+    styleExtraLarge.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{city}, {country}  -  {uptimeHr}:{uptimeMin}:{uptimeSec}  -  ↑{transferUp} ↓{transferDown}',
+            'CONNECTING': 'VPN CONNECTING',
+            'DISCONNECTED': 'VPN DISCONNECTED',
+            'DISCONNECTING': 'VPN DISCONNECTING ',
+            'RECONNECTING': 'VPN RECONNECTING',
+            'RESTARTING': 'VPN RESTARTING',
+            'ERROR': 'VPN ERROR',
+            'LOGGED_OUT': 'VPN LOGGED OUT',
+            'LOGGING_IN': 'VPN LOGGING IN',
+            'LOGGING_OUT': 'VPN LOGGING OUT',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleLarge.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{country} #{number}',
+            'CONNECTING': 'CONNECTING',
+            'DISCONNECTED': 'DISCONNECTED',
+            'DISCONNECTING': 'DISCONNECTING',
+            'RECONNECTING': 'RECONNECTING',
+            'RESTARTING': 'RESTARTING',
+            'ERROR': 'ERROR',
+            'LOGGED_OUT': 'LOGGED OUT',
+            'LOGGING_IN': 'LOGGING IN',
+            'LOGGING_OUT': 'LOGGING OUT',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleMedium.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{ctry}#{number}',
+            'CONNECTING': '...',
+            'DISCONNECTED': 'OFF',
+            'DISCONNECTING': '...',
+            'RECONNECTING': '...',
+            'RESTARTING': '...',
+            'ERROR': 'ERR',
+            'LOGGED_OUT': 'OUT',
+            'LOGGING_IN': '...',
+            'LOGGING_OUT': '...',
+
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleSmall.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{ctry}',
+            'CONNECTING': '.',
+            'DISCONNECTED': '∅',
+            'DISCONNECTING': '.',
+            'RECONNECTING': '.',
+            'RESTARTING': '.',
+            'ERROR': '⚠',
+            'LOGGED_OUT': '?',
+            'LOGGING_IN': '.',
+            'LOGGING_OUT': '.',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss,styleItems);
+    });
+
+    styleItems.forEach(item => {
+        item.format.connect(`changed`, () => {
+            saveStyle(styleItems);
+        });
+        item.css.connect(`changed`, () => {
+            saveStyle(styleItems);
+        });
+    });
+
+    return stylePage;
+}
+
 function saveStyle(styleItems) {
 
     let data = {};
@@ -91,6 +321,53 @@ function loadStyle(data, styleItems) {
         let css = data[item.state].css;
         item.css.get_buffer().set_text(css, css.length);
     })
+}
+
+function loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems) {
+    let styleCss = {
+        'CONNECTED': {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);'},
+        'CONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'DISCONNECTED': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
+        'DISCONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'RECONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'RESTARTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'ERROR': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
+        'LOGGED_OUT': {css: 'background-color: rgba(48,26,208,0.7); color: rgba(255,255,255,1);'},
+        'LOGGING_IN': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+        'LOGGING_OUT': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+    };
+
+    let styleAltCss = {
+        'CONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(0,255,0,0.7);'},
+        'CONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'DISCONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
+        'DISCONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'RECONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'RESTARTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'ERROR': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
+        'LOGGED_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(48,26,208,0.7);'},
+        'LOGGING_IN': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+        'LOGGING_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
+    }
+
+    let monoCss = "background-color: rgba(255,255,255,0.7); color: rgba(0,0,0,1);";
+    let altMonoCss = "background-color: rgba(0,0,0,0.7); color: rgba(255,255,255,1);";
+
+    let ccss = "font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;";
+    let altCcss = "font-weight: bold; border-radius: 5px; padding: 3px 10px 0; margin: 3px 0px 3px 0px; border: 1px solid white;";
+
+    let isMono = monoToggle.get_active();
+    let isAlt = altToggle.get_active();
+    let style = isAlt ? styleAltCss : styleCss;
+    Common.safeObjectKeys(style).forEach(key => {
+        if (isMono) style[key].css = isAlt ? altMonoCss : monoCss;
+        style[key].panelText = panelTexts[key];
+    });
+
+    let _ccss = altToggle.get_active() ? altCcss : ccss;
+    commonCss.get_buffer().set_text(_ccss, _ccss.length);
+
+    loadStyle(style, styleItems);
 }
 
 function createGeneralPage() {
@@ -342,236 +619,6 @@ function createAccountsPage() {
     }
 
     return accountPage;
-}
-
-function createStylesPage() {
-    const stylePage = new Gtk.Grid({
-        margin_start: 18,
-        margin_top: 10,
-        column_spacing: 12,
-        row_spacing: 12,
-        visible: true
-    });
-
-    const monoLabel = new Gtk.Label({
-        label: `Build as monochrome:`,
-        halign: Gtk.Align.START,
-        visible: true
-    });
-    stylePage.attach(monoLabel, 0, 0, 1, 1);
-
-    const monoToggle = new Gtk.Switch({
-        active: false,
-        halign: Gtk.Align.END,
-        visible: true
-    });
-    stylePage.attach(monoToggle, 1, 0, 1, 1);
-
-    const altLabel = new Gtk.Label({
-        label: `Build with alt style:`,
-        halign: Gtk.Align.START,
-        visible: true
-    });
-    stylePage.attach(altLabel, 0, 1, 1, 1);
-
-    const altToggle = new Gtk.Switch({
-        active: false,
-        halign: Gtk.Align.END,
-        visible: true
-    });
-    stylePage.attach(altToggle, 1, 1, 1, 1);
-
-
-    const loadDefault = new Gtk.Label({
-        label: '<b>Build default: </b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    });
-    stylePage.attach(loadDefault, 0, 2, 1, 1);
-
-
-    const styleSmall = new Gtk.Button({
-        label: `Small default`,
-        visible: true
-    });
-    stylePage.attach(styleSmall, 1, 2, 1, 1);
-
-    const styleMedium = new Gtk.Button({
-        label: `Medium default`,
-        visible: true
-    });
-    stylePage.attach(styleMedium, 2, 2, 1, 1);
-
-    const styleLarge = new Gtk.Button({
-        label: `Large default`,
-        visible: true
-    });
-    stylePage.attach(styleLarge, 3, 2, 1, 1);
-
-    const styleExtraLarge = new Gtk.Button({
-        label: `Extra Large default`,
-        visible: true
-    });
-    stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
-
-    const customStyle = new Gtk.Label({
-        label: '<b>Edit style</b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    });
-    stylePage.attach(customStyle, 0, 3, 1, 1);
-
-    const displayMsg = new Gtk.Label({
-        label: '<b>Display Msg</b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    });
-    stylePage.attach(displayMsg, 1, 4, 1, 1);
-
-    const textColor = new Gtk.Label({
-        label: '<b>CSS Style</b>',
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    });
-    stylePage.attach(textColor, 2, 4, 1, 1);
-
-    let row = 5;
-    let styleItems = [];
-    Common.safeObjectKeys(Constants.states).forEach(state => {
-        const label = new Gtk.Label({
-            label: state,
-            halign: Gtk.Align.START,
-            visible: true
-        });
-        stylePage.attach(label, 0, row, 1, 1);
-
-        const format = new Gtk.Entry();
-        stylePage.attach(format, 1, row, 1, 1);
-
-        const css = new Gtk.Entry();
-        stylePage.attach(css, 2, row++, 3, 1);
-
-        styleItems.push({state, format, css});
-    });
-
-    const commonCsslabel = new Gtk.Label({
-        label: "Common CSS",
-        halign: Gtk.Align.START,
-        visible: true
-    });
-    stylePage.attach(commonCsslabel, 0, row, 1, 1);
-
-    const commonCss = new Gtk.Entry();
-    let cps = this.settings.get_string(`common-panel-style`);
-    commonCss.get_buffer().set_text(cps, cps.length)
-    commonCss.connect(`changed`, () => {
-        let gv = new GLib.Variant("s", commonCss.get_buffer().get_text());
-        log(JSON.stringify(commonCss.get_buffer().get_text()));
-        settings.set_value(`common-panel-style`, gv);
-    });
-
-    stylePage.attach(commonCss, 1, row++, 4, 1);
-
-    let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
-    loadStyle(savedStyle, styleItems)
-
-    const connectedKeyLabel = new Gtk.Label({
-        label: `<b>* Available keys for CONNECTED: {country},{COUNTRY},{ctry},{city},{CITY},{number},{server},{ip},{tech},{protocol},{transfer},{transferUp},{transferDown},{uptime},{uptimeHr},{uptimeMin},{uptimeSec}</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true,
-    });
-    connectedKeyLabel.set_selectable(true);
-    stylePage.attach(connectedKeyLabel, 0, row++, 5, 1);
-
-    const styleSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`,
-        halign: Gtk.Align.START,
-        use_markup: true,
-        visible: true
-    });
-
-    stylePage.attach(styleSaveLabel, 0, row, 2, 1);
-
-    styleExtraLarge.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{city}, {country}  -  {uptimeHr}:{uptimeMin}:{uptimeSec}  -  ↑{transferUp} ↓{transferDown}',
-            'CONNECTING': 'VPN CONNECTING',
-            'DISCONNECTED': 'VPN DISCONNECTED',
-            'DISCONNECTING': 'VPN DISCONNECTING ',
-            'RECONNECTING': 'VPN RECONNECTING',
-            'RESTARTING': 'VPN RESTARTING',
-            'ERROR': 'VPN ERROR',
-            'LOGGED_OUT': 'VPN LOGGED OUT',
-            'LOGGING_IN': 'VPN LOGGING IN',
-            'LOGGING_OUT': 'VPN LOGGING OUT',
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
-    });
-
-    styleLarge.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{country} #{number}',
-            'CONNECTING': 'CONNECTING',
-            'DISCONNECTED': 'DISCONNECTED',
-            'DISCONNECTING': 'DISCONNECTING',
-            'RECONNECTING': 'RECONNECTING',
-            'RESTARTING': 'RESTARTING',
-            'ERROR': 'ERROR',
-            'LOGGED_OUT': 'LOGGED OUT',
-            'LOGGING_IN': 'LOGGING IN',
-            'LOGGING_OUT': 'LOGGING OUT',
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
-    });
-
-    styleMedium.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{ctry}#{number}',
-            'CONNECTING': '...',
-            'DISCONNECTED': 'OFF',
-            'DISCONNECTING': '...',
-            'RECONNECTING': '...',
-            'RESTARTING': '...',
-            'ERROR': 'ERR',
-            'LOGGED_OUT': 'OUT',
-            'LOGGING_IN': '...',
-            'LOGGING_OUT': '...',
-
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
-    });
-
-    styleSmall.connect(`clicked`, () => {
-        let panelTexts = {
-            'CONNECTED': '{ctry}',
-            'CONNECTING': '.',
-            'DISCONNECTED': '∅',
-            'DISCONNECTING': '.',
-            'RECONNECTING': '.',
-            'RESTARTING': '.',
-            'ERROR': '⚠',
-            'LOGGED_OUT': '?',
-            'LOGGING_IN': '.',
-            'LOGGING_OUT': '.',
-        }
-        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss,styleItems);
-    });
-
-    styleItems.forEach(item => {
-        item.format.connect(`changed`, () => {
-            saveStyle(styleItems);
-        });
-        item.css.connect(`changed`, () => {
-            saveStyle(styleItems);
-        });
-    });
-
-    return stylePage;
 }
 
 function createConnectionsPage() {
@@ -975,54 +1022,48 @@ function createServersPage() {
     return {serverPage, serverTreeView, serverTreeIterMap};
 }
 
-function loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems) {
-    let styleCss = {
-        'CONNECTED': {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);'},
-        'CONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-        'DISCONNECTED': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
-        'DISCONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-        'RECONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-        'RESTARTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-        'ERROR': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
-        'LOGGED_OUT': {css: 'background-color: rgba(48,26,208,0.7); color: rgba(255,255,255,1);'},
-        'LOGGING_IN': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-        'LOGGING_OUT': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-    };
+function buildPrefsWidget() {
+    this.normalRender = new Adw.TextView();
 
-    let styleAltCss = {
-        'CONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(0,255,0,0.7);'},
-        'CONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-        'DISCONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
-        'DISCONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-        'RECONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-        'RESTARTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-        'ERROR': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
-        'LOGGED_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(48,26,208,0.7);'},
-        'LOGGING_IN': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-        'LOGGING_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-    }
+    this.vpn = new Vpn();
+    this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
+    this.vpn.setSettingsFromNord();
 
-    let monoCss = "background-color: rgba(255,255,255,0.7); color: rgba(0,0,0,1);";
-    let altMonoCss = "background-color: rgba(0,0,0,0.7); color: rgba(255,255,255,1);";
+    this.countryMap = this.vpn.getCountries();
+    this.countryMapWithID = this.vpn.getCountries(true);
+    this.countryNames = Common.safeObjectKeys(this.countryMap);
 
-    let ccss = "font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;";
-    let altCcss = "font-weight: bold; border-radius: 5px; padding: 3px 10px 0; margin: 3px 0px 3px 0px; border: 1px solid white;";
+    const preferencesWindow = new Adw.PreferencesWindow();
+    const generalPage = new Adw.PreferencesPage();
+    const generalGroup = new Adw.PreferencesGroup();
 
-    let isMono = monoToggle.get_active();
-    let isAlt = altToggle.get_active();
-    let style = isAlt ? styleAltCss : styleCss;
-    Common.safeObjectKeys(style).forEach(key => {
-        if (isMono) style[key].css = isAlt ? altMonoCss : monoCss;
-        style[key].panelText = panelTexts[key];
+    // Create widgets for general settings and add them to generalGroup
+    const { generalWidgets, resetAll } = createGeneralPage.call(this);
+    generalWidgets.forEach((widget) => {
+        generalGroup.add(widget);
     });
 
-    let _ccss = altToggle.get_active() ? altCcss : ccss;
-    commonCss.get_buffer().set_text(_ccss, _ccss.length);
+    generalPage.add(generalGroup);
+    preferencesWindow.add(generalPage);
 
-    loadStyle(style, styleItems);
+    // Apply settings when prefs window is closed
+    preferencesWindow.connect('hide', function() {
+        this.vpn.applySettingsToNord();
+    }.bind(this));
+
+    // resetAll.connect('clicked', () => {
+    //     resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
+    // });
+
+    resetConnection.connect('clicked', () => {
+        resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
+    });
+
+    return preferencesWindow;
 }
 
-function buildPrefsWidget() {
+
+function buildPrefsWidgetOld() {
     this.normalRender = new Gtk.CellRendererText();
 
     this.vpn = new Vpn();
