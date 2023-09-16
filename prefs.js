@@ -361,8 +361,18 @@ function createGeneralPage() {
 
     // Autoconnect Toggle
     const autoConnectLabel = new Gtk.Label({label: "Autoconnect to VPN on startup:", halign: Gtk.Align.START});
-    const autoConnectToggle = new Gtk.Switch({active: this.settings.get_boolean(`autoconnect`), halign: Gtk.Align.START, visible: true});
+    const autoConnectToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`autoconnect`),
+        halign: Gtk.Align.START,
+        visible: true
+    });
     this.settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+
+    autoConnectToggle.connect('state-set', (widget, state) => {
+        this.settings.set_boolean('autoconnect', state);
+        log(`Set autoconnect to: ${state}`);
+        log(`Retrieved autoconnect as: ${this.settings.get_boolean('autoconnect')}`);
+    });
 
     autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
     generalGrid.attach(autoConnectLabel, 0, 1, 1, 1);
@@ -370,7 +380,11 @@ function createGeneralPage() {
 
     // Common Favorite Toggle
     const commonFavLabel = new Gtk.Label({label: "Display a common favorite tab:", halign: Gtk.Align.START});
-    const commonFavToggle = new Gtk.Switch({active: this.settings.get_boolean(`commonfavorite`), halign: Gtk.Align.START, visible: true});
+    const commonFavToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`commonfavorite`),
+        halign: Gtk.Align.START,
+        visible: true
+    });
     this.settings.bind(`commonfavorite`, commonFavToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     commonFavToggle.set_hexpand(false);  // Don't expand horizontally
@@ -391,116 +405,76 @@ function createGeneralPage() {
 }
 
 function createAccountsPage() {
-    const accountsGrid = new Gtk.Label({
-        label: "<b>* Changes applied on close</b>", use_markup: true, halign: Gtk.Align.START
+    const accountsGrid = new Gtk.Grid({
+        column_spacing: 12, row_spacing: 12, margin_top: 10, margin_bottom: 10, margin_start: 10, margin_end: 10
     });
 
-    return accountsGrid;
-}
+    // Show Login Toggle
+    const showLoginLabel = new Gtk.Label({ label: "Show login button in menu:", halign: Gtk.Align.START });
+    const showLoginToggle = new Gtk.Switch({ active: this.settings.get_boolean('showlogin'), halign: Gtk.Align.START });
+    this.settings.bind('showlogin', showLoginToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+    accountsGrid.attach(showLoginLabel, 0, 0, 1, 1);
+    accountsGrid.attach(showLoginToggle, 1, 0, 1, 1);
 
-function createAccountsPageOld() {
-    const accountPage = new Gtk.Grid({
-        margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
-    });
+    // Show Logout Toggle
+    const showLogoutLabel = new Gtk.Label({ label: "Show logout button in menu:", halign: Gtk.Align.START });
+    const showLogoutToggle = new Gtk.Switch({ active: this.settings.get_boolean('showlogout'), halign: Gtk.Align.START });
+    this.settings.bind('showlogout', showLogoutToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+    accountsGrid.attach(showLogoutLabel, 0, 1, 1, 1);
+    accountsGrid.attach(showLogoutToggle, 1, 1, 1, 1);
 
-    // showlogin
-    const showLoginLabel = new Gtk.Label({
-        label: `Show login button in menu:`, halign: Gtk.Align.START, visible: true
-    });
-    accountPage.attach(showLoginLabel, 0, 0, 1, 1);
+    // Account Information
+    const accountInfo = new Gtk.Label({ label: "<b>Account Information</b>", use_markup: true, halign: Gtk.Align.START });
+    accountsGrid.attach(accountInfo, 0, 2, 2, 1);
 
-    const showLoginToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`showlogin`), halign: Gtk.Align.END, visible: true
-    });
-    accountPage.attach(showLoginToggle, 1, 0, 1, 1);
+    const accountEmailLabel = new Gtk.Label({ label: "Account email:", halign: Gtk.Align.START });
+    const accountEmail = new Gtk.Label({ halign: Gtk.Align.START });
+    accountsGrid.attach(accountEmailLabel, 0, 3, 1, 1);
+    accountsGrid.attach(accountEmail, 1, 3, 1, 1);
 
-    this.settings.bind(`showlogin`, showLoginToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    const accountStatusLabel = new Gtk.Label({ label: "Account status:", halign: Gtk.Align.START });
+    const accountStatus = new Gtk.Label({ halign: Gtk.Align.START });
+    accountsGrid.attach(accountStatusLabel, 0, 4, 1, 1);
+    accountsGrid.attach(accountStatus, 1, 4, 1, 1);
 
-    // showlogout
-    const showLogoutLabel = new Gtk.Label({
-        label: `Show logout button in menu:`, halign: Gtk.Align.START, visible: true
-    });
-    accountPage.attach(showLogoutLabel, 0, 1, 1, 1);
-
-    const showLogoutToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`showlogout`), halign: Gtk.Align.END, visible: true
-    });
-    accountPage.attach(showLogoutToggle, 1, 1, 1, 1);
-
-    this.settings.bind(`showlogout`, showLogoutToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
-
-    const accountSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    });
-    accountPage.attach(accountSaveLabel, 0, 2, 2, 1);
-
-    const accountInfo = new Gtk.Label({
-        label: `<b>Account Information</b>`, halign: Gtk.Align.START, visible: true, use_markup: true,
-    });
-    accountPage.attach(accountInfo, 0, 3, 1, 1);
-
-
-    const accountEmailLabel = new Gtk.Label({
-        label: `Account email: `, halign: Gtk.Align.START, visible: true
-    });
-    accountPage.attach(accountEmailLabel, 0, 4, 1, 1);
-
-    const accountEmail = new Gtk.Label({
-        label: "", halign: Gtk.Align.START, visible: true
-    });
-    accountPage.attach(accountEmail, 1, 4, 1, 1);
-
-
-    const accountStatusLabel = new Gtk.Label({
-        label: `Account status: `, halign: Gtk.Align.START, visible: true
-    });
-    accountPage.attach(accountStatusLabel, 0, 5, 1, 1);
-
-    const accountStatus = new Gtk.Label({
-        label: "", halign: Gtk.Align.START, visible: true
-    });
-    accountPage.attach(accountStatus, 1, 5, 1, 1);
-
-    const login = new Gtk.Button({
-        label: `Login`, visible: true
-    });
-    login.set_sensitive(false);
-    accountPage.attach(login, 0, 6, 1, 1);
-
-    login.connect(`clicked`, () => {
+    const loginButton = new Gtk.Button({ label: "Login" });
+    loginButton.connect('clicked', () => {
         this.vpn.loginVpn();
     });
+    loginButton.set_sensitive(false);
+    accountsGrid.attach(loginButton, 0, 5, 1, 1);
 
-    const logout = new Gtk.Button({
-        label: `Logout`, visible: true
-    });
-    logout.set_sensitive(false);
-    accountPage.attach(logout, 1, 6, 1, 1);
-
-    logout.connect(`clicked`, () => {
+    const logoutButton = new Gtk.Button({ label: "Logout" });
+    logoutButton.connect('clicked', () => {
         this.vpn.logoutVpn();
     });
+    logoutButton.set_sensitive(false);
+    accountsGrid.attach(logoutButton, 1, 5, 1, 1);
 
-    const refreshAccountBtn = new Gtk.Button({
-        label: `Refresh`, visible: true
-    });
-    accountPage.attach(refreshAccountBtn, 0, 7, 1, 1);
-
-    refreshAccount();
-    refreshAccountBtn.connect(`clicked`, refreshAccount);
-
-    function refreshAccount() {
-        let account = vpn.getAccount();
-        let loggedin = !!account.emailAddress;
-
+    const refreshAccountButton = new Gtk.Button({ label: "Refresh" });
+    const refreshAccount = () => {
+        let account = this.vpn.getAccount();
+        let loggedIn = !!account.emailAddress;
         accountEmail.set_text(account.emailAddress || "");
         accountStatus.set_text(account.vpnService || "");
+        loginButton.set_sensitive(!loggedIn);
+        logoutButton.set_sensitive(loggedIn);
+    };
+    refreshAccountButton.connect('clicked', refreshAccount);
+    accountsGrid.attach(refreshAccountButton, 0, 6, 1, 1);
 
-        login.set_sensitive(!loggedin);
-        logout.set_sensitive(loggedin);
-    }
+    // Initialize account information
+    refreshAccount();
 
-    return accountPage;
+    // Changes Applied on Close Label
+    const changesAppliedLabel = new Gtk.Label({
+        label: "<b>* Changes applied on close</b>",
+        use_markup: true,
+        halign: Gtk.Align.START
+    });
+    accountsGrid.attach(changesAppliedLabel, 0, 7, 2, 1);
+
+    return accountsGrid;
 }
 
 function createConnectionsPage() {
