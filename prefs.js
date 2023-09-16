@@ -69,7 +69,7 @@ function resetSetting(settings, keys) {
     })
 }
 
-function createStylesPage() {
+function createStylesPageOld() {
     const stylePage = new Gtk.Grid({
         margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
@@ -264,6 +264,221 @@ function createStylesPage() {
     return stylePage;
 }
 
+function connectStyleButtons(styleExtraLarge, monoToggle, altToggle, commonCss, styleItems, styleLarge, styleMedium, styleSmall) {
+    styleExtraLarge.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{city}, {country}  -  {uptimeHr}:{uptimeMin}:{uptimeSec}  -  ↑{transferUp} ↓{transferDown}',
+            'CONNECTING': 'VPN CONNECTING',
+            'DISCONNECTED': 'VPN DISCONNECTED',
+            'DISCONNECTING': 'VPN DISCONNECTING ',
+            'RECONNECTING': 'VPN RECONNECTING',
+            'RESTARTING': 'VPN RESTARTING',
+            'ERROR': 'VPN ERROR',
+            'LOGGED_OUT': 'VPN LOGGED OUT',
+            'LOGGING_IN': 'VPN LOGGING IN',
+            'LOGGING_OUT': 'VPN LOGGING OUT',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleLarge.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{country} #{number}',
+            'CONNECTING': 'CONNECTING',
+            'DISCONNECTED': 'DISCONNECTED',
+            'DISCONNECTING': 'DISCONNECTING',
+            'RECONNECTING': 'RECONNECTING',
+            'RESTARTING': 'RESTARTING',
+            'ERROR': 'ERROR',
+            'LOGGED_OUT': 'LOGGED OUT',
+            'LOGGING_IN': 'LOGGING IN',
+            'LOGGING_OUT': 'LOGGING OUT',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleMedium.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{ctry}#{number}',
+            'CONNECTING': '...',
+            'DISCONNECTED': 'OFF',
+            'DISCONNECTING': '...',
+            'RECONNECTING': '...',
+            'RESTARTING': '...',
+            'ERROR': 'ERR',
+            'LOGGED_OUT': 'OUT',
+            'LOGGING_IN': '...',
+            'LOGGING_OUT': '...',
+
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleSmall.connect(`clicked`, () => {
+        let panelTexts = {
+            'CONNECTED': '{ctry}',
+            'CONNECTING': '.',
+            'DISCONNECTED': '∅',
+            'DISCONNECTING': '.',
+            'RECONNECTING': '.',
+            'RESTARTING': '.',
+            'ERROR': '⚠',
+            'LOGGED_OUT': '?',
+            'LOGGING_IN': '.',
+            'LOGGING_OUT': '.',
+        }
+        loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
+    });
+
+    styleItems.forEach(item => {
+        item.format.connect(`changed`, () => {
+            saveStyle(styleItems);
+        });
+        item.css.connect(`changed`, () => {
+            saveStyle(styleItems);
+        });
+    });
+}
+
+function createBuildSection() {
+    const stylePage = new Gtk.Grid({
+        margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
+    });
+
+    const monoLabel = new Gtk.Label({
+        label: `Build as monochrome:`, halign: Gtk.Align.START, visible: true
+    });
+    stylePage.attach(monoLabel, 0, 0, 1, 1);
+
+    const monoToggle = new Gtk.Switch({
+        active: false, halign: Gtk.Align.END, visible: true
+    });
+    stylePage.attach(monoToggle, 1, 0, 1, 1);
+
+    const altLabel = new Gtk.Label({
+        label: `Build with alt style:`, halign: Gtk.Align.START, visible: true
+    });
+    stylePage.attach(altLabel, 0, 1, 1, 1);
+
+    const altToggle = new Gtk.Switch({
+        active: false, halign: Gtk.Align.END, visible: true
+    });
+    stylePage.attach(altToggle, 1, 1, 1, 1);
+
+    const loadDefault = new Gtk.Label({
+        label: '<b>Build default: </b>', halign: Gtk.Align.START, use_markup: true, visible: true
+    });
+    stylePage.attach(loadDefault, 0, 2, 1, 1);
+
+    const styleSmall = new Gtk.Button({
+        label: `Small default`, visible: true
+    });
+    stylePage.attach(styleSmall, 1, 2, 1, 1);
+
+    const styleMedium = new Gtk.Button({
+        label: `Medium default`, visible: true
+    });
+    stylePage.attach(styleMedium, 2, 2, 1, 1);
+
+    const styleLarge = new Gtk.Button({
+        label: `Large default`, visible: true
+    });
+    stylePage.attach(styleLarge, 3, 2, 1, 1);
+
+    const styleExtraLarge = new Gtk.Button({
+        label: `Extra Large default`, visible: true
+    });
+    stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
+    return {stylePage, monoToggle, altToggle, styleSmall, styleMedium, styleLarge, styleExtraLarge};
+}
+
+function createEditStyleSection(stylePage) {
+    const customStyle = new Gtk.Label({
+        label: '<b>Edit style</b>', halign: Gtk.Align.START, use_markup: true, visible: true
+    });
+    stylePage.attach(customStyle, 0, 3, 1, 1);
+
+    const displayMsg = new Gtk.Label({
+        label: '<b>Display Msg</b>', halign: Gtk.Align.START, use_markup: true, visible: true
+    });
+    stylePage.attach(displayMsg, 1, 4, 1, 1);
+
+    const textColor = new Gtk.Label({
+        label: '<b>CSS Style</b>', halign: Gtk.Align.START, use_markup: true, visible: true
+    });
+    stylePage.attach(textColor, 2, 4, 1, 1);
+
+    let row = 5;
+    let styleItems = [];
+    Common.safeObjectKeys(Constants.states).forEach(state => {
+        const label = new Gtk.Label({
+            label: state, halign: Gtk.Align.START, visible: true
+        });
+        stylePage.attach(label, 0, row, 1, 1);
+
+        const format = new Gtk.Entry();
+        stylePage.attach(format, 1, row, 1, 1);
+
+        const css = new Gtk.Entry();
+        stylePage.attach(css, 2, row++, 3, 1);
+
+        styleItems.push({state, format, css});
+    });
+
+    const commonCsslabel = new Gtk.Label({
+        label: "Common CSS", halign: Gtk.Align.START, visible: true
+    });
+    stylePage.attach(commonCsslabel, 0, row, 1, 1);
+
+    const commonCss = new Gtk.Entry();
+    let cps = this.settings.get_string(`common-panel-style`);
+    commonCss.get_buffer().set_text(cps, cps.length)
+    commonCss.connect(`changed`, () => {
+        let gv = new GLib.Variant("s", commonCss.get_buffer().get_text());
+        log(JSON.stringify(commonCss.get_buffer().get_text()));
+        settings.set_value(`common-panel-style`, gv);
+    });
+
+    stylePage.attach(commonCss, 1, row++, 4, 1);
+
+    let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
+    loadStyle(savedStyle, styleItems)
+
+    const connectedKeyLabel = new Gtk.Label({
+        label: `<b>* Available keys for CONNECTED: {country},{COUNTRY},{ctry},{city},{CITY},{number},{server},{ip},{tech},{protocol},{transfer},{transferUp},{transferDown},{uptime},{uptimeHr},{uptimeMin},{uptimeSec}</b>`,
+        halign: Gtk.Align.START,
+        use_markup: true,
+        visible: true,
+    });
+    connectedKeyLabel.set_selectable(true);
+    stylePage.attach(connectedKeyLabel, 0, row++, 5, 1);
+    return {row, styleItems, commonCss};
+}
+
+function createStylesPage() {
+    const {
+        stylePage,
+        monoToggle,
+        altToggle,
+        styleSmall,
+        styleMedium,
+        styleLarge,
+        styleExtraLarge
+    } = createBuildSection();
+
+    let {row, styleItems, commonCss} = createEditStyleSection.call(this, stylePage);
+
+    connectStyleButtons(styleExtraLarge, monoToggle, altToggle, commonCss, styleItems, styleLarge, styleMedium, styleSmall);
+
+    const styleSaveLabel = new Gtk.Label({
+        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
+    });
+
+    stylePage.attach(styleSaveLabel, 0, row, 2, 1);
+
+    return stylePage;
+}
+
 function saveStyle(styleItems) {
 
     let data = {};
@@ -410,48 +625,48 @@ function createAccountsPage() {
     });
 
     // Show Login Toggle
-    const showLoginLabel = new Gtk.Label({ label: "Show login button in menu:", halign: Gtk.Align.START });
-    const showLoginToggle = new Gtk.Switch({ active: this.settings.get_boolean('showlogin'), halign: Gtk.Align.START });
+    const showLoginLabel = new Gtk.Label({label: "Show login button in menu:", halign: Gtk.Align.START});
+    const showLoginToggle = new Gtk.Switch({active: this.settings.get_boolean('showlogin'), halign: Gtk.Align.START});
     this.settings.bind('showlogin', showLoginToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
     accountsGrid.attach(showLoginLabel, 0, 0, 1, 1);
     accountsGrid.attach(showLoginToggle, 1, 0, 1, 1);
 
     // Show Logout Toggle
-    const showLogoutLabel = new Gtk.Label({ label: "Show logout button in menu:", halign: Gtk.Align.START });
-    const showLogoutToggle = new Gtk.Switch({ active: this.settings.get_boolean('showlogout'), halign: Gtk.Align.START });
+    const showLogoutLabel = new Gtk.Label({label: "Show logout button in menu:", halign: Gtk.Align.START});
+    const showLogoutToggle = new Gtk.Switch({active: this.settings.get_boolean('showlogout'), halign: Gtk.Align.START});
     this.settings.bind('showlogout', showLogoutToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
     accountsGrid.attach(showLogoutLabel, 0, 1, 1, 1);
     accountsGrid.attach(showLogoutToggle, 1, 1, 1, 1);
 
     // Account Information
-    const accountInfo = new Gtk.Label({ label: "<b>Account Information</b>", use_markup: true, halign: Gtk.Align.START });
+    const accountInfo = new Gtk.Label({label: "<b>Account Information</b>", use_markup: true, halign: Gtk.Align.START});
     accountsGrid.attach(accountInfo, 0, 2, 2, 1);
 
-    const accountEmailLabel = new Gtk.Label({ label: "Account email:", halign: Gtk.Align.START });
-    const accountEmail = new Gtk.Label({ halign: Gtk.Align.START });
+    const accountEmailLabel = new Gtk.Label({label: "Account email:", halign: Gtk.Align.START});
+    const accountEmail = new Gtk.Label({halign: Gtk.Align.START});
     accountsGrid.attach(accountEmailLabel, 0, 3, 1, 1);
     accountsGrid.attach(accountEmail, 1, 3, 1, 1);
 
-    const accountStatusLabel = new Gtk.Label({ label: "Account status:", halign: Gtk.Align.START });
-    const accountStatus = new Gtk.Label({ halign: Gtk.Align.START });
+    const accountStatusLabel = new Gtk.Label({label: "Account status:", halign: Gtk.Align.START});
+    const accountStatus = new Gtk.Label({halign: Gtk.Align.START});
     accountsGrid.attach(accountStatusLabel, 0, 4, 1, 1);
     accountsGrid.attach(accountStatus, 1, 4, 1, 1);
 
-    const loginButton = new Gtk.Button({ label: "Login" });
+    const loginButton = new Gtk.Button({label: "Login"});
     loginButton.connect('clicked', () => {
         this.vpn.loginVpn();
     });
     loginButton.set_sensitive(false);
     accountsGrid.attach(loginButton, 0, 5, 1, 1);
 
-    const logoutButton = new Gtk.Button({ label: "Logout" });
+    const logoutButton = new Gtk.Button({label: "Logout"});
     logoutButton.connect('clicked', () => {
         this.vpn.logoutVpn();
     });
     logoutButton.set_sensitive(false);
     accountsGrid.attach(logoutButton, 1, 5, 1, 1);
 
-    const refreshAccountButton = new Gtk.Button({ label: "Refresh" });
+    const refreshAccountButton = new Gtk.Button({label: "Refresh"});
     const refreshAccount = () => {
         let account = this.vpn.getAccount();
         let loggedIn = !!account.emailAddress;
@@ -824,6 +1039,16 @@ function fillPreferencesWindow(window) {
     accountsGroup.add(accountsGrid);
     accountsPage.add(accountsGroup);
     window.add(accountsPage);
+
+    // *** STYLES
+    const stylesPage = new Adw.PreferencesPage();
+    stylesPage.set_title("Styles");
+    stylesPage.set_icon_name("edit-select-all-symbolic");
+    const stylesGroup = new Adw.PreferencesGroup();
+    const stylesGrid = createStylesPage().call(this);
+    stylesGroup.add(stylesGrid);
+    stylesPage.add(stylesGroup);
+    window.add(stylesPage);
 
     // Apply settings when prefs window is closed
     window.connect('hide', function () {
