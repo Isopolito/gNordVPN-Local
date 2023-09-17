@@ -1,6 +1,6 @@
 `use strict`;
 
-const { Adw, GLib, Gio, Gtk, GObject } = imports.gi;
+const {Adw, GLib, Gio, Gtk, GObject} = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Vpn = Me.imports.modules.Vpn.Vpn;
@@ -280,14 +280,7 @@ function createStylesPage() {
     } = createStylesBuildSection();
 
     let {row, styleItems, commonCss} = createStyleEditSection.call(this, stylePage);
-
     connectStylesButtons(styleExtraLarge, monoToggle, altToggle, commonCss, styleItems, styleLarge, styleMedium, styleSmall);
-
-    const styleSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    });
-
-    stylePage.attach(styleSaveLabel, 0, row, 2, 1);
 
     return stylePage;
 }
@@ -387,25 +380,6 @@ function createGeneralPage() {
         this.settings.set_string('panel-position', newPosition);
     }.bind(this));
 
-    // Autoconnect Toggle
-    const autoConnectLabel = new Gtk.Label({label: "Autoconnect to VPN on startup:", halign: Gtk.Align.START});
-    const autoConnectToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`autoconnect`),
-        halign: Gtk.Align.START,
-        visible: true
-    });
-    this.settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
-
-    autoConnectToggle.connect('state-set', (widget, state) => {
-        this.settings.set_boolean('autoconnect', state);
-        log(`Set autoconnect to: ${state}`);
-        log(`Retrieved autoconnect as: ${this.settings.get_boolean('autoconnect')}`);
-    });
-
-    autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
-    generalGrid.attach(autoConnectLabel, 0, 1, 1, 1);
-    generalGrid.attach(autoConnectToggle, 1, 1, 1, 1);
-
     // Common Favorite Toggle
     const commonFavLabel = new Gtk.Label({label: "Display a common favorite tab:", halign: Gtk.Align.START});
     const commonFavToggle = new Gtk.Switch({
@@ -422,12 +396,6 @@ function createGeneralPage() {
     // Reset All Settings Button
     const resetAll = new Gtk.Button({label: "Reset All Settings"});
     generalGrid.attach(resetAll, 0, 3, 2, 1);
-
-    // Changes Applied on Close Label
-    const changesAppliedLabel = new Gtk.Label({
-        label: "<b>* Changes applied on close</b>", use_markup: true, halign: Gtk.Align.START
-    });
-    generalGrid.attach(changesAppliedLabel, 0, 4, 2, 1);
 
     return {generalGrid, resetAll};
 }
@@ -493,171 +461,172 @@ function createAccountsPage() {
 
     // Initialize account information
     refreshAccount();
-
-    // Changes Applied on Close Label
-    const changesAppliedLabel = new Gtk.Label({
-        label: "<b>* Changes applied on close</b>",
-        use_markup: true,
-        halign: Gtk.Align.START
-    });
-    accountsGrid.attach(changesAppliedLabel, 0, 7, 2, 1);
-
     return accountsGrid;
 }
 
 function createConnectionsPage() {
-    const connectionPage = new Gtk.Grid({
+    const connectionsGrid = new Gtk.Grid({
         margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
-    // Currently a bug in nordvpn where notify doesn't reflect in settings output, hiding for now to
-    // not confuse people.
-    // Notify
-    // const notifyLabel = new Gtk.Label({
-    //     label: `Enable Notify:`,
-    //     halign: Gtk.Align.START,
-    //     visible: true
-    // });
-    // prefsWidget.attach(notifyLabel, 0, 2, 1, 1);
-    //
-    // const notifyToggle = new Gtk.Switch({
-    //     active: this.settings.get_boolean(`notify`),
-    //     halign: Gtk.Align.END,
-    //     visible: true
-    // });
-    // prefsWidget.attach(notifyToggle, 1, 2, 1, 1);
-    //
-    // this.settings.bind(
-    //     `notify`,
-    //     notifyToggle,
-    //     `active`,
-    //     Gio.SettingsBindFlags.DEFAULT
-    // );
+    // Technology
+    const techLabel = new Gtk.Label({
+        label: `Select Technology:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    connectionsGrid.attach(techLabel, 0, 0, 1, 1);
+
+    let techModel = new Gtk.ListStore();
+    techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
+    this.techCbox = new Gtk.ComboBox({model: techModel});
+    let techRenderer = new Gtk.CellRendererText();
+    this.techCbox.pack_start(techRenderer, true);
+    this.techCbox.add_attribute(techRenderer, 'text', 1);
+    techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
+    techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
+    let tech = this.settings.get_string(`technology`);
+    this.techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
+    this.techCbox.connect('changed', function (entry) {
+        let [success, iter] = this.techCbox.get_active_iter();
+        if (!success) return;
+        let tech = techModel.get_value(iter, 0);
+        this.settings.set_string(`technology`, tech);
+        onTechChange.call(this, tech);
+    }.bind(this));
+    this.techCbox.show();
+    connectionsGrid.attach(this.techCbox, 1, 0, 1, 1);
+
+    // Autoconnect Toggle
+    const autoConnectLabel = new Gtk.Label({label: "Autoconnect to VPN on startup:", halign: Gtk.Align.START});
+    const autoConnectToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`autoconnect`),
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    this.settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+
+    autoConnectToggle.connect('state-set', (widget, state) => {
+        this.settings.set_boolean('autoconnect', state);
+        log(`Set autoconnect to: ${state}`);
+        log(`Retrieved autoconnect as: ${this.settings.get_boolean('autoconnect')}`);
+    });
+
+    autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
+    connectionsGrid.attach(autoConnectLabel, 0, 1, 1, 1);
+    connectionsGrid.attach(autoConnectToggle, 1, 1, 1, 1);
 
     // CyberSec
     const cybersecLabel = new Gtk.Label({
-        label: `Enable CyberSec:`, halign: Gtk.Align.START, visible: true
+        label: `Enable CyberSec:`,
+        halign: Gtk.Align.START,
+        visible: true
     });
-    connectionPage.attach(cybersecLabel, 0, 0, 1, 1);
+    connectionsGrid.attach(cybersecLabel, 0, 2, 1, 1);
 
     const cyberSecToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`cybersec`), halign: Gtk.Align.END, visible: true
+        active: this.settings.get_boolean(`cybersec`),
+        halign: Gtk.Align.END,
+        visible: true
     });
-    connectionPage.attach(cyberSecToggle, 1, 0, 1, 1);
-
+    connectionsGrid.attach(cyberSecToggle, 1, 2, 1, 1);
     this.settings.bind(`cybersec`, cyberSecToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Firewall
     const firewallLabel = new Gtk.Label({
-        label: `Enable Firewall:`, halign: Gtk.Align.START, visible: true
+        label: `Enable Firewall:`,
+        halign: Gtk.Align.START,
+        visible: true
     });
-    connectionPage.attach(firewallLabel, 0, 1, 1, 1);
+    connectionsGrid.attach(firewallLabel, 0, 3, 1, 1);
 
     const firewallToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`firewall`), halign: Gtk.Align.END, visible: true
+        active: this.settings.get_boolean(`firewall`),
+        halign: Gtk.Align.END,
+        visible: true
     });
-    connectionPage.attach(firewallToggle, 1, 1, 1, 1);
-
+    connectionsGrid.attach(firewallToggle, 1, 3, 1, 1);
     this.settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Killswitch
     const killswitchLabel = new Gtk.Label({
-        label: `Enable Killswitch:`, halign: Gtk.Align.START, visible: true
+        label: `Enable Killswitch:`,
+        halign: Gtk.Align.START,
+        visible: true
     });
-    connectionPage.attach(killswitchLabel, 0, 2, 1, 1);
+    connectionsGrid.attach(killswitchLabel, 0, 4, 1, 1);
 
     const killswitchToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`killswitch`), halign: Gtk.Align.END, visible: true
+        active: this.settings.get_boolean(`killswitch`),
+        halign: Gtk.Align.END,
+        visible: true
     });
-    connectionPage.attach(killswitchToggle, 1, 2, 1, 1);
-
+    connectionsGrid.attach(killswitchToggle, 1, 4, 1, 1);
     this.settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Obfuscate
     const obfuscateLabel = new Gtk.Label({
-        label: `Enable Obfuscate:`, halign: Gtk.Align.START, visible: true
+        label: `Enable Obfuscate:`,
+        halign: Gtk.Align.START,
+        visible: true
     });
-    connectionPage.attach(obfuscateLabel, 0, 3, 1, 1);
+    connectionsGrid.attach(obfuscateLabel, 0, 5, 1, 1);
 
     const obfuscateToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`obfuscate`), halign: Gtk.Align.END, visible: true
+        active: this.settings.get_boolean(`obfuscate`),
+        halign: Gtk.Align.END,
+        visible: true
     });
-    connectionPage.attach(obfuscateToggle, 1, 3, 1, 1);
-
+    connectionsGrid.attach(obfuscateToggle, 1, 5, 1, 1);
     this.settings.bind(`obfuscate`, obfuscateToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Protocol
     const protocolLabel = new Gtk.Label({
-        label: `Select Protocol:`, halign: Gtk.Align.START, visible: true
+        label: `Select Protocol:`,
+        halign: Gtk.Align.START,
+        visible: true
     });
-    connectionPage.attach(protocolLabel, 0, 4, 1, 1);
+    connectionsGrid.attach(protocolLabel, 0, 6, 1, 1);
 
     let protoModel = new Gtk.ListStore();
     protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-
     this.protoCbox = new Gtk.ComboBox({model: protoModel});
     let protoRenderer = new Gtk.CellRendererText();
     this.protoCbox.pack_start(protoRenderer, true);
     this.protoCbox.add_attribute(protoRenderer, 'text', 1);
-
     protoModel.set(protoModel.append(), [0, 1], ['UDP', 'UDP']);
     protoModel.set(protoModel.append(), [0, 1], ['TCP', 'TCP']);
-
     let protocol = this.settings.get_string(`protocol`);
     this.protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
-
     this.protoCbox.connect('changed', function (entry) {
         let [success, iter] = this.protoCbox.get_active_iter();
         if (!success) return;
         let protocol = protoModel.get_value(iter, 0);
         this.settings.set_string(`protocol`, protocol);
     }.bind(this));
-
     this.protoCbox.show();
-    connectionPage.attach(this.protoCbox, 1, 4, 1, 1);
-
-    // Technology
-    const techLabel = new Gtk.Label({
-        label: `Select Technology:`, halign: Gtk.Align.START, visible: true
-    });
-    connectionPage.attach(techLabel, 0, 5, 1, 1);
-
-    let techModel = new Gtk.ListStore();
-    techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-
-    this.techCbox = new Gtk.ComboBox({model: techModel});
-    let techRenderer = new Gtk.CellRendererText();
-    this.techCbox.pack_start(techRenderer, true);
-    this.techCbox.add_attribute(techRenderer, 'text', 1);
-
-    techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
-    techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
-
-    let tech = this.settings.get_string(`technology`);
-    this.techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
-
-    this.techCbox.connect('changed', function (entry) {
-        let [success, iter] = this.techCbox.get_active_iter();
-        if (!success) return;
-        let tech = techModel.get_value(iter, 0);
-        this.settings.set_string(`technology`, tech);
-    }.bind(this));
-
-    this.techCbox.show();
-    connectionPage.attach(this.techCbox, 1, 5, 1, 1);
-
+    connectionsGrid.attach(this.protoCbox, 1, 6, 1, 1);
 
     // Reset connection settings
     const resetConnection = new Gtk.Button({
-        label: `Reset Connection Settings`, visible: true
+        label: `Reset Connection Settings`,
+        visible: true
     });
-    connectionPage.attach(resetConnection, 0, 6, 1, 1);
+    connectionsGrid.attach(resetConnection, 0, 7, 1, 1);
 
-    const connectionSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    });
-    connectionPage.attach(connectionSaveLabel, 0, 7, 2, 1);
-    return {connectionPage, resetConnection};
+    function onTechChange(tech) {
+        const isOpenVpn = tech === 'OPENVPN';
+        if (isOpenVpn) {
+            obfuscateToggle.sensitive = true;
+            this.protoCbox.sensitive = true;
+        } else {
+            obfuscateToggle.sensitive = false;
+            this.protoCbox.sensitive = false;
+        }
+    }
+
+    onTechChange.call(this, tech);
+    return {connectionsGrid, resetConnection};
 }
 
 function createCitiesPage() {
@@ -822,9 +791,38 @@ function createServersPage() {
     return {serverPage, serverTreeView, serverTreeIterMap};
 }
 
-function fillPreferencesWindow(window) {
-    //this.normalRender = new Adw.TextView();
+function createFooter() {
+    const box = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        spacing: 10,
+        visible: true,
+    });
 
+    const button = new Gtk.Button({
+        label: "Apply",
+        visible: true,
+    });
+
+    // Set custom style
+    button.get_style_context().add_class('suggested-action');
+
+    // Adjust the width by setting size request
+    button.set_size_request(80, -1);
+
+    // Add some margin to the button for spacing
+    button.margin_top = 20;
+
+    button.connect('clicked', function () {
+        log('Apply Changes button clicked');
+        this.vpn.applySettingsToNord();
+    }.bind(this));
+
+    box.append(button);  // Use append() in GTK 4
+
+    return box;
+}
+
+function fillPreferencesWindow(window) {
     this.vpn = new Vpn();
     this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
     this.vpn.setSettingsFromNord();
@@ -861,18 +859,24 @@ function fillPreferencesWindow(window) {
     stylesPage.add(stylesGroup);
     window.add(stylesPage);
 
-    // Apply settings when prefs window is closed
-    window.connect('hide', function () {
-        this.vpn.applySettingsToNord();
-    }.bind(this));
+    // *** CONNECTIONS
+    const connectionsPage = new Adw.PreferencesPage();
+    connectionsPage.set_title("Connections");
+    connectionsPage.set_icon_name("network-server-symbolic");
+    const connectionsGroup = new Adw.PreferencesGroup();
+    const {connectionsGrid, resetConnection} = createConnectionsPage.call(this);
+    connectionsGroup.add(connectionsGrid);
+    connectionsGroup.add(createFooter());
+    connectionsPage.add(connectionsGroup);
+    window.add(connectionsPage);
 
     // resetAll.connect('clicked', () => {
     //     resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
     // });
 
-    // resetConnection.connect('clicked', () => {
-    //     resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
-    // });
+    resetConnection.connect('clicked', () => {
+        resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
+    });
 
     return window;
 }

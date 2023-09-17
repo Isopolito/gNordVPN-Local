@@ -113,7 +113,10 @@ var Vpn = class Vpn {
     }
 
     applySettingsToNord() {
+        log(`gnord is nord running?: ${this.isNordVpnRunning()}`);
         if (!this.isNordVpnRunning()) return;
+
+        log(`gnord protocol?: ${this.settings.get_string(`protocol`)}`);
 
         this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
