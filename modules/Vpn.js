@@ -69,13 +69,14 @@ var Vpn = class Vpn {
         if (normalizedText.includes(`tech`)) return `technology`;
         if (normalizedText === `protocol`) return `protocol`;
         if (normalizedText === `kill switch`) return `killswitch`;
-        if (normalizedText === `cybersec`) return `cybersec`;
+        if (normalizedText === `analytics`) return `analytics`;
+        if (normalizedText === `threat protection lite`) return `cybersec`;
         if (normalizedText === `obfuscate`) return `obfuscate`;
         if (normalizedText === `notify`) return `notify`;
         if (normalizedText === `auto-connect`) return `autoconnect`;
+        if (normalizedText === `ipv6`) return `ipv6`;
 
         // Currently these settings are not supported in this extension
-        //if (normalizedText === `ipv6`) return `ipv6`;
         //if (normalizedText === `dns`) return `dns`;
 
         return null;
@@ -113,12 +114,10 @@ var Vpn = class Vpn {
     }
 
     applySettingsToNord() {
-        log(`gnord is nord running?: ${this.isNordVpnRunning()}`);
         if (!this.isNordVpnRunning()) return;
 
-        log(`gnord protocol?: ${this.settings.get_string(`protocol`)}`);
-
         this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
         this.executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);

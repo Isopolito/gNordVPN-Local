@@ -580,13 +580,45 @@ function createConnectionsPage() {
     connectionsGrid.attach(obfuscateToggle, 1, 5, 1, 1);
     this.settings.bind(`obfuscate`, obfuscateToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
+    // Analytics
+    const analyticsLabel = new Gtk.Label({
+        label: `Enable Analyics (send anonymous usage to NordVpn):`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    connectionsGrid.attach(analyticsLabel, 0, 6, 1, 1);
+
+    const analyticsToggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`analytics`),
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    connectionsGrid.attach(analyticsToggle, 1, 6, 1, 1);
+    this.settings.bind(`analytics`, analyticsToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+
+    // Ipv6
+    const ipv6Label = new Gtk.Label({
+        label: `Enable IPv6:`,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    connectionsGrid.attach(ipv6Label, 0, 7, 1, 1);
+
+    const ipV6Toggle = new Gtk.Switch({
+        active: this.settings.get_boolean(`ipv6`),
+        halign: Gtk.Align.END,
+        visible: true
+    });
+    connectionsGrid.attach(ipV6Toggle , 1, 7, 1, 1);
+    this.settings.bind(`ipv6`, ipV6Toggle , `active`, Gio.SettingsBindFlags.DEFAULT);
+
     // Protocol
     const protocolLabel = new Gtk.Label({
         label: `Select Protocol:`,
         halign: Gtk.Align.START,
         visible: true
     });
-    connectionsGrid.attach(protocolLabel, 0, 6, 1, 1);
+    connectionsGrid.attach(protocolLabel, 0, 8, 1, 1);
 
     let protoModel = new Gtk.ListStore();
     protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
@@ -605,14 +637,14 @@ function createConnectionsPage() {
         this.settings.set_string(`protocol`, protocol);
     }.bind(this));
     this.protoCbox.show();
-    connectionsGrid.attach(this.protoCbox, 1, 6, 1, 1);
+    connectionsGrid.attach(this.protoCbox, 1, 8, 1, 1);
 
     // Reset connection settings
     const resetConnection = new Gtk.Button({
         label: `Reset Connection Settings`,
         visible: true
     });
-    connectionsGrid.attach(resetConnection, 0, 7, 1, 1);
+    connectionsGrid.attach(resetConnection, 0, 9, 1, 1);
 
     function onTechChange(tech) {
         const isOpenVpn = tech === 'OPENVPN';
@@ -630,14 +662,14 @@ function createConnectionsPage() {
 }
 
 function createCitiesPage() {
-    const cityPage = new Gtk.Grid({
+    const cityGrid = new Gtk.Grid({
         margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
     const maxCityPerCountryLabel = new Gtk.Label({
         label: `Max cities per country displayed:`, halign: Gtk.Align.START, visible: true
     });
-    cityPage.attach(maxCityPerCountryLabel, 0, 0, 1, 1);
+    cityGrid.attach(maxCityPerCountryLabel, 0, 0, 1, 1);
 
     const maxCityPerCountryInput = new Gtk.SpinButton();
     maxCityPerCountryInput.set_sensitive(true);
@@ -645,23 +677,30 @@ function createCitiesPage() {
     maxCityPerCountryInput.set_value(0);
     maxCityPerCountryInput.set_increments(1, 2);
 
-    cityPage.attach(maxCityPerCountryInput, 1, 0, 1, 1);
+    cityGrid.attach(maxCityPerCountryInput, 1, 0, 1, 1);
 
     this.settings.bind(`number-cities-per-countries`, maxCityPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const citySelectLabel = new Gtk.Label({
-        label: `Select countries to list in cities tab:`, halign: Gtk.Align.START, visible: true
+        label: `Select countries for cities tab:\n<small>Hold down CTRL to select multiple</small>`,
+        use_markup: true,
+        halign: Gtk.Align.START,
+        visible: true
     });
-    cityPage.attach(citySelectLabel, 0, 1, 1, 1);
+    cityGrid.attach(citySelectLabel, 0, 1, 1, 1);
 
     let cityStore = new Gtk.TreeStore();
     cityStore.set_column_types([GObject.TYPE_STRING]);
 
+    let cityColumnRenderer = new Gtk.CellRendererText();
+    cityColumnRenderer.height = 30;
     let cityColumn = new Gtk.TreeViewColumn({
-        title: "Countries"
+        title: "Countries",
+        expand: true,
+        min_width: 200
     });
-    cityColumn.pack_start(this.normalRender, true);
-    cityColumn.add_attribute(this.normalRender, "text", 0);
+    cityColumn.pack_start(cityColumnRenderer, true);
+    cityColumn.add_attribute(cityColumnRenderer, "text", 0);
 
     let cityTreeView = new Gtk.TreeView({
         model: cityStore
@@ -669,15 +708,15 @@ function createCitiesPage() {
     cityTreeView.insert_column(cityColumn, 0);
     cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
-    let cityTreeIterMap = {}
+    let cityTreeIterMap = {};
     let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
-    if (this.countrieNames) {
-        this.countrieNames.forEach(country => {
+    if (this.countryNames) {
+        this.countryNames.forEach(country => {
             let iter = cityStore.append(null);
             cityStore.set(iter, [0], [country]);
             cityTreeIterMap[country] = iter;
 
-            if (cityCountries.includes(this.countrieMap[country])) {
+            if (cityCountries.includes(this.countryMap[country])) {
                 cityTreeView.get_selection().select_iter(iter);
             }
         });
@@ -690,7 +729,7 @@ function createCitiesPage() {
         cityPathList.forEach(path => {
             let model = cityTreeView.get_model();
             let [ok, iter] = model.get_iter(path);
-            selected.push(this.countrieMap[model.get_value(iter, 0)]);
+            selected.push(this.countryMap[model.get_value(iter, 0)]);
         });
 
         settings.set_value('countries-selected-for-cities', new GLib.Variant('as', selected));
@@ -699,15 +738,11 @@ function createCitiesPage() {
     this.cityScroll = new Gtk.ScrolledWindow();
     this.cityScroll.set_child(cityTreeView);
     this.cityScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
-    this.cityScroll.set_min_content_height(150);
+    this.cityScroll.set_min_content_height(400);
 
-    cityPage.attach(this.cityScroll, 1, 1, 1, 1);
+    cityGrid.attach(this.cityScroll, 1, 1, 1, 1);
 
-    const citySaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    });
-    cityPage.attach(citySaveLabel, 0, 2, 2, 1);
-    return {cityPage, cityTreeView, cityTreeIterMap};
+    return {cityGrid, cityTreeView, cityTreeIterMap};
 }
 
 function createServersPage() {
@@ -752,13 +787,13 @@ function createServersPage() {
 
     let serverTreeIterMap = {}
     let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
-    if (this.countrieNames) {
-        this.countrieNames.forEach(country => {
+    if (this.countryNames) {
+        this.countryNames.forEach(country => {
             let iter = serverStore.append(null);
             serverStore.set(iter, [0], [country]);
             serverTreeIterMap[country] = iter;
 
-            if (serverCountries.includes(this.countrieMapWithID[country])) {
+            if (serverCountries.includes(this.countryMapWithID[country])) {
                 serverTreeView.get_selection().select_iter(iter);
             }
         });
@@ -771,7 +806,7 @@ function createServersPage() {
         serverPathList.forEach(path => {
             let model = serverTreeView.get_model();
             let [ok, iter] = model.get_iter(path);
-            selected.push(this.countrieMapWithID[model.get_value(iter, 0)]);
+            selected.push(this.countryMapWithID[model.get_value(iter, 0)]);
         });
 
         settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
@@ -791,7 +826,7 @@ function createServersPage() {
     return {serverPage, serverTreeView, serverTreeIterMap};
 }
 
-function createFooter() {
+function createSaveFooter() {
     const box = new Gtk.Box({
         orientation: Gtk.Orientation.VERTICAL,
         spacing: 10,
@@ -827,10 +862,6 @@ function fillPreferencesWindow(window) {
     this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
     this.vpn.setSettingsFromNord();
 
-    this.countryMap = this.vpn.getCountries();
-    this.countryMapWithID = this.vpn.getCountries(true);
-    this.countryNames = Common.safeObjectKeys(this.countryMap);
-
     // *** GENERAL
     const generalPage = new Adw.PreferencesPage();
     generalPage.set_title("General");
@@ -861,87 +892,39 @@ function fillPreferencesWindow(window) {
 
     // *** CONNECTIONS
     const connectionsPage = new Adw.PreferencesPage();
-    connectionsPage.set_title("Connections");
+    connectionsPage.set_title("Connection");
     connectionsPage.set_icon_name("network-server-symbolic");
     const connectionsGroup = new Adw.PreferencesGroup();
     const {connectionsGrid, resetConnection} = createConnectionsPage.call(this);
     connectionsGroup.add(connectionsGrid);
-    connectionsGroup.add(createFooter());
+    connectionsGroup.add(createSaveFooter());
     connectionsPage.add(connectionsGroup);
     window.add(connectionsPage);
 
-    // resetAll.connect('clicked', () => {
-    //     resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
-    // });
+    this.countryMap = this.vpn.getCountries();
+    this.normalRender = new Gtk.CellRendererText();
+    this.countryMapWithID = this.vpn.getCountries(true);
+    this.countryNames = Common.safeObjectKeys(this.countryMap);
+
+    // *** CITIES
+    const cityPage = new Adw.PreferencesPage();
+    cityPage.set_title("Cities");
+    cityPage.set_icon_name("document-open-symbolic");
+    const cityGroup = new Adw.PreferencesGroup();
+    const {cityGrid, cityTreeView, cityTreeIterMap} = createCitiesPage.call(this);
+    cityGroup.add(cityGrid);
+    cityPage.add(cityGroup);
+    window.add(cityPage);
+
+    // *** COUNTRIES
+
+    resetAll.connect('clicked', () => {
+        resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
+    });
 
     resetConnection.connect('clicked', () => {
         resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
     });
 
     return window;
-}
-
-function buildPrefsWidgetOld() {
-    this.normalRender = new Gtk.CellRendererText();
-
-    this.vpn = new Vpn();
-    this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-    this.vpn.setSettingsFromNord();
-
-    this.countrieMap = this.vpn.getCountries();
-    this.countrieMapWithID = this.vpn.getCountries(true);
-    this.countrieNames = Common.safeObjectKeys(this.countrieMap);
-
-    const notebook = new Gtk.Notebook()
-
-    // *** GENERAL
-    const {generalPage, resetAll} = createGeneralPage.call(this);
-    notebook.append_page(generalPage, new Gtk.Label({
-        label: `<b>General</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    }))
-
-    // *** ACCOUNTS
-    const accountPage = createAccountsPage.call(this);
-    notebook.append_page(accountPage, new Gtk.Label({
-        label: `<b>Account</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    }))
-
-    // *** STYLES
-    let stylePage = createStylesPage.call(this);
-    notebook.append_page(stylePage, new Gtk.Label({
-        label: `<b>Style</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    }))
-
-    // *** CONNECTIONS
-    const {connectionPage, resetConnection} = createConnectionsPage.call(this);
-    notebook.append_page(connectionPage, new Gtk.Label({
-        label: `<b>Connection</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    }))
-
-    // *** CITIES
-    let {cityPage, cityTreeView, cityTreeIterMap} = createCitiesPage.call(this);
-    notebook.append_page(cityPage, new Gtk.Label({
-        label: `<b>City</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    }))
-
-    // *** SERVERS
-    let {serverPage, serverTreeView, serverTreeIterMap} = createServersPage.call(this);
-    notebook.append_page(serverPage, new Gtk.Label({
-        label: `<b>Server</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    }))
-
-    // Apply settings when prefs window is closed
-    notebook.connect('unmap', function () {
-        this.vpn.applySettingsToNord();
-    }.bind(this));
-
-    resetAll.connect(`clicked`, () => {
-        resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
-    });
-
-    resetConnection.connect(`clicked`, () => {
-        resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
-    });
-
-    return notebook;
 }
