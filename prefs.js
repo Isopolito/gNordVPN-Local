@@ -609,8 +609,8 @@ function createConnectionsPage() {
         halign: Gtk.Align.END,
         visible: true
     });
-    connectionsGrid.attach(ipV6Toggle , 1, 7, 1, 1);
-    this.settings.bind(`ipv6`, ipV6Toggle , `active`, Gio.SettingsBindFlags.DEFAULT);
+    connectionsGrid.attach(ipV6Toggle, 1, 7, 1, 1);
+    this.settings.bind(`ipv6`, ipV6Toggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Protocol
     const protocolLabel = new Gtk.Label({
@@ -746,14 +746,14 @@ function createCitiesPage() {
 }
 
 function createServersPage() {
-    const serverPage = new Gtk.Grid({
+    const serverGrid = new Gtk.Grid({
         margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
 
     const maxServerPerCountryLabel = new Gtk.Label({
-        label: `Max server per country displayed:`, halign: Gtk.Align.START, visible: true
+        label: `Max servers per country displayed:`, halign: Gtk.Align.START, visible: true
     });
-    serverPage.attach(maxServerPerCountryLabel, 0, 0, 1, 1);
+    serverGrid.attach(maxServerPerCountryLabel, 0, 0, 1, 1);
 
     const maxServerPerCountryInput = new Gtk.SpinButton();
     maxServerPerCountryInput.set_sensitive(true);
@@ -761,20 +761,31 @@ function createServersPage() {
     maxServerPerCountryInput.set_value(0);
     maxServerPerCountryInput.set_increments(1, 2);
 
-    serverPage.attach(maxServerPerCountryInput, 1, 0, 1, 1);
+    serverGrid.attach(maxServerPerCountryInput, 1, 0, 1, 1);
 
     this.settings.bind(`number-servers-per-countries`, maxServerPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const serverSelectLabel = new Gtk.Label({
-        label: `Select countries to list in servers tab:`, halign: Gtk.Align.START, visible: true
+        label: `Select countries to list in servers tab:\n<small>Hold down CTRL to select multiple</small>`,
+        use_markup: true,
+        halign: Gtk.Align.START,
+        visible: true
     });
-    serverPage.attach(serverSelectLabel, 0, 1, 1, 1);
+    const citySelectLabel = new Gtk.Label({
+        label: `Select countries for cities tab:\n<small>Hold down CTRL to select multiple</small>`,
+        use_markup: true,
+        halign: Gtk.Align.START,
+        visible: true
+    });
+    serverGrid.attach(serverSelectLabel, 0, 1, 1, 1);
 
     let serverStore = new Gtk.TreeStore();
     serverStore.set_column_types([GObject.TYPE_STRING]);
 
     let serverColumn = new Gtk.TreeViewColumn({
-        title: "Countries"
+        title: "Countries",
+        expand: true,
+        min_width: 200
     });
     serverColumn.pack_start(this.normalRender, true);
     serverColumn.add_attribute(this.normalRender, "text", 0);
@@ -786,7 +797,7 @@ function createServersPage() {
     serverTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
     let serverTreeIterMap = {}
-    let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
+    let serverCountries = this.settings.get_value('countries-selected-for-servers').deep_unpack();
     if (this.countryNames) {
         this.countryNames.forEach(country => {
             let iter = serverStore.append(null);
@@ -809,22 +820,20 @@ function createServersPage() {
             selected.push(this.countryMapWithID[model.get_value(iter, 0)]);
         });
 
-        settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
+        this.settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
     });
 
     this.serverScroll = new Gtk.ScrolledWindow();
     this.serverScroll.set_child(serverTreeView);
     this.serverScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
     this.serverScroll.set_min_content_height(150);
+    this.serverScroll.set_min_content_height(400);
 
-    serverPage.attach(this.serverScroll, 1, 1, 1, 1);
+    serverGrid.attach(this.serverScroll, 1, 1, 1, 1);
 
-    const serverSaveLabel = new Gtk.Label({
-        label: `<b>* Changes applied on close</b>`, halign: Gtk.Align.START, use_markup: true, visible: true
-    });
-    serverPage.attach(serverSaveLabel, 0, 2, 2, 1);
-    return {serverPage, serverTreeView, serverTreeIterMap};
+    return {serverGrid, serverTreeView, serverTreeIterMap};
 }
+
 
 function createSaveFooter() {
     const box = new Gtk.Box({
@@ -915,7 +924,15 @@ function fillPreferencesWindow(window) {
     cityPage.add(cityGroup);
     window.add(cityPage);
 
-    // *** COUNTRIES
+    // *** SERVERS
+    const serverPage = new Adw.PreferencesPage();
+    serverPage.set_title("Servers");
+    serverPage.set_icon_name("network-workgroup-symbolic");
+    const serverGroup = new Adw.PreferencesGroup();
+    const {serverGrid, serverTreeView, serverTreeIterMap} = createServersPage.call(this);
+    serverGroup.add(serverGrid);
+    serverPage.add(serverGroup);
+    window.add(serverPage);
 
     resetAll.connect('clicked', () => {
         resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
