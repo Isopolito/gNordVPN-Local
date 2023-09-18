@@ -73,5 +73,8 @@
         <key name="showlogout" type="b">
             <default>false</default>
         </key>
+        <key name="extra-large-button" type="b">
+            <default>false</default>
+        </key>
     </schema>
 </schemalist>

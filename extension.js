@@ -1,6 +1,5 @@
 'use strict';
 
-const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
@@ -112,8 +111,9 @@ const VpnIndicator = GObject.registerClass({
             this._updateMenu(status);
             this._panelIcon.update(status);
 
-            // Start the refreshes again
-            this._setTimeout(status.currentState.refreshTimeout);
+            // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
+            const timeoutInSec = this.settings.get_boolean(`extra-large-button`) ? 1 : status.currentState.refreshTimeout;
+            this._setTimeout(timeoutInSec);
         }
 
         _updateMenu(status) {

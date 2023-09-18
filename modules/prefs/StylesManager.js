@@ -41,6 +41,8 @@ var StylesManager = class StylesManager {
                 'LOGGING_IN': 'VPN LOGGING IN',
                 'LOGGING_OUT': 'VPN LOGGING OUT',
             }
+
+            this.settings.set_boolean(`extra-large-button`, true);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -57,6 +59,8 @@ var StylesManager = class StylesManager {
                 'LOGGING_IN': 'LOGGING IN',
                 'LOGGING_OUT': 'LOGGING OUT',
             }
+
+            this.settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -74,6 +78,8 @@ var StylesManager = class StylesManager {
                 'LOGGING_OUT': '...',
 
             }
+
+            this.settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -90,6 +96,8 @@ var StylesManager = class StylesManager {
                 'LOGGING_IN': '.',
                 'LOGGING_OUT': '.',
             }
+
+            this.settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -129,8 +137,9 @@ var StylesManager = class StylesManager {
         stylePage.attach(altToggle, 1, 1, 1, 1);
 
         const loadDefault = new Gtk.Label({
-            label: '<b>Build default: </b>', halign: Gtk.Align.START, use_markup: true, visible: true
+            label: '<b>Build default: </b>\n<small>Extra Large will cause the panel to refresh every 1 second</small>', halign: Gtk.Align.START, use_markup: true, visible: true
         });
+
         stylePage.attach(loadDefault, 0, 2, 1, 1);
 
         const styleSmall = new Gtk.Button({
