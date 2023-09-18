@@ -5,63 +5,10 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Vpn = Me.imports.modules.Vpn.Vpn;
 const StylesManager = Me.imports.modules.prefs.StylesManager.StylesManager;
+const ResetManager = Me.imports.modules.prefs.ResetManager.ResetManager;
 const Common = Me.imports.modules.common;
 
 function init() {
-}
-
-function resetAllSetting(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap) {
-    resetGeneralSetting(settings);
-    resetAccountSetting(settings);
-    resetConnectionSetting(settings, protoCbox, techCbox);
-    resetCitySetting(settings, cityTreeView, cityTreeIterMap);
-    resetServerSetting(settings, serverTreeView, serverTreeIterMap);
-}
-
-function resetGeneralSetting(settings) {
-    resetSetting(settings, ['autoconnect', 'commonfavorite']);
-}
-
-function resetAccountSetting(settings) {
-    resetSetting(settings, ['showlogin', 'showlogout']);
-}
-
-function resetConnectionSetting(settings, protoCbox, techCbox) {
-    resetSetting(settings, ['cybersec', 'firewall', 'killswitch', 'obfuscate', 'notify', 'ipv6', 'protocol', 'technology']);
-
-    let protocol = settings.get_string(`protocol`);
-    protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
-
-    let tech = settings.get_string(`technology`);
-    techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
-}
-
-function resetCitySetting(settings, cityTreeView, cityTreeIterMap) {
-    resetSetting(settings, ['number-cities-per-countries', 'countries-selected-for-cities']);
-
-    let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
-
-    cityTreeView.get_selection().unselect_all();
-    cityCountries.forEach(country => {
-        cityTreeView.get_selection().select_iter(cityTreeIterMap[country.replace(/_/g, " ")]);
-    })
-}
-
-function resetServerSetting(settings, serverTreeView, serverTreeIterMap) {
-    resetSetting(settings, ['number-servers-per-countries', 'countries-selected-for-servers']);
-
-    let serverCountries = this.settings.get_value('countries-selected-for-servers').deep_unpack();
-
-    serverTreeView.get_selection().unselect_all();
-    serverCountries.forEach(server => {
-        serverTreeView.get_selection().select_iter(serverTreeIterMap[server.replace(/_/g, " ")]);
-    })
-}
-
-function resetSetting(settings, keys) {
-    keys.forEach(key => {
-        settings.set_value(key, settings.get_default_value(key));
-    })
 }
 
 function createGeneralPage() {
@@ -568,6 +515,7 @@ function createServersPage() {
 function fillPreferencesWindow(window) {
     this.vpn = new Vpn();
     this.stylesManager = new StylesManager();
+    this.resetManager = new ResetManager();
     this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
     this.vpn.setSettingsFromNord();
 
@@ -636,11 +584,11 @@ function fillPreferencesWindow(window) {
     window.add(serverPage);
 
     resetAll.connect('clicked', () => {
-        resetAllSetting(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
+        this.resetManager.resetAllSettings(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
     });
 
     resetConnection.connect('clicked', () => {
-        resetConnectionSetting(this.settings, this.protoCbox, this.techCbox);
+        this.resetManager.resetConnectionSettings(this.settings, this.protoCbox, this.techCbox);
     });
 
     return window;
