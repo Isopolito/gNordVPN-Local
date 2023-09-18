@@ -151,7 +151,7 @@ function createStylesBuildSection() {
     stylePage.attach(monoLabel, 0, 0, 1, 1);
 
     const monoToggle = new Gtk.Switch({
-        active: false, halign: Gtk.Align.END, visible: true
+        active: false, halign: Gtk.Align.START, visible: true
     });
     stylePage.attach(monoToggle, 1, 0, 1, 1);
 
@@ -161,7 +161,7 @@ function createStylesBuildSection() {
     stylePage.attach(altLabel, 0, 1, 1, 1);
 
     const altToggle = new Gtk.Switch({
-        active: false, halign: Gtk.Align.END, visible: true
+        active: false, halign: Gtk.Align.START, visible: true
     });
     stylePage.attach(altToggle, 1, 1, 1, 1);
 
@@ -848,7 +848,6 @@ function createSaveFooter() {
     button.margin_top = 20;
 
     button.connect('clicked', function () {
-        log('Apply Changes button clicked');
         this.vpn.applySettingsToNord();
     }.bind(this));
 
