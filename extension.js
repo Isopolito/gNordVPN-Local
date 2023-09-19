@@ -25,7 +25,7 @@ const VpnIndicator = GObject.registerClass({
     GTypeName: 'VpnIndicator',
 }, class VpnIndicator extends PanelMenu.Button {
         _init() {
-            super._init(0, indicatorName, false);
+            super._init(0.5, indicatorName, false);
             this.loggedin;
             this.stateManager = new StateManager();
 
@@ -117,7 +117,7 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _updateMenu(status) {
-            if (!this._statusPopup || !this._statusLabel) return;
+            if (!this._statusPopup ||  !this._statusPopup.get_label_actor() || !this._statusLabel) return;
 
             // Set the status text on the menu
             this._statusLabel.text = status.connectStatus;
@@ -291,7 +291,7 @@ const VpnIndicator = GObject.registerClass({
 
             this._panelIcon.button().connect(`button-press-event`, function (actor,event) {
                 //Only checking login state when clicking on menu
-                //Cannot chech periodicaly because:
+                //Cannot check periodically because:
                 //If checking with 'nordvpn account' it fetches from a server that limit request
                 //If checking with 'nordvpn login' it generate a new url, preventing the use from login in
                 this.loggedin = this._vpn.checkLogin();
