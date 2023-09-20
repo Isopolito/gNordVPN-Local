@@ -36,11 +36,15 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
 
         //connectionFavs-favConnectionItems
         let toAddToFav = Common.safeObjectKeys(connectionFavs).filter(x => !this._favConnectionItems.includes(x));
-        toAddToFav.forEach(connection => { this._toogleConnectionMenuItem(connection, !true); })
+        toAddToFav.forEach(connection => {
+            this._toogleConnectionMenuItem(connection, !true);
+        })
 
         //_favConnectionItems-connectionFavs
         let toRemoveFromFav = this._favConnectionItems.filter(x => !Common.safeObjectKeys(connectionFavs).includes(x))
-        toRemoveFromFav.forEach(connection => { this._toogleConnectionMenuItem(connection, !false); })
+        toRemoveFromFav.forEach(connection => {
+            this._toogleConnectionMenuItem(connection, !false);
+        })
 
     }
 
@@ -50,7 +54,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._connectionMenu.menu.addMenuItem(this._buildPlaceHolderMenuItem());
         this.tryBuild();
     }
-    
+
     _buildPlaceHolderMenuItem() {
         return new PopupMenu.PopupMenuItem("Loading...");
     }
@@ -75,7 +79,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, function () {
                 this._toogleConnectionMenuItem(connection, isFavorite);
                 if (isFavorite) this._favorites.remove(this._favoritesKey, connection);
-                else            this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
+                else this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
             }.bind(this)
         );
 
@@ -154,7 +158,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
 
         const connectionFavs = this._favorites.get(this._favoritesKey, this._connections);
         this._connections = {...connectionFavs.favorites, ...connectionFavs.itemsMinusFavorites};
-        
+
         for (const connection of Common.safeObjectKeys(connectionFavs.favorites).sort()) {
             const menuItem = this._buildConnectionMenuItem(connection, true);
             this._favConnectionItems.push(connection);
@@ -180,7 +184,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._isBuilt = true;
     }
 
-    showHide(show=true) {
+    showHide(show = true) {
         if (Common.safeObjectKeys(this._connections).length < 1 || !show) {
             this._connectionMenu.hide();
         } else {
