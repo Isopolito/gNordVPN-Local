@@ -22,60 +22,59 @@ let vpnIndicator;
 const indicatorName = `VPN Indicator`;
 
 const VpnIndicator = GObject.registerClass({
-    GTypeName: 'VpnIndicator',
-}, class VpnIndicator extends PanelMenu.Button {
+        GTypeName: 'VpnIndicator',
+    }, class VpnIndicator extends PanelMenu.Button {
         _init() {
             super._init(0.5, indicatorName, false);
             this.loggedin;
             this.stateManager = new StateManager();
 
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-            this.settings.connect('changed', (settings, key) =>  {
-                switch(key) {
+            this.settings.connect('changed', (settings, key) => {
+                switch (key) {
                     case 'panel-position':
-                    	if (Main.panel.statusArea[indicatorName]) {
-                    		Main.panel.statusArea[indicatorName].disable();
-                			Main.panel.statusArea[indicatorName].destroy();
-            			}
-		 				vpnIndicator = new VpnIndicator();
-    					vpnIndicator.enable();
-						Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0 ,vpnIndicator.settings.get_string('panel-position'));
-                    break;      
-                    case 'panel-styles':             
+                        if (Main.panel.statusArea[indicatorName]) {
+                            Main.panel.statusArea[indicatorName].disable();
+                            Main.panel.statusArea[indicatorName].destroy();
+                        }
+                        vpnIndicator = new VpnIndicator();
+                        vpnIndicator.enable();
+                        Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0, vpnIndicator.settings.get_string('panel-position'));
+                        break;
+                    case 'panel-styles':
                     case 'common-panel-style':
                         this._panelIcon.updateStyle();
                         this._refresh();
-                    break;
-
-                    case 'favorite-countries': 
+                        break;
+                    case 'favorite-countries':
                         this._countryMenu.updateFavorite();
-                        this._commonFavorite.updateFavorite(); 
-                    break;
+                        this._commonFavorite.updateFavorite();
+                        break;
                     case 'favorite-cities':
-                        this._cityMenu.updateFavorite(); 
-                        this._commonFavorite.updateFavorite(); 
-                    break;
+                        this._cityMenu.updateFavorite();
+                        this._commonFavorite.updateFavorite();
+                        break;
                     case 'favorite-servers':
-                        this._serverMenu.updateFavorite(); 
-                        this._commonFavorite.updateFavorite(); 
-                    break;
-
+                        this._serverMenu.updateFavorite();
+                        this._commonFavorite.updateFavorite();
+                        break;
                     case 'showlogin':
                     case 'showlogout':
                         this._refresh();
-                    break;
-
+                        break;
                     case 'number-cities-per-countries':
-                    case 'countries-selected-for-cities': this._cityMenu.rebuild(); break;
-               
+                    case 'countries-selected-for-cities':
+                        this._cityMenu.rebuild();
+                        break;
                     case 'number-servers-per-countries':
-                    case 'countries-selected-for-servers': this._serverMenu.rebuild(); break;
-
-                    case 'commonfavorite': {       
-                        this._commonFavorite.showHide(settings.get_boolean(`commonfavorite`)); 
-                    }break;
+                    case 'countries-selected-for-servers':
+                        this._serverMenu.rebuild();
+                        break;
+                    case 'commonfavorite': {
+                        this._commonFavorite.showHide(settings.get_boolean(`commonfavorite`));
+                    }
+                        break;
                 }
-
             });
         }
 
@@ -117,7 +116,7 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _updateMenu(status) {
-            if (!this._statusPopup ||  !this._statusPopup.get_label_actor() || !this._statusLabel) return;
+            if (!this._statusPopup || !this._statusPopup.get_label_actor() || !this._statusLabel) return;
 
             // Set the status text on the menu
             this._statusLabel.text = status.connectStatus;
@@ -129,7 +128,7 @@ const VpnIndicator = GObject.registerClass({
             statusToDisplay.forEach(key => {
                 if (status[key]) {
                     const label = key.replace(/([A-Z]+)/g, " $1").replace(/([A-Z][a-z])/g, " $1").replace(/^./, e => e.toUpperCase());
-                    const menuItem = new PopupMenu.PopupMenuItem(label+": "+status[key]);
+                    const menuItem = new PopupMenu.PopupMenuItem(label + ": " + status[key]);
                     this._statusPopup.menu.addMenuItem(menuItem);
                     hasItems = true;
                 }
@@ -203,7 +202,7 @@ const VpnIndicator = GObject.registerClass({
                 this._timeout = undefined;
             }
         }
-        
+
         _openSettings() {
             if (typeof ExtensionUtils.openPrefs === 'function') {
                 ExtensionUtils.openPrefs();
@@ -217,7 +216,7 @@ const VpnIndicator = GObject.registerClass({
 
         _buildIndicatorMenu() {
             this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-            this._statusPopup.menu.connect(`open-state-changed`, function (actor,event) {
+            this._statusPopup.menu.connect(`open-state-changed`, function (actor, event) {
                 this._setQuickRefresh(event);
             }.bind(this));
 
@@ -251,8 +250,8 @@ const VpnIndicator = GObject.registerClass({
             this._commonFavorite.build();
             this.menu.addMenuItem(this._commonFavorite.menu);
 
-            if (this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show(); 
-            else this._commonFavorite.menu.hide(); 
+            if (this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show();
+            else this._commonFavorite.menu.hide();
 
             this._countryMenu.tryBuild();
             this.menu.addMenuItem(this._countryMenu.menu);
@@ -289,7 +288,7 @@ const VpnIndicator = GObject.registerClass({
             this._panelIcon.build();
             this.add_actor(this._panelIcon.button());
 
-            this._panelIcon.button().connect(`button-press-event`, function (actor,event) {
+            this._panelIcon.button().connect(`button-press-event`, function (actor, event) {
                 //Only checking login state when clicking on menu
                 //Cannot check periodically because:
                 //If checking with 'nordvpn account' it fetches from a server that limit request
@@ -323,7 +322,7 @@ const VpnIndicator = GObject.registerClass({
 
         disable() {
             this._clearTimeout();
-            
+
             this._commonFavorite.disable();
             this._commonFavorite.isAdded = false;
             this._countryMenu.disable();
@@ -343,7 +342,7 @@ function init() {
 function enable() {
     vpnIndicator = new VpnIndicator();
     vpnIndicator.enable();
-	Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0 ,vpnIndicator.settings.get_string('panel-position'));
+    Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0, vpnIndicator.settings.get_string('panel-position'));
 }
 
 function disable() {
