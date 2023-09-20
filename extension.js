@@ -26,20 +26,15 @@ const VpnIndicator = GObject.registerClass({
     }, class VpnIndicator extends PanelMenu.Button {
         _init() {
             super._init(0.5, indicatorName, false);
-            this.loggedin;
+            this.isLoggedIn;
             this.stateManager = new StateManager();
-
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+
+            this._moveIndicator();
             this.settings.connect('changed', (settings, key) => {
                 switch (key) {
                     case 'panel-position':
-                        if (Main.panel.statusArea[indicatorName]) {
-                            Main.panel.statusArea[indicatorName].disable();
-                            Main.panel.statusArea[indicatorName].destroy();
-                        }
-                        vpnIndicator = new VpnIndicator();
-                        vpnIndicator.enable();
-                        Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0, vpnIndicator.settings.get_string('panel-position'));
+                        this._moveIndicator();
                         break;
                     case 'panel-styles':
                     case 'common-panel-style':
@@ -72,8 +67,8 @@ const VpnIndicator = GObject.registerClass({
                         break;
                     case 'commonfavorite': {
                         this._commonFavorite.showHide(settings.get_boolean(`commonfavorite`));
-                    }
                         break;
+                    }
                 }
             });
         }
@@ -93,7 +88,7 @@ const VpnIndicator = GObject.registerClass({
             this._clearTimeout();
 
             let status = this._vpn.getStatus();
-            status.loggedin = this.loggedin;
+            status.loggedin = this.isLoggedIn;
             status.currentState = this._vpn.isNordVpnRunning()
                 ? this.stateManager.resolveState(status)
                 : this.stateManager.resolveState(null);
@@ -134,7 +129,7 @@ const VpnIndicator = GObject.registerClass({
                 }
             })
 
-            if (!this.loggedin) {
+            if (!this.isLoggedIn) {
                 this._statusPopup.hide();
                 this._statusLabel.hide();
             } else if (hasItems) {
@@ -293,11 +288,11 @@ const VpnIndicator = GObject.registerClass({
                 //Cannot check periodically because:
                 //If checking with 'nordvpn account' it fetches from a server that limit request
                 //If checking with 'nordvpn login' it generate a new url, preventing the use from login in
-                this.loggedin = this._vpn.checkLogin();
+                this.isLoggedIn = this._vpn.checkLogin();
                 this._refresh();
             }.bind(this));
 
-            this.loggedin = this._vpn.checkLogin();
+            this.isLoggedIn = this._vpn.checkLogin();
         }
 
         _setTimeout(timeoutDuration) {
@@ -332,6 +327,25 @@ const VpnIndicator = GObject.registerClass({
             this._serverMenu.disable();
             this._serverMenu.isAdded = false;
             this._signals.disconnectAll();
+        }
+
+        _moveIndicator() {
+            let position = this.settings.get_string('panel-position');
+            let box;
+
+            if (position === 'left') {
+                box = Main.panel._leftBox;
+            } else if (position === 'center') {
+                box = Main.panel._centerBox;
+            } else {
+                box = Main.panel._rightBox;
+            }
+
+            // Remove the indicator from its current parent
+            this.get_parent().remove_actor(this);
+
+            // Add it to the new box
+            box.add(this);
         }
     }
 );
