@@ -37,13 +37,13 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         //connectionFavs-favConnectionItems
         let toAddToFav = Common.safeObjectKeys(connectionFavs).filter(x => !this._favConnectionItems.includes(x));
         toAddToFav.forEach(connection => {
-            this._toogleConnectionMenuItem(connection, !true);
+            this._toggleConnectionMenuItem(connection, !true);
         })
 
         //_favConnectionItems-connectionFavs
         let toRemoveFromFav = this._favConnectionItems.filter(x => !Common.safeObjectKeys(connectionFavs).includes(x))
         toRemoveFromFav.forEach(connection => {
-            this._toogleConnectionMenuItem(connection, !false);
+            this._toggleConnectionMenuItem(connection, !false);
         })
 
     }
@@ -77,7 +77,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         menuItem.icofavBtn = icofavBtn;
         this._destroyMap[connection] = {menuItemClickId, menuItem, icofavBtn};
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, function () {
-                this._toogleConnectionMenuItem(connection, isFavorite);
+                this._toggleConnectionMenuItem(connection, isFavorite);
                 if (isFavorite) this._favorites.remove(this._favoritesKey, connection);
                 else this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
             }.bind(this)
@@ -89,7 +89,7 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         return menuItem;
     }
 
-    _toogleConnectionMenuItem(connection, isFavorite) {
+    _toggleConnectionMenuItem(connection, isFavorite) {
         let d = this._destroyMap[connection];
         if (d) {
             this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
