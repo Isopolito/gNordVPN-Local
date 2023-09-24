@@ -91,7 +91,6 @@ const VpnIndicator = GObject.registerClass({
                 // Stop the refreshes
                 this._clearTimeout();
                 let timeoutInSec;  // Define timeoutInSec here so it's accessible in the finally block
-                this._lockUI();
 
                 this._vpn.getStatus()
                     .then(status => {
@@ -121,34 +120,11 @@ const VpnIndicator = GObject.registerClass({
                     })
                     .finally(() => {
                         this.isRefreshing = false;
-                        this._unlockUI();
 
                         // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
                         // Use the previously defined timeoutInSec, or a default value if it's undefined
                         this._setTimeout(timeoutInSec || 1);
                     });
-            }
-
-            _lockUI() {
-                // Disable all the relevant menu buttons
-                [this._countryMenuButton, this._cityMenuButton, this._serverMenuButton, this._loginMenuItem, this._logoutMenuItem]
-                    .forEach(button => {
-                        if (button) button.reactive = false;
-                    });
-
-                // Optionally, show a loading spinner
-                // this._showLoadingSpinner();
-            }
-
-            _unlockUI() {
-                // Enable all the relevant menu buttons
-                [this._countryMenuButton, this._cityMenuButton, this._serverMenuButton, this._loginMenuItem, this._logoutMenuItem]
-                    .forEach(button => {
-                        if (button) button.reactive = true;
-                    });
-
-                // Optionally, hide the loading spinner
-                // this._hideLoadingSpinner();
             }
 
             _updateMenu(status) {
