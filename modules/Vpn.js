@@ -11,20 +11,18 @@ const CMD_CITIES = `nordvpn cities`;
 const CMD_SETTINGS = `nordvpn s`;
 const CMD_FETCH_SETTINGS = `nordvpn settings`;
 const CMD_CONNECT = "nordvpn c";
-const CMD_AUTOCONNECT_ON = "nordvpn set autoconnect on ";
-const CMD_AUTOCONNECT_OFF = "nordvpn set autoconnect off";
 const CMD_DISCONNECT = "nordvpn d";
 const CMD_LOGIN = "nordvpn login";
 const CMD_LOGOUT = "nordvpn logout";
 
 var Vpn = class Vpn {
     constructor() {
+        this.executeCommandSync = GLib.spawn_command_line_sync;
+        this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
         this.session = Soup.Session.new();
         this.soupVersion = Soup.get_major_version();
     }
-
-    _executeCommandSync = (cmd) => GLib.spawn_command_line_sync(cmd);
 
     _httpGet = (url) => {
         const msg = Soup.Message.new("GET", url);
@@ -86,13 +84,13 @@ var Vpn = class Vpn {
 
     _executeCommand(command) {
         if (!this.isNordVpnRunning()) return "";
-        const [ok, standardOut, standardError, exitStatus] = this._executeCommandSync(command);
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(command);
         return this._getString(standardOut);
     }
 
     isNordVpnRunning() {
         try {
-            const [ok, standardOut, standardError, exitStatus] = this._executeCommandSync(CMD_VPNSTATUS);
+            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
             return exitStatus === 0;
         } catch {
             return false;
@@ -118,23 +116,23 @@ var Vpn = class Vpn {
     applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
-        this._executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
-        this._executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
     }
 
     setToDefaults() {
-        this._executeCommandAsync(`${CMD_SETTINGS} defaults`);
+        this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
 
     getAccount() {
@@ -156,110 +154,59 @@ var Vpn = class Vpn {
         return standardOut.replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
-    // Execute a command asynchronously and read its standard output
-    _executeCommandAsync(command) {
-        return new Promise((resolve, reject) => {
-            let standardOutput = '';
-            let [success, pid, in_fd, out_fd, err_fd] = GLib.spawn_async_with_pipes(
-                null,
-                ["/bin/sh", "-c", command],
-                null,
-                GLib.SpawnFlags.SEARCH_PATH,
-                null
-            );
-
-            if (!success) {
-                reject(new Error(`Failed to start child process to read ${command}`));
-                return;
-            }
-
-            let outStream = new Gio.UnixInputStream({fd: out_fd, close_fd: true});
-            let outReader = new Gio.DataInputStream({base_stream: outStream});
-
-            outReader.read_line_async(GLib.PRIORITY_DEFAULT, null, function readLine(source, result) {
-                let [line, length] = source.read_line_finish_utf8(result);
-
-                if (line !== null) {
-                    standardOutput += line + '\n';
-                    outReader.read_line_async(GLib.PRIORITY_DEFAULT, null, readLine);
-                } else {
-                    resolve(standardOutput);
-                }
-            });
-
-            let childWatch = GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, (pid, exitCode) => {
-                GLib.spawn_close_pid(pid);
-                if (exitCode !== 0) {
-                    reject(new Error(`Process exited with code ${exitCode}`));
-                }
-            });
-
-            GLib.Source.remove(childWatch);
-        });
-    }
-
-    // NOTE: Important to run this process async to avoid locking up the shell. Sometimes the nordvpn command and take a while...
     getStatus() {
-        return this._executeCommandAsync(CMD_VPNSTATUS)
-            .then(standardOutput => {
-                // Parsing logic and rest of your code
-                const allStatusMessages = standardOutput.split('\n');
-                let connectStatus, updateMessage, country, serverNumber, city, serverIp,
-                    currentTech, currentProtocol, transfer, uptime, currentServer;
+        const standardOut = this._executeCommand(CMD_VPNSTATUS);
+        const allStatusMessages = standardOut.split(`\n`);
 
-                // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
-                for (const msg of allStatusMessages) {
-                    if (msg.includes("Status:")) connectStatus = (msg.match(/Status: \w+/) || [''])[0];
-                    else if (msg.includes("Country:")) country = msg.replace("Country: ", "").toUpperCase();
-                    else if (msg.includes("City:")) city = msg.replace("City: ", "");
-                    else if (msg.includes("Server IP:")) serverIp = msg.replace("Server IP: ", "");
-                    else if (msg.includes("IP:")) serverIp = msg.replace("IP: ", "");
-                    else if (msg.includes("Current protocol:")) currentProtocol = msg.replace("Current protocol: ", "");
-                    else if (msg.includes("Current technology:")) currentTech = msg.replace("Current technology: ", "");
-                    else if (msg.includes("Transfer:")) transfer = msg.replace("Transfer: ", "");
-                    else if (msg.includes("Uptime:")) uptime = msg.replace("Uptime: ", "");
-                    else if (msg.includes("new version")) updateMessage = msg;
-                    else if (msg.includes("Current server:")) {
-                        serverNumber = msg.match(/\d+/);
-                        currentServer = msg.replace("Current server: ", "");
-                    } else if (msg.includes("Hostname:")) {
-                        serverNumber = msg.match(/\d+/);
-                        currentServer = msg.replace("Hostname: ", "");
-                    }
-                }
+        let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer,
+            uptime, currentServer;
 
-                // Resolve the promise with the parsed data, providing default 'N/A' values
-                return {
-                    connectStatus: connectStatus || 'N/A',
-                    updateMessage,
-                    country: country || 'N/A',
-                    city: city || 'N/A',
-                    serverNumber: serverNumber || 'N/A',
-                    currentServer: currentServer || 'N/A',
-                    serverIp: serverIp || 'N/A',
-                    currentTech: currentTech || 'N/A',
-                    currentProtocol: currentProtocol || 'N/A',
-                    transfer: transfer || 'N/A',
-                    uptime: uptime || 'N/A'
-                };
-            })
-            .catch(err => {
-                log(err, "Gnordvpn: Unable to fetch vpn status");
-            });
+        // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
+        for (const msg of allStatusMessages) {
+            if (msg.includes("Status:")) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
+            else if (msg.includes("Country:")) country = msg.replace("Country: ", "").toUpperCase();
+            else if (msg.includes("City:")) city = msg.replace("City: ", "");
+            else if (msg.includes("Server IP:")) serverIp = msg.replace("Server IP: ", "");
+            else if (msg.includes("IP:")) serverIp = msg.replace("IP: ", "");
+            else if (msg.includes("Current protocol:")) currentProtocol = msg.replace("Current protocol: ", "");
+            else if (msg.includes("Current technology:")) currentTech = msg.replace("Current technology: ", "");
+            else if (msg.includes("Transfer:")) transfer = msg.replace("Transfer: ", "");
+            else if (msg.includes("Uptime:")) uptime = msg.replace("Uptime: ", "");
+            else if (msg.includes("new version")) updateMessage = msg;
+            else if (msg.includes("Current server:")) {
+                serverNumber = msg.match(/\d+/);
+                currentServer = msg.replace("Current server: ", "")
+            } else if (msg.includes("Hostname:")) {
+                serverNumber = msg.match(/\d+/);
+                currentServer = msg.replace("Hostname: ", "")
+            }
+        }
+
+        return {
+            connectStatus: connectStatus || 'N/A',
+            updateMessage,
+            country: country || 'N/A',
+            city: city || 'N/A',
+            serverNumber: serverNumber || 'N/A',
+            currentServer: currentServer || 'N/A',
+            serverIp: serverIp || 'N/A',
+            currentTech: currentTech || 'N/A',
+            currentProtocol: currentProtocol || 'N/A',
+            transfer: transfer || 'N/A',
+            uptime: uptime || 'N/A'
+        }
     }
 
     connectVpn(query) {
         if (query) {
-            this._executeCommandSync(CMD_AUTOCONNECT_OFF);
-            this._executeCommandSync(`${CMD_AUTOCONNECT_ON} ${query}`);
-            this._executeCommandAsync(`${CMD_CONNECT} ${query}`);
+            this.executeCommandAsync(`${CMD_CONNECT} ${query}`);
         } else {
-            this._executeCommandAsync(CMD_CONNECT);
+            this.executeCommandAsync(CMD_CONNECT);
         }
     }
 
     disconnectVpn() {
-        this._executeCommandAsync(CMD_DISCONNECT);
+        this.executeCommandAsync(CMD_DISCONNECT);
     }
 
     loginVpn() {
@@ -273,7 +220,7 @@ var Vpn = class Vpn {
     }
 
     logoutVpn() {
-        this._executeCommandAsync(CMD_LOGOUT);
+        this.executeCommandAsync(CMD_LOGOUT);
     }
 
     getConnectionList(connectionType) {
@@ -326,7 +273,7 @@ var Vpn = class Vpn {
         let processedCities = {};
 
         for (let i = 0; i < citiesSaved.length; i++) {
-            const [ok, standardOut, standardError, exitStatus] = this._executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
+            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
             const cities = this._processCityCountryOutput(this._getString(standardOut));
 
             for (let j = 0; j < cities.length; j++) {
@@ -381,7 +328,7 @@ var Vpn = class Vpn {
 
         return servers;
 
-        //TODO maybe async
+        //TODO maybe async      
         // this.session.send_async(this.message, null, (session,result) => {
         //     let input_stream = session.send_finish(result);
 
