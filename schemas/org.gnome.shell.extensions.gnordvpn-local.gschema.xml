@@ -76,8 +76,5 @@
         <key name="extra-large-button" type="b">
             <default>false</default>
         </key>
-        <key name="last-connection" type="s">
-            <default>""</default>
-        </key>
     </schema>
 </schemalist>
