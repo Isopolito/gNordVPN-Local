@@ -199,9 +199,11 @@ var Vpn = class Vpn {
 
     connectVpn(query) {
         if (query) {
-            this.executeCommandAsync(`${CMD_CONNECT} ${query}`);
+            this._executeCommandSync(CMD_AUTOCONNECT_OFF);
+            this._executeCommandSync(`${CMD_AUTOCONNECT_ON} ${query}`);
+            this._executeCommandAsync(`${CMD_CONNECT} ${query}`);
         } else {
-            this.executeCommandAsync(CMD_CONNECT);
+            this._executeCommandAsync(CMD_CONNECT);
         }
     }
 
