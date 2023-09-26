@@ -19,8 +19,8 @@ const CMD_LOGOUT = "nordvpn logout";
 
 var Vpn = class Vpn {
     constructor() {
-        this._executeCommandSync = GLib.spawn_command_line_sync;
-        this._executeCommandAsync = GLib.spawn_command_line_async;
+        this.executeCommandSync = GLib.spawn_command_line_sync;
+        this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
         this.session = Soup.Session.new();
         this.soupVersion = Soup.get_major_version();
@@ -86,13 +86,13 @@ var Vpn = class Vpn {
 
     _executeCommand(command) {
         if (!this.isNordVpnRunning()) return "";
-        const [ok, standardOut, standardError, exitStatus] = this._executeCommandSync(command);
+        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(command);
         return this._getString(standardOut);
     }
 
     isNordVpnRunning() {
         try {
-            const [ok, standardOut, standardError, exitStatus] = this._executeCommandSync(CMD_VPNSTATUS);
+            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
             return exitStatus === 0;
         } catch {
             return false;
@@ -118,23 +118,23 @@ var Vpn = class Vpn {
     applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
-        this._executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
-        this._executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
-        this._executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
     }
 
     setToDefaults() {
-        this._executeCommandAsync(`${CMD_SETTINGS} defaults`);
+        this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
     }
 
     getAccount() {
@@ -201,16 +201,16 @@ var Vpn = class Vpn {
 
     connectVpn(query) {
         if (query) {
-            this._executeCommandSync(CMD_AUTOCONNECT_OFF);
-            this._executeCommandSync(`${CMD_AUTOCONNECT_ON} ${query}`);
-            this._executeCommandAsync(`${CMD_CONNECT} ${query}`);
+            this.executeCommandSync(CMD_AUTOCONNECT_OFF);
+            this.executeCommandSync(`${CMD_AUTOCONNECT_ON} ${query}`);
+            this.executeCommandAsync(`${CMD_CONNECT} ${query}`);
         } else {
-            this._executeCommandAsync(CMD_CONNECT);
+            this.executeCommandAsync(CMD_CONNECT);
         }
     }
 
     disconnectVpn() {
-        this._executeCommandAsync(CMD_DISCONNECT);
+        this.executeCommandAsync(CMD_DISCONNECT);
     }
 
     loginVpn() {
@@ -224,7 +224,7 @@ var Vpn = class Vpn {
     }
 
     logoutVpn() {
-        this._executeCommandAsync(CMD_LOGOUT);
+        this.executeCommandAsync(CMD_LOGOUT);
     }
 
     getConnectionList(connectionType) {
@@ -277,7 +277,7 @@ var Vpn = class Vpn {
         let processedCities = {};
 
         for (let i = 0; i < citiesSaved.length; i++) {
-            const [ok, standardOut, standardError, exitStatus] = this._executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
+            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
             const cities = this._processCityCountryOutput(this._getString(standardOut));
 
             for (let j = 0; j < cities.length; j++) {
