@@ -219,12 +219,17 @@ var Vpn = class Vpn {
     }
 
     async connectVpn(query) {
-        if (query) {
-            await this._execCommunicate([CMD_AUTOCONNECT_OFF], null, null);
-            await this._execCommunicate([CMD_AUTOCONNECT_ON, query], null, null);
-            await this._execCommunicate([CMD_CONNECT, query], null, null);
-        } else {
-            await this._execCommunicate([CMD_CONNECT], null, null);
+        try {
+            // TODO: Fix exec communicate commands since they take an array....
+            if (query) {
+                await this._execCommunicate([CMD_AUTOCONNECT_OFF], null, null);
+                await this._execCommunicate([CMD_AUTOCONNECT_ON, query], null, null);
+                await this._execCommunicate([CMD_CONNECT, query], null, null);
+            } else {
+                await this._execCommunicate([CMD_CONNECT], null, null);
+            }
+        } catch (e) {
+            log(e, `gnordvpn: unable to connect to vpn`);
         }
     }
 

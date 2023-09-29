@@ -290,13 +290,13 @@ const VpnIndicator = GObject.registerClass({
             this._panelIcon.build();
             this.add_actor(this._panelIcon.button());
 
-            this._panelIcon.button().connect(`button-press-event`, async function (actor, event) {
+            this._panelIcon.button().connect(`button-press-event`, function (actor, event) {
                 //Only checking login state when clicking on menu
                 //Cannot check periodically because:
                 //If checking with 'nordvpn account' it fetches from a server that limit request
                 //If checking with 'nordvpn login' it generate a new url, preventing the use from login in
                 this.isLoggedIn = this._vpn.checkLogin();
-                await this._refresh();
+                this._refresh();
             }.bind(this));
 
             this.isLoggedIn = this._vpn.checkLogin();
