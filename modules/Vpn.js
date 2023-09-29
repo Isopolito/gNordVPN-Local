@@ -8,7 +8,8 @@ const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
 const CMD_COUNTRIES = `nordvpn countries`;
 const CMD_CITIES = `nordvpn cities`;
-const CMD_SETTINGS = [`nordvpn`, `s`];
+const CMD_SETTINGS = `nordvpn s`;
+//const CMD_SETTINGS = [`nordvpn`, `s`];
 const CMD_FETCH_SETTINGS = `nordvpn settings`;
 const CMD_AUTOCONNECT_ON = `nordvpn set autoconnect on `;
 const CMD_AUTOCONNECT_OFF = `nordvpn set autoconnect off`;
@@ -114,22 +115,41 @@ var Vpn = class Vpn {
         }
     }
 
-    async applySettingsToNord() {
+    // async applySettingsToNord() {
+    //     if (!this.isNordVpnRunning()) return;
+    //
+    //     await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'analytics', `${this.settings.get_boolean(`analytics`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'autoconnect', `${this.settings.get_boolean(`autoconnect`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'cybersec' , `${this.settings.get_boolean(`cybersec`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'killswitch', `${this.settings.get_boolean(`killswitch`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'obfuscate', `${this.settings.get_boolean(`obfuscate`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'ipv6', `${this.settings.get_boolean(`ipv6`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'notify', `${this.settings.get_boolean(`notify`)}`], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'protocol', this.settings.get_string(`protocol`)], null, null);
+    //     await this._execCommunicate([`nordvpn`, `s`, 'technology', this.settings.get_string(`technology`)], null, null);
+    //
+    //     // TODO: Why is this 2nd call to firewall needed to make things work?
+    //     await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
+    // }
+
+
+    applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
-        await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'analytics', `${this.settings.get_boolean(`analytics`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'autoconnect', `${this.settings.get_boolean(`autoconnect`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'cybersec' , `${this.settings.get_boolean(`cybersec`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'killswitch', `${this.settings.get_boolean(`killswitch`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'obfuscate', `${this.settings.get_boolean(`obfuscate`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'ipv6', `${this.settings.get_boolean(`ipv6`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'notify', `${this.settings.get_boolean(`notify`)}`], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'protocol', this.settings.get_string(`protocol`)], null, null);
-        await this._execCommunicate([`nordvpn`, `s`, 'technology', this.settings.get_string(`technology`)], null, null);
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
+        this.executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
-        await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
+        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
     }
 
     async setToDefaults() {

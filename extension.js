@@ -308,20 +308,19 @@ const VpnIndicator = GObject.registerClass({
         }
 
         async enable() {
-            this._vpn = new Vpn();
-            this._signals = new Signals();
-            this._commonFavorite = new CommonFavorite(this._overrideRefresh.bind(this));
-            this._countryMenu = new ConnectionMenu('Countries', 'countries', Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this));
-            this._cityMenu = new ConnectionMenu('Cities', 'cities', Constants.favorites.favoriteCities, this._overrideRefresh.bind(this));
-            this._serverMenu = new ConnectionMenu('Servers', 'servers', Constants.favorites.favoriteServers, this._overrideRefresh.bind(this));
-            this._panelIcon = new PanelIcon();
-            this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-
-
             try {
+                this._vpn = new Vpn();
+                this._signals = new Signals();
+                this._commonFavorite = new CommonFavorite(this._overrideRefresh.bind(this));
+                this._countryMenu = new ConnectionMenu('Countries', 'countries', Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this));
+                this._cityMenu = new ConnectionMenu('Cities', 'cities', Constants.favorites.favoriteCities, this._overrideRefresh.bind(this));
+                this._serverMenu = new ConnectionMenu('Servers', 'servers', Constants.favorites.favoriteServers, this._overrideRefresh.bind(this));
+                this._panelIcon = new PanelIcon();
+                this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+
                 await this._buildIndicatorMenu();
                 await this._refresh();
-                await this._vpn.applySettingsToNord();
+                this._vpn.applySettingsToNord();
             } catch (e) {
                 log(e, `gnordvpn: unable to build indicator menu and refresh`);
             }
