@@ -8,26 +8,25 @@ const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
 const CMD_COUNTRIES = `nordvpn countries`;
 const CMD_CITIES = `nordvpn cities`;
-const CMD_SETTINGS = `nordvpn s`;
+const CMD_SETTINGS = [`nordvpn`, `s`];
 const CMD_FETCH_SETTINGS = `nordvpn settings`;
-const CMD_CONNECT = "nordvpn c";
-const CMD_AUTOCONNECT_ON = "nordvpn set autoconnect on ";
-const CMD_AUTOCONNECT_OFF = "nordvpn set autoconnect off";
-const CMD_DISCONNECT = "nordvpn d";
-const CMD_LOGIN = "nordvpn login";
-const CMD_LOGOUT = "nordvpn logout";
+const CMD_AUTOCONNECT_ON = `nordvpn set autoconnect on `;
+const CMD_AUTOCONNECT_OFF = `nordvpn set autoconnect off`;
+const CMD_CONNECT = [`nordvpn`, `c`];
+const CMD_DISCONNECT = [`nordvpn`, `d`];
+const CMD_LOGIN = `nordvpn login`;
+const CMD_LOGOUT = `nordvpn logout`;
 
 var Vpn = class Vpn {
     constructor() {
         this.executeCommandSync = GLib.spawn_command_line_sync;
-        this.executeCommandAsync = GLib.spawn_command_line_async;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
         this.session = Soup.Session.new();
         this.soupVersion = Soup.get_major_version();
     }
 
     _httpGet = (url) => {
-        const msg = Soup.Message.new("GET", url);
+        const msg = Soup.Message.new(`GET`, url);
         switch (this.soupVersion) {
             case 2:
                 this.session.send_message(msg);
@@ -85,7 +84,7 @@ var Vpn = class Vpn {
     }
 
     _executeCommand(command) {
-        if (!this.isNordVpnRunning()) return "";
+        if (!this.isNordVpnRunning()) return ``;
         const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(command);
         return this._getString(standardOut);
     }
@@ -115,26 +114,26 @@ var Vpn = class Vpn {
         }
     }
 
-    applySettingsToNord() {
+    async applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
-        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
+        await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'analytics', `${this.settings.get_boolean(`analytics`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'autoconnect', `${this.settings.get_boolean(`autoconnect`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'cybersec' , `${this.settings.get_boolean(`cybersec`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'killswitch', `${this.settings.get_boolean(`killswitch`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'obfuscate', `${this.settings.get_boolean(`obfuscate`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'ipv6', `${this.settings.get_boolean(`ipv6`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'notify', `${this.settings.get_boolean(`notify`)}`], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'protocol', this.settings.get_string(`protocol`)], null, null);
+        await this._execCommunicate([`nordvpn`, `s`, 'technology', this.settings.get_string(`technology`)], null, null);
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
-        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
     }
 
-    setToDefaults() {
-        this.executeCommandAsync(`${CMD_SETTINGS} defaults`);
+    async setToDefaults() {
+        await this._execCommunicate([CMD_SETTINGS, 'defaults'], null, null);
     }
 
     getAccount() {
@@ -144,8 +143,8 @@ var Vpn = class Vpn {
         let emailAddress;
         let vpnService;
         if (allAccountMessages.length > 2 && allAccountMessages[1].includes(`Email`)) {
-            emailAddress = allAccountMessages[1].replace("Email Address: ", "");
-            vpnService = allAccountMessages[2].replace("VPN Service: ", "")
+            emailAddress = allAccountMessages[1].replace(`Email Address: `, ``);
+            vpnService = allAccountMessages[2].replace(`VPN Service: `, ``)
         }
 
         return {emailAddress, vpnService};
@@ -156,31 +155,31 @@ var Vpn = class Vpn {
         return standardOut.replace(/\s+/g, ` `).includes('You are already logged in.');
     }
 
-    getStatus() {
-        const standardOut = this._executeCommand(CMD_VPNSTATUS);
+    async getStatus() {
+        const standardOut = await this._execCommunicate(['nordvpn', 'status'], null, null);
         const allStatusMessages = standardOut.split(`\n`);
 
-        let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech, currentProtocol, transfer,
-            uptime, currentServer;
+        let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech,
+            currentProtocol, transfer, uptime, currentServer;
 
         // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
         for (const msg of allStatusMessages) {
-            if (msg.includes("Status:")) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
-            else if (msg.includes("Country:")) country = msg.replace("Country: ", "").toUpperCase();
-            else if (msg.includes("City:")) city = msg.replace("City: ", "");
-            else if (msg.includes("Server IP:")) serverIp = msg.replace("Server IP: ", "");
-            else if (msg.includes("IP:")) serverIp = msg.replace("IP: ", "");
-            else if (msg.includes("Current protocol:")) currentProtocol = msg.replace("Current protocol: ", "");
-            else if (msg.includes("Current technology:")) currentTech = msg.replace("Current technology: ", "");
-            else if (msg.includes("Transfer:")) transfer = msg.replace("Transfer: ", "");
-            else if (msg.includes("Uptime:")) uptime = msg.replace("Uptime: ", "");
-            else if (msg.includes("new version")) updateMessage = msg;
-            else if (msg.includes("Current server:")) {
+            if (msg.includes(`Status:`)) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
+            else if (msg.includes(`Country:`)) country = msg.replace(`Country: `, ``).toUpperCase();
+            else if (msg.includes(`City:`)) city = msg.replace(`City: `, ``);
+            else if (msg.includes(`Server IP:`)) serverIp = msg.replace(`Server IP: `, ``);
+            else if (msg.includes(`IP:`)) serverIp = msg.replace(`IP: `, ``);
+            else if (msg.includes(`Current protocol:`)) currentProtocol = msg.replace(`Current protocol: `, ``);
+            else if (msg.includes(`Current technology:`)) currentTech = msg.replace(`Current technology: `, ``);
+            else if (msg.includes(`Transfer:`)) transfer = msg.replace(`Transfer: `, ``);
+            else if (msg.includes(`Uptime:`)) uptime = msg.replace(`Uptime: `, ``);
+            else if (msg.includes(`new version`)) updateMessage = msg;
+            else if (msg.includes(`Current server:`)) {
                 serverNumber = msg.match(/\d+/);
-                currentServer = msg.replace("Current server: ", "")
-            } else if (msg.includes("Hostname:")) {
+                currentServer = msg.replace(`Current server: `, ``)
+            } else if (msg.includes(`Hostname:`)) {
                 serverNumber = msg.match(/\d+/);
-                currentServer = msg.replace("Hostname: ", "")
+                currentServer = msg.replace(`Hostname: `, ``)
             }
         }
 
@@ -199,24 +198,24 @@ var Vpn = class Vpn {
         }
     }
 
-    connectVpn(query) {
+    async connectVpn(query) {
         if (query) {
-            this.executeCommandSync(CMD_AUTOCONNECT_OFF);
-            this.executeCommandSync(`${CMD_AUTOCONNECT_ON} ${query}`);
-            this.executeCommandAsync(`${CMD_CONNECT} ${query}`);
+            await this._execCommunicate([CMD_AUTOCONNECT_OFF], null, null);
+            await this._execCommunicate([CMD_AUTOCONNECT_ON, query], null, null);
+            await this._execCommunicate([CMD_CONNECT, query], null, null);
         } else {
-            this.executeCommandAsync(CMD_CONNECT);
+            await this._execCommunicate([CMD_CONNECT], null, null);
         }
     }
 
-    disconnectVpn() {
-        this.executeCommandAsync(CMD_DISCONNECT);
+    async disconnectVpn() {
+        return await this._execCommunicate([CMD_DISCONNECT], null, null);
     }
 
     loginVpn() {
         const standardOut = this._executeCommand(CMD_LOGIN);
 
-        const ref = "Continue in the browser: ";
+        const ref = `Continue in the browser: `;
         let url = standardOut.replace(/\s+/g, ` `);
         url = url.substring(url.indexOf(ref) + ref.length).trim();
 
@@ -243,7 +242,7 @@ var Vpn = class Vpn {
         if (withId) {
             let countrieMap;
             try {
-                let data = this._httpGet("https://api.nordvpn.com/v1/servers/countries");
+                let data = this._httpGet(`https://api.nordvpn.com/v1/servers/countries`);
                 countrieMap = data.reduce((acc, v) => {
                     acc[v['name']] = v['id'];
                     return acc;
@@ -260,7 +259,7 @@ var Vpn = class Vpn {
 
         let processedCountries = {};
         for (let country of countries) {
-            processedCountries[country.replace(/_/g, " ")] = country;
+            processedCountries[country.replace(/_/g, ` `)] = country;
         }
 
         // If the list of countries from NordVpn cli is less then 5 there's most likely a problem with the connection.
@@ -282,8 +281,8 @@ var Vpn = class Vpn {
 
             for (let j = 0; j < cities.length; j++) {
                 if (j > citiesMax) break;
-                let c = (citiesSaved[i] + ", " + cities[j].replace(",", "")).replace(/_/g, " ");
-                let d = cities[j].replace(",", "");
+                let c = (citiesSaved[i] + `, ` + cities[j].replace(`,`, ``)).replace(/_/g, ` `);
+                let d = cities[j].replace(`,`, ``);
                 processedCities[c] = d;
             }
         }
@@ -298,30 +297,30 @@ var Vpn = class Vpn {
         let countriesMax = this.settings.get_value('number-servers-per-countries').unpack();
         let countriesSaved = this.settings.get_value('countries-selected-for-servers').deep_unpack();
 
-        let url = "https://api.nordvpn.com/v1/servers/recommendations?limit=" + countriesMax
+        let url = `https://api.nordvpn.com/v1/servers/recommendations?limit=` + countriesMax
         let technology = this.settings.get_string(`technology`);
         if (technology == 'NORDLYNX') {
-            url += "&filters[servers_technologies][identifier]=wireguard_udp";
+            url += `&filters[servers_technologies][identifier]=wireguard_udp`;
 
         } else if (technology == 'OPENVPN') {
             let obfuscate = this.settings.get_boolean(`obfuscate`);
             let protocol = this.settings.get_string(`protocol`);
 
-            if (protocol == "UDP") {
-                if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_udp";
-                else url += "&filters[servers_technologies][identifier]=openvpn_udp";
-            } else if (protocol == "TCP") {
-                if (obfuscate) url += "&filters[servers_technologies][identifier]=openvpn_xor_tcp";
-                else url += "&filters[servers_technologies][identifier]=openvpn_tcp";
+            if (protocol == `UDP`) {
+                if (obfuscate) url += `&filters[servers_technologies][identifier]=openvpn_xor_udp`;
+                else url += `&filters[servers_technologies][identifier]=openvpn_udp`;
+            } else if (protocol == `TCP`) {
+                if (obfuscate) url += `&filters[servers_technologies][identifier]=openvpn_xor_tcp`;
+                else url += `&filters[servers_technologies][identifier]=openvpn_tcp`;
             }
         }
 
-        url += "&filters[servers_groups][identifier]=legacy_standard";
+        url += `&filters[servers_groups][identifier]=legacy_standard`;
 
         let servers = {}
         try {
             for (let i = 0; i < countriesSaved.length; i++) {
-                let data = this._httpGet(url + "&filters[country_id]=" + countriesSaved[i]);
+                let data = this._httpGet(url + `&filters[country_id]=` + countriesSaved[i]);
                 data.forEach(e => {
                     servers[e['name']] = e['hostname'].replace('.nordvpn.com', '');
                 });
@@ -340,5 +339,56 @@ var Vpn = class Vpn {
         //     let out = data_input_stream.read_line(null);
         // });
         // let data = this.message.response_body_data.get_data();
+    }
+
+    /**
+     * Execute a command asynchronously and return the output from `stdout` on
+     * success or throw an error with output from `stderr` on failure.
+     *
+     * If given, @input will be passed to `stdin` and @cancellable can be used to
+     * stop the process before it finishes.
+     *
+     * @param {string[]} argv - a list of string arguments
+     * @param {string} [input] - Input to write to `stdin` or %null to ignore
+     * @param {Gio.Cancellable} [cancellable] - optional cancellable object
+     * @returns {Promise<string>} - The process output
+     */
+    async _execCommunicate(argv, input = null, cancellable = null) {
+        return new Promise((resolve, reject) => {
+            let cancelId = 0;
+            let flags = Gio.SubprocessFlags.STDOUT_PIPE |
+                Gio.SubprocessFlags.STDERR_PIPE;
+
+            if (input !== null) flags |= Gio.SubprocessFlags.STDIN_PIPE;
+
+            const proc = new Gio.Subprocess({argv, flags});
+            proc.init(cancellable);
+
+            if (cancellable instanceof Gio.Cancellable) {
+                cancelId = cancellable.connect(() => proc.force_exit());
+            }
+
+            proc.communicate_utf8_async(input, null, (proc, res) => {
+                if (cancelId > 0) cancellable.disconnect(cancelId);
+
+                try {
+                    const [, stdout, stderr] = proc.communicate_utf8_finish(res);
+                    const status = proc.get_exit_status();
+
+                    if (status !== 0) {
+                        reject(new Gio.IOErrorEnum({
+                            code: Gio.io_error_from_errno(status),
+                            message: stderr ? stderr.trim() : GLib.strerror(status),
+                        }));
+                        return;
+                    }
+
+                    resolve(stdout.trim());
+                } catch (e) {
+                    log(`Gnordvpn: Error: ${e.message}`);
+                    reject(e);
+                }
+            });
+        });
     }
 };

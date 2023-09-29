@@ -26,12 +26,12 @@ const VpnIndicator = GObject.registerClass({
     }, class VpnIndicator extends PanelMenu.Button {
         _init() {
             super._init(0.5, indicatorName, false);
-            this.isLoggedIn;
+            this.isLoggedIn = false;
             this.stateManager = new StateManager();
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
             this._moveIndicator();
-            this.settings.connect('changed', (settings, key) => {
+            this.settings.connect('changed', async (settings, key) => {
                 switch (key) {
                     case 'panel-position':
                         this._moveIndicator();
@@ -73,21 +73,28 @@ const VpnIndicator = GObject.registerClass({
             });
         }
 
-        _setQuickRefresh(quick) {
+        async _setQuickRefresh(quick) {
             this.stateManager.setQuickRefresh(quick);
-            this._refresh();
+            await this._refresh();
         }
 
-        _overrideRefresh(state, overrideKeys) {
+        async _overrideRefresh(state, overrideKeys) {
             this.stateManager.refreshOverride(state, overrideKeys);
-            this._refresh();
+            await this._refresh();
         }
 
-        _refresh() {
+        async _refresh() {
             // Stop the refreshes
             this._clearTimeout();
 
-            let status = this._vpn.getStatus();
+            let status;
+            try {
+                status = await this._vpn.getStatus();
+            } catch (e) {
+                status = "n/a";
+                log(e, `gnordvpn: Unable to get vpn status`);
+            }
+
             status.loggedin = this.isLoggedIn;
             status.currentState = this._vpn.isNordVpnRunning()
                 ? this.stateManager.resolveState(status)
@@ -161,33 +168,33 @@ const VpnIndicator = GObject.registerClass({
             this._logoutMenuItem.actor.visible = status.loggedin && this.settings.get_boolean(`showlogout`);
         }
 
-        _connect() {
-            this._vpn.connectVpn();
+        async _connect() {
+            await this._vpn.connectVpn();
 
             // Set an override on the status as the command line status takes a while to catch up
-            this._overrideRefresh(Constants.status.connecting)
+            await this._overrideRefresh(Constants.status.connecting)
         }
 
-        _disconnect() {
+        async _disconnect() {
             // Run the disconnect command
-            this._vpn.disconnectVpn();
+            await this._vpn.disconnectVpn();
 
             // Set an override on the status as the command line status takes a while to catch up
-            this._overrideRefresh(Constants.status.disconnecting)
+            await this._overrideRefresh(Constants.status.disconnecting)
         }
 
-        _login() {
+        async _login() {
             this._vpn.loginVpn();
 
             // Set an override on the status as the command line status takes a while to catch up
-            this._overrideRefresh(Constants.status.login)
+            await this._overrideRefresh(Constants.status.login)
         }
 
-        _logout() {
+        async _logout() {
             this._vpn.logoutVpn();
 
             // Set an override on the status as the command line status takes a while to catch up
-            this._overrideRefresh(Constants.status.logout)
+            await this._overrideRefresh(Constants.status.logout)
         }
 
         _clearTimeout() {
@@ -209,10 +216,10 @@ const VpnIndicator = GObject.registerClass({
             }
         }
 
-        _buildIndicatorMenu() {
+        async _buildIndicatorMenu() {
             this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-            this._statusPopup.menu.connect(`open-state-changed`, function (actor, event) {
-                this._setQuickRefresh(event);
+            this._statusPopup.menu.connect(`open-state-changed`, async function (actor, event) {
+                await this._setQuickRefresh(event);
             }.bind(this));
 
             this.menu.addMenuItem(this._statusPopup);
@@ -283,13 +290,13 @@ const VpnIndicator = GObject.registerClass({
             this._panelIcon.build();
             this.add_actor(this._panelIcon.button());
 
-            this._panelIcon.button().connect(`button-press-event`, function (actor, event) {
+            this._panelIcon.button().connect(`button-press-event`, async function (actor, event) {
                 //Only checking login state when clicking on menu
                 //Cannot check periodically because:
                 //If checking with 'nordvpn account' it fetches from a server that limit request
                 //If checking with 'nordvpn login' it generate a new url, preventing the use from login in
                 this.isLoggedIn = this._vpn.checkLogin();
-                this._refresh();
+                await this._refresh();
             }.bind(this));
 
             this.isLoggedIn = this._vpn.checkLogin();
@@ -300,7 +307,7 @@ const VpnIndicator = GObject.registerClass({
             this._timeout = Mainloop.timeout_add_seconds(timeoutDuration, this._refresh.bind(this));
         }
 
-        enable() {
+        async enable() {
             this._vpn = new Vpn();
             this._signals = new Signals();
             this._commonFavorite = new CommonFavorite(this._overrideRefresh.bind(this));
@@ -310,9 +317,14 @@ const VpnIndicator = GObject.registerClass({
             this._panelIcon = new PanelIcon();
             this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
-            this._vpn.applySettingsToNord();
-            this._buildIndicatorMenu();
-            this._refresh();
+
+            try {
+                await this._buildIndicatorMenu();
+                await this._refresh();
+                await this._vpn.applySettingsToNord();
+            } catch (e) {
+                log(e, `gnordvpn: unable to build indicator menu and refresh`);
+            }
         }
 
         disable() {
