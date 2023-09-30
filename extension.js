@@ -169,32 +169,48 @@ const VpnIndicator = GObject.registerClass({
         }
 
         async _connect() {
-            await this._vpn.connectVpn();
+            try {
+                await this._vpn.connectVpn();
 
-            // Set an override on the status as the command line status takes a while to catch up
-            await this._overrideRefresh(Constants.status.connecting)
+                // Set an override on the status as the command line status takes a while to catch up
+                await this._overrideRefresh(Constants.status.connecting)
+            } catch (e) {
+                log(e, `gnordvpn: unable to connect to vpn`);
+            }
         }
 
         async _disconnect() {
-            // Run the disconnect command
-            await this._vpn.disconnectVpn();
+            try {
+                // Run the disconnect command
+                await this._vpn.disconnectVpn();
 
-            // Set an override on the status as the command line status takes a while to catch up
-            await this._overrideRefresh(Constants.status.disconnecting)
+                // Set an override on the status as the command line status takes a while to catch up
+                await this._overrideRefresh(Constants.status.disconnecting)
+            } catch (e) {
+                log(e, `gnordvpn: unable to disconnect`);
+            }
         }
 
         async _login() {
-            this._vpn.loginVpn();
+            try {
+                this._vpn.loginVpn();
 
-            // Set an override on the status as the command line status takes a while to catch up
-            await this._overrideRefresh(Constants.status.login)
+                // Set an override on the status as the command line status takes a while to catch up
+                await this._overrideRefresh(Constants.status.login)
+            } catch (e) {
+                log(e, `gnordvpn: unable to login`);
+            }
         }
 
         async _logout() {
-            this._vpn.logoutVpn();
+            try {
+                this._vpn.logoutVpn();
 
-            // Set an override on the status as the command line status takes a while to catch up
-            await this._overrideRefresh(Constants.status.logout)
+                // Set an override on the status as the command line status takes a while to catch up
+                await this._overrideRefresh(Constants.status.logout)
+            } catch (e) {
+                log(e, `gnordvpn: unable to logout`);
+            }
         }
 
         _clearTimeout() {
@@ -217,89 +233,93 @@ const VpnIndicator = GObject.registerClass({
         }
 
         async _buildIndicatorMenu() {
-            this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-            this._statusPopup.menu.connect(`open-state-changed`, async function (actor, event) {
-                await this._setQuickRefresh(event);
-            }.bind(this));
+            try {
+                this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
+                this._statusPopup.menu.connect(`open-state-changed`, async function (actor, event) {
+                    await this._setQuickRefresh(event);
+                }.bind(this));
 
-            this.menu.addMenuItem(this._statusPopup);
+                this.menu.addMenuItem(this._statusPopup);
 
-            this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
-            this.menu.box.add(this._statusLabel);
+                this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
+                this.menu.box.add(this._statusLabel);
 
-            // Optionally add 'Update' status
-            this._updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
-            this.menu.box.add(this._updateMenuLabel);
+                // Optionally add 'Update' status
+                this._updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
+                this.menu.box.add(this._updateMenuLabel);
 
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-            // Add 'Connect' menu item 
-            this._connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
-            const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, this._connect.bind(this));
-            this._signals.register(connectMenuItemClickId, function () {
-                this._connectMenuItem.disconnect(connectMenuItemClickId)
-            }.bind(this));
-            this.menu.addMenuItem(this._connectMenuItem);
+                // Add 'Connect' menu item
+                this._connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
+                const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, this._connect.bind(this));
+                this._signals.register(connectMenuItemClickId, function () {
+                    this._connectMenuItem.disconnect(connectMenuItemClickId)
+                }.bind(this));
+                this.menu.addMenuItem(this._connectMenuItem);
 
-            // Add 'Disconnect' menu item 
-            this._disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
-            const disconnectMenuItemClickId = this._disconnectMenuItem.connect(`activate`, this._disconnect.bind(this));
-            this._signals.register(disconnectMenuItemClickId, function () {
-                this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)
-            }.bind(this));
-            this.menu.addMenuItem(this._disconnectMenuItem);
+                // Add 'Disconnect' menu item
+                this._disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
+                const disconnectMenuItemClickId = this._disconnectMenuItem.connect(`activate`, this._disconnect.bind(this));
+                this._signals.register(disconnectMenuItemClickId, function () {
+                    this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)
+                }.bind(this));
+                this.menu.addMenuItem(this._disconnectMenuItem);
 
-            this._commonFavorite.build();
-            this.menu.addMenuItem(this._commonFavorite.menu);
+                this._commonFavorite.build();
+                this.menu.addMenuItem(this._commonFavorite.menu);
 
-            if (this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show();
-            else this._commonFavorite.menu.hide();
+                if (this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show();
+                else this._commonFavorite.menu.hide();
 
-            this._countryMenu.tryBuild();
-            this.menu.addMenuItem(this._countryMenu.menu);
+                this._countryMenu.tryBuild();
+                this.menu.addMenuItem(this._countryMenu.menu);
 
-            this._cityMenu.tryBuild();
-            this.menu.addMenuItem(this._cityMenu.menu);
+                this._cityMenu.tryBuild();
+                this.menu.addMenuItem(this._cityMenu.menu);
 
-            this._serverMenu.tryBuild();
-            this.menu.addMenuItem(this._serverMenu.menu);
+                this._serverMenu.tryBuild();
+                this.menu.addMenuItem(this._serverMenu.menu);
 
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-            // Add 'Settings' menu item 
-            const settingsMenuItem = new PopupMenu.PopupMenuItem('Settings');
-            this.menu.addMenuItem(settingsMenuItem);
-            settingsMenuItem.connect('activate', this._openSettings.bind(this));
+                // Add 'Settings' menu item
+                const settingsMenuItem = new PopupMenu.PopupMenuItem('Settings');
+                this.menu.addMenuItem(settingsMenuItem);
+                settingsMenuItem.connect('activate', this._openSettings.bind(this));
 
-            // Add 'Login' menu item 
-            this._loginMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.login);
-            const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, this._login.bind(this));
-            this._signals.register(loginMenuItemClickId, function () {
-                this._loginMenuItem.disconnect(loginMenuItemClickId)
-            }.bind(this));
-            this.menu.addMenuItem(this._loginMenuItem);
+                // Add 'Login' menu item
+                this._loginMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.login);
+                const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, this._login.bind(this));
+                this._signals.register(loginMenuItemClickId, function () {
+                    this._loginMenuItem.disconnect(loginMenuItemClickId)
+                }.bind(this));
+                this.menu.addMenuItem(this._loginMenuItem);
 
-            // Add 'Logout' menu item 
-            this._logoutMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.logout);
-            const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, this._logout.bind(this));
-            this._signals.register(logoutMenuItemClickId, function () {
-                this._logoutMenuItem.disconnect(logoutMenuItemClickId)
-            }.bind(this));
-            this.menu.addMenuItem(this._logoutMenuItem);
+                // Add 'Logout' menu item
+                this._logoutMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.logout);
+                const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, this._logout.bind(this));
+                this._signals.register(logoutMenuItemClickId, function () {
+                    this._logoutMenuItem.disconnect(logoutMenuItemClickId)
+                }.bind(this));
+                this.menu.addMenuItem(this._logoutMenuItem);
 
-            this._panelIcon.build();
-            this.add_actor(this._panelIcon.button());
+                this._panelIcon.build();
+                this.add_actor(this._panelIcon.button());
 
-            this._panelIcon.button().connect(`button-press-event`, function (actor, event) {
-                //Only checking login state when clicking on menu
-                //Cannot check periodically because:
-                //If checking with 'nordvpn account' it fetches from a server that limit request
-                //If checking with 'nordvpn login' it generate a new url, preventing the use from login in
+                this._panelIcon.button().connect(`button-press-event`, function (actor, event) {
+                    //Only checking login state when clicking on menu
+                    //Cannot check periodically because:
+                    //If checking with 'nordvpn account' it fetches from a server that limit request
+                    //If checking with 'nordvpn login' it generate a new url, preventing the use from login in
+                    this.isLoggedIn = this._vpn.checkLogin();
+                    this._refresh();
+                }.bind(this));
+
                 this.isLoggedIn = this._vpn.checkLogin();
-                this._refresh();
-            }.bind(this));
-
-            this.isLoggedIn = this._vpn.checkLogin();
+            } catch (e) {
+                log(e, `gnordvpn: unable to build indicator menu`);
+            }
         }
 
         _setTimeout(timeoutDuration) {
