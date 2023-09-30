@@ -20,7 +20,6 @@ const CMD_LOGOUT = `nordvpn logout`;
 
 var Vpn = class Vpn {
     constructor() {
-        this.executeCommandSync = GLib.spawn_command_line_sync;
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
         this.session = Soup.Session.new();
         this.soupVersion = Soup.get_major_version();
@@ -84,15 +83,16 @@ var Vpn = class Vpn {
         return null;
     }
 
-    _executeCommand(command) {
+    _execSyncIfVpnOn(command) {
         if (!this.isNordVpnRunning()) return ``;
-        const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(command);
+
+        const [ok, standardOut, standardError, exitStatus] = this._execCommunicateSync(command);
         return this._getString(standardOut);
     }
 
     isNordVpnRunning() {
         try {
-            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(CMD_VPNSTATUS);
+            const [ok, standardOut, standardError, exitStatus] = this._execCommunicateSync(CMD_VPNSTATUS);
             return exitStatus === 0;
         } catch {
             return false;
@@ -100,7 +100,7 @@ var Vpn = class Vpn {
     }
 
     setSettingsFromNord() {
-        const standardOut = this._executeCommand(CMD_FETCH_SETTINGS);
+        const standardOut = this._execSyncIfVpnOn(CMD_FETCH_SETTINGS);
         for (const line of standardOut.split(`\n`)) {
             let parts = line.split(`:`);
             const settingName = this._resolveSettingsKey(parts[0]);
@@ -115,49 +115,30 @@ var Vpn = class Vpn {
         }
     }
 
-    // async applySettingsToNord() {
-    //     if (!this.isNordVpnRunning()) return;
-    //
-    //     await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'analytics', `${this.settings.get_boolean(`analytics`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'autoconnect', `${this.settings.get_boolean(`autoconnect`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'cybersec' , `${this.settings.get_boolean(`cybersec`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'killswitch', `${this.settings.get_boolean(`killswitch`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'obfuscate', `${this.settings.get_boolean(`obfuscate`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'ipv6', `${this.settings.get_boolean(`ipv6`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'notify', `${this.settings.get_boolean(`notify`)}`], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'protocol', this.settings.get_string(`protocol`)], null, null);
-    //     await this._execCommunicate([`nordvpn`, `s`, 'technology', this.settings.get_string(`technology`)], null, null);
-    //
-    //     // TODO: Why is this 2nd call to firewall needed to make things work?
-    //     await this._execCommunicate([`nordvpn`, `s`, 'firewall', `${this.settings.get_boolean(`firewall`)}`], null, null);
-    // }
-
-
     applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
-        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
-        this.executeCommandSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
-        this.executeCommandSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
     }
 
     async setToDefaults() {
-        await this._execCommunicate([CMD_SETTINGS, 'defaults'], null, null);
+        await this._execAsync(`${CMD_SETTINGS} defaults`);
     }
 
     getAccount() {
-        const standardOut = this._executeCommand(CMD_VPNACCOUNT);
+        const standardOut = this._execSyncIfVpnOn(CMD_VPNACCOUNT);
         const allAccountMessages = standardOut.split(`\n`);
 
         let emailAddress;
@@ -171,12 +152,14 @@ var Vpn = class Vpn {
     }
 
     checkLogin() {
-        const standardOut = this._executeCommand(CMD_LOGIN);
-        return standardOut.replace(/\s+/g, ` `).includes('You are already logged in.');
+        const [ok, standardOut, err, exitStatus] = this._execCommunicateSync(CMD_LOGIN);
+        return this._getString(standardOut)
+            .replace(/\s+/g, ` `)
+            .includes('You are already logged in.');
     }
 
     async getStatus() {
-        const standardOut = await this._execCommunicate(['nordvpn', 'status'], null, null);
+        const standardOut = await this._execCommunicateAsync(['nordvpn', 'status'], null, null);
         const allStatusMessages = standardOut.split(`\n`);
 
         let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech,
@@ -218,27 +201,22 @@ var Vpn = class Vpn {
         }
     }
 
-    async connectVpn(query) {
-        try {
-            // TODO: Fix exec communicate commands since they take an array....
-            if (query) {
-                await this._execCommunicate([CMD_AUTOCONNECT_OFF], null, null);
-                await this._execCommunicate([CMD_AUTOCONNECT_ON, query], null, null);
-                await this._execCommunicate([CMD_CONNECT, query], null, null);
-            } else {
-                await this._execCommunicate([CMD_CONNECT], null, null);
-            }
-        } catch (e) {
-            log(e, `gnordvpn: unable to connect to vpn`);
+    connectVpn(query) {
+        if (query) {
+            this._execCommunicateSync(CMD_AUTOCONNECT_OFF);
+            this._execCommunicateSync(`${CMD_AUTOCONNECT_ON} ${query}`);
+            return this._execAsync(`${CMD_CONNECT} ${query}`);
+        } else {
+            return this._execAsync(CMD_CONNECT);
         }
     }
 
-    async disconnectVpn() {
-        return await this._execCommunicate([CMD_DISCONNECT], null, null);
+    disconnectVpn() {
+        return this._execAsync(CMD_DISCONNECT);
     }
 
     loginVpn() {
-        const standardOut = this._executeCommand(CMD_LOGIN);
+        const standardOut = this._execSyncIfVpnOn(CMD_LOGIN);
 
         const ref = `Continue in the browser: `;
         let url = standardOut.replace(/\s+/g, ` `);
@@ -248,7 +226,7 @@ var Vpn = class Vpn {
     }
 
     logoutVpn() {
-        this.executeCommandAsync(CMD_LOGOUT);
+        return this._execAsync(CMD_LOGOUT);
     }
 
     getConnectionList(connectionType) {
@@ -279,7 +257,7 @@ var Vpn = class Vpn {
             return countrieMap;
         }
 
-        const standardOut = this._executeCommand(CMD_COUNTRIES);
+        const standardOut = this._execSyncIfVpnOn(CMD_COUNTRIES);
         const countries = this._processCityCountryOutput(standardOut);
 
         let processedCountries = {};
@@ -301,7 +279,7 @@ var Vpn = class Vpn {
         let processedCities = {};
 
         for (let i = 0; i < citiesSaved.length; i++) {
-            const [ok, standardOut, standardError, exitStatus] = this.executeCommandSync(`${CMD_CITIES} ${citiesSaved[i]}`);
+            const [ok, standardOut, standardError, exitStatus] = this._execCommunicateSync(`${CMD_CITIES} ${citiesSaved[i]}`);
             const cities = this._processCityCountryOutput(this._getString(standardOut));
 
             for (let j = 0; j < cities.length; j++) {
@@ -378,7 +356,7 @@ var Vpn = class Vpn {
      * @param {Gio.Cancellable} [cancellable] - optional cancellable object
      * @returns {Promise<string>} - The process output
      */
-    async _execCommunicate(argv, input = null, cancellable = null) {
+    async _execCommunicateAsync(argv, input = null, cancellable = null) {
         return new Promise((resolve, reject) => {
             let cancelId = 0;
             let flags = Gio.SubprocessFlags.STDOUT_PIPE |
@@ -412,6 +390,37 @@ var Vpn = class Vpn {
                 } catch (e) {
                     log(`Gnordvpn: Error: ${e.message}`);
                     reject(e);
+                }
+            });
+        });
+    }
+
+    _execCommunicateSync(command) {
+        return GLib.spawn_command_line_sync(command);
+    }
+
+    _execAsync(command) {
+        return new Promise((resolve, reject) => {
+            let [success, pid] = GLib.spawn_async(
+                null,
+                command,
+                null,
+                GLib.SpawnFlags.SEARCH_PATH | GLib.SpawnFlags.DO_NOT_REAP_CHILD,
+                null
+            );
+
+            if (!success) {
+                reject(new Error("Gnordvpn: Failed to spawn process"));
+                return;
+            }
+
+            GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, (pid, exitCode) => {
+                GLib.spawn_close_pid(pid);
+
+                if (exitCode !== 0) {
+                    reject(new Error(`Gnordvpn: Process exited with code ${exitCode}`));
+                } else {
+                    resolve();
                 }
             });
         });
