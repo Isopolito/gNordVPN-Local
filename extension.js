@@ -85,36 +85,34 @@ const VpnIndicator = GObject.registerClass({
 
         async _refresh() {
             // Stop the refreshes
-            this._clearTimeout();
-
-            let status;
+            let status = "n/a";
             try {
+                this._clearTimeout();
+
                 status = await this._vpn.getStatus();
+                status.loggedin = this.isLoggedIn;
+                status.currentState = this._vpn.isNordVpnRunning()
+                    ? this.stateManager.resolveState(status)
+                    : this.stateManager.resolveState(null);
+
+                // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
+                // to provide available cities, countries, etc
+                if (status.currentState.stateName !== Constants.states['ERROR']) {
+                    this._countryMenu.tryBuild();
+                    this._cityMenu.tryBuild();
+                    this._serverMenu.tryBuild();
+                }
+
+                // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
+                const timeoutInSec = this.settings.get_boolean(`extra-large-button`) ? 1 : status.currentState.refreshTimeout;
+                this._setTimeout(timeoutInSec);
             } catch (e) {
-                status = "n/a";
-                log(e, `gnordvpn: Unable to get vpn status`);
+                log(e, `gnordvpn: Unable to refresh`);
+            } finally {
+                // Update the menu and panel based on the current state
+                this._updateMenu(status);
+                this._panelIcon.update(status);
             }
-
-            status.loggedin = this.isLoggedIn;
-            status.currentState = this._vpn.isNordVpnRunning()
-                ? this.stateManager.resolveState(status)
-                : this.stateManager.resolveState(null);
-
-            // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
-            // to provide available cities, countries, etc
-            if (status.currentState.stateName !== Constants.states['ERROR']) {
-                this._countryMenu.tryBuild();
-                this._cityMenu.tryBuild();
-                this._serverMenu.tryBuild();
-            }
-
-            // Update the menu and panel based on the current state
-            this._updateMenu(status);
-            this._panelIcon.update(status);
-
-            // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
-            const timeoutInSec = this.settings.get_boolean(`extra-large-button`) ? 1 : status.currentState.refreshTimeout;
-            this._setTimeout(timeoutInSec);
         }
 
         _updateMenu(status) {
