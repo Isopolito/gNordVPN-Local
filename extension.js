@@ -27,11 +27,12 @@ const VpnIndicator = GObject.registerClass({
         _init() {
             super._init(0.5, indicatorName, false);
             this.isLoggedIn = false;
+            this.isRefreshing = false;
             this.stateManager = new StateManager();
             this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
             this._moveIndicator();
-            this.settings.connect('changed', async (settings, key) => {
+            this.settings.connect('changed', (settings, key) => {
                 switch (key) {
                     case 'panel-position':
                         this._moveIndicator();
@@ -73,19 +74,22 @@ const VpnIndicator = GObject.registerClass({
             });
         }
 
-        async _setQuickRefresh(quick) {
+        _setQuickRefresh(quick) {
             this.stateManager.setQuickRefresh(quick);
-            await this._refresh();
+            this._refresh();
         }
 
-        async _overrideRefresh(state, overrideKeys) {
+        _overrideRefresh(state, overrideKeys) {
             this.stateManager.refreshOverride(state, overrideKeys);
-            await this._refresh();
+            this._refresh();
         }
 
         async _refresh() {
             // Stop the refreshes
-            let status = "n/a";
+            if (this.isRefreshing) return;
+            this.isRefreshing = true;
+
+            let status;
             try {
                 this._clearTimeout();
 
@@ -103,15 +107,16 @@ const VpnIndicator = GObject.registerClass({
                     this._serverMenu.tryBuild();
                 }
 
-                // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
-                const timeoutInSec = this.settings.get_boolean(`extra-large-button`) ? 1 : status.currentState.refreshTimeout;
-                this._setTimeout(timeoutInSec);
-            } catch (e) {
-                log(e, `gnordvpn: Unable to refresh`);
-            } finally {
                 // Update the menu and panel based on the current state
                 this._updateMenu(status);
                 this._panelIcon.update(status);
+            } catch (e) {
+                log(e, `gnordvpn: Unable to refresh`);
+            } finally {
+                // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
+                const timeoutInSec = this.settings.get_boolean(`extra-large-button`) ? 1 : status.currentState.refreshTimeout;
+                this._setTimeout(timeoutInSec);
+                this.isRefreshing = false;
             }
         }
 
@@ -167,48 +172,30 @@ const VpnIndicator = GObject.registerClass({
         }
 
         async _connect() {
-            try {
-                await this._vpn.connectVpn();
-
+            this._vpn.connectVpn().then(() => {
                 // Set an override on the status as the command line status takes a while to catch up
-                await this._overrideRefresh(Constants.status.connecting)
-            } catch (e) {
-                log(e, `gnordvpn: unable to connect to vpn`);
-            }
+                this._overrideRefresh(Constants.status.connecting)
+            }).catch(e => log(e, `Gnordvpn: unable to connect to vpn`));
         }
 
         async _disconnect() {
-            try {
-                // Run the disconnect command
-                await this._vpn.disconnectVpn();
-
+            // Run the disconnect command
+            this._vpn.disconnectVpn().then(() => {
                 // Set an override on the status as the command line status takes a while to catch up
-                await this._overrideRefresh(Constants.status.disconnecting)
-            } catch (e) {
-                log(e, `gnordvpn: unable to disconnect`);
-            }
+                this._overrideRefresh(Constants.status.disconnecting)
+            }).catch(e, log(e, `Gnordvpn: unable to disconnect`));
         }
 
         async _login() {
-            try {
-                this._vpn.loginVpn();
-
-                // Set an override on the status as the command line status takes a while to catch up
-                await this._overrideRefresh(Constants.status.login)
-            } catch (e) {
-                log(e, `gnordvpn: unable to login`);
-            }
+            this._vpn.loginVpn()
+            this._overrideRefresh(Constants.status.login);
         }
 
         async _logout() {
-            try {
-                this._vpn.logoutVpn();
-
+            this._vpn.logoutVpn().then(() => {
                 // Set an override on the status as the command line status takes a while to catch up
-                await this._overrideRefresh(Constants.status.logout)
-            } catch (e) {
-                log(e, `gnordvpn: unable to logout`);
-            }
+                this._overrideRefresh(Constants.status.logout)
+            });
         }
 
         _clearTimeout() {
@@ -233,8 +220,8 @@ const VpnIndicator = GObject.registerClass({
         async _buildIndicatorMenu() {
             try {
                 this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-                this._statusPopup.menu.connect(`open-state-changed`, async function (actor, event) {
-                    await this._setQuickRefresh(event);
+                this._statusPopup.menu.connect(`open-state-changed`, function (actor, event) {
+                    this._setQuickRefresh(event);
                 }.bind(this));
 
                 this.menu.addMenuItem(this._statusPopup);
@@ -325,7 +312,7 @@ const VpnIndicator = GObject.registerClass({
             this._timeout = Mainloop.timeout_add_seconds(timeoutDuration, this._refresh.bind(this));
         }
 
-        async enable() {
+        enable() {
             try {
                 this._vpn = new Vpn();
                 this._signals = new Signals();
@@ -336,9 +323,11 @@ const VpnIndicator = GObject.registerClass({
                 this._panelIcon = new PanelIcon();
                 this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
-                await this._buildIndicatorMenu();
-                await this._refresh();
-                this._vpn.applySettingsToNord();
+                this._buildIndicatorMenu().then(() => {
+                    this._refresh().then(() => {
+                        this._vpn.applySettingsToNord();
+                    }).catch(e => log(e, `Gnordvpn: unable to refresh`));
+                }).catch(e => log(e, `Gnordvpn: unable to build indicator menu`));
             } catch (e) {
                 log(e, `gnordvpn: unable to build indicator menu and refresh`);
             }

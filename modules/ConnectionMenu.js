@@ -91,7 +91,9 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
 
     _toggleConnectionMenuItem(connection, isFavorite) {
         let d = this._destroyMap[connection];
-        if (d) {
+        if (d && !d.isDisposed) {
+
+            d.isDisposed = true;
             this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
             d.icofavBtn.destroy();
             d.menuItem.destroy();

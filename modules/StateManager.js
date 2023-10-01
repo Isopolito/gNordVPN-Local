@@ -133,11 +133,10 @@ var StateManager = class StateManager {
                 (this.stateOverride.overrideKeys[0] === 'servers' && this.stateOverride.overrideKeys[1] === status.currentServer.replace('.nordvpn.com', ''))))
 
             if (this.stateOverrideCounter > this.STATE_OVERRIDE_DURATION ||
-                (vpnState.clearsOverrideId == this.stateOverride.overrideId) || overrideFromKey) {
+                (vpnState.clearsOverrideId === this.stateOverride.overrideId) || overrideFromKey) {
                 // State override expired or cleared by current state, remove it
                 this.stateOverride = undefined;
                 this.stateOverrideCounter = 0;
-
             } else {
                 // State override still active
                 vpnState = this.stateOverride;

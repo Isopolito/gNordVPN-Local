@@ -22,6 +22,7 @@ var Vpn = class Vpn {
         this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
         this.session = Soup.Session.new();
         this.soupVersion = Soup.get_major_version();
+        this.lastConnectedAt = 0;
     }
 
     _httpGet = (url) => {
@@ -158,30 +159,32 @@ var Vpn = class Vpn {
     }
 
     async getStatus() {
+        let connectStatus, updateMessage, country, serverNumber, city, serverIp,
+            currentTech, currentProtocol, transfer, uptime, currentServer;
+
         const standardOut = await this._execCommunicateAsync(['nordvpn', 'status'], null, null);
-        const allStatusMessages = standardOut.split(`\n`);
+        if (standardOut) {
+            const allStatusMessages = standardOut.split(`\n`);
 
-        let connectStatus, updateMessage, country, serverNumber, city, serverIp, currentTech,
-            currentProtocol, transfer, uptime, currentServer;
-
-        // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
-        for (const msg of allStatusMessages) {
-            if (msg.includes(`Status:`)) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
-            else if (msg.includes(`Country:`)) country = msg.replace(`Country: `, ``).toUpperCase();
-            else if (msg.includes(`City:`)) city = msg.replace(`City: `, ``);
-            else if (msg.includes(`Server IP:`)) serverIp = msg.replace(`Server IP: `, ``);
-            else if (msg.includes(`IP:`)) serverIp = msg.replace(`IP: `, ``);
-            else if (msg.includes(`Current protocol:`)) currentProtocol = msg.replace(`Current protocol: `, ``);
-            else if (msg.includes(`Current technology:`)) currentTech = msg.replace(`Current technology: `, ``);
-            else if (msg.includes(`Transfer:`)) transfer = msg.replace(`Transfer: `, ``);
-            else if (msg.includes(`Uptime:`)) uptime = msg.replace(`Uptime: `, ``);
-            else if (msg.includes(`new version`)) updateMessage = msg;
-            else if (msg.includes(`Current server:`)) {
-                serverNumber = msg.match(/\d+/);
-                currentServer = msg.replace(`Current server: `, ``)
-            } else if (msg.includes(`Hostname:`)) {
-                serverNumber = msg.match(/\d+/);
-                currentServer = msg.replace(`Hostname: `, ``)
+            // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
+            for (const msg of allStatusMessages) {
+                if (msg.includes(`Status:`)) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
+                else if (msg.includes(`Country:`)) country = msg.replace(`Country: `, ``).toUpperCase();
+                else if (msg.includes(`City:`)) city = msg.replace(`City: `, ``);
+                else if (msg.includes(`Server IP:`)) serverIp = msg.replace(`Server IP: `, ``);
+                else if (msg.includes(`IP:`)) serverIp = msg.replace(`IP: `, ``);
+                else if (msg.includes(`Current protocol:`)) currentProtocol = msg.replace(`Current protocol: `, ``);
+                else if (msg.includes(`Current technology:`)) currentTech = msg.replace(`Current technology: `, ``);
+                else if (msg.includes(`Transfer:`)) transfer = msg.replace(`Transfer: `, ``);
+                else if (msg.includes(`Uptime:`)) uptime = msg.replace(`Uptime: `, ``);
+                else if (msg.includes(`new version`)) updateMessage = msg;
+                else if (msg.includes(`Current server:`)) {
+                    serverNumber = msg.match(/\d+/);
+                    currentServer = msg.replace(`Current server: `, ``)
+                } else if (msg.includes(`Hostname:`)) {
+                    serverNumber = msg.match(/\d+/);
+                    currentServer = msg.replace(`Hostname: `, ``)
+                }
             }
         }
 
@@ -201,6 +204,10 @@ var Vpn = class Vpn {
     }
 
     connectVpn(query) {
+        // Throttle connection attempts to prevent freezes
+        if ((Date.now() - this.lastConnectedAt) < 9000) return;
+        this.lastConnectedAt = Date.now();
+
         if (query) {
             this._execCommunicateSync(CMD_AUTOCONNECT_OFF);
             this._execCommunicateSync(`${CMD_AUTOCONNECT_ON} ${query}`);
@@ -416,7 +423,7 @@ var Vpn = class Vpn {
 
         GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, function (pid, exitCode) {
             GLib.spawn_close_pid(pid);
-            if (exitCode !== 0) log(`Gnordvpn: Process exited with code ${exitCode}`);
+            if (exitCode !== 0) log(`Gnordvpn: (_execAsync) Process [${command}] exited with code ${exitCode}`);
         });
     }
 }
