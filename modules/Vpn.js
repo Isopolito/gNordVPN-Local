@@ -340,7 +340,7 @@ var Vpn = class Vpn {
 
         return servers;
 
-        //TODO maybe async
+        // TODO: For future version still need to proof out making http calls async
         // this.session.send_async(this.message, null, (session,result) => {
         //     let input_stream = session.send_finish(result);
 
