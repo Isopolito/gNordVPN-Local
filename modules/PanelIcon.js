@@ -25,8 +25,9 @@ var PanelIcon = class PanelIcon {
     }
 
     update(status) {
-        let config = this.uiMap[status.currentState.stateName];
+        if (!status || this._label.isDisposed) return;
 
+        let config = this.uiMap[status.currentState.stateName];
         let msg = config.panelText
         if (status.currentState.stateName == 'Status: Connected')
             msg = msg.replaceAll('{country}',      status.country)
@@ -67,6 +68,11 @@ var PanelIcon = class PanelIcon {
         });
 
         this._label = new St.Label();
+        this._label.connect('destroy', () => {
+            this._label.isDisposed = true;
+            log(`\ngnordvn: label disposed is true`);
+        });
+
         this._button.set_child(this._label);
     }
 }
