@@ -208,16 +208,15 @@ const VpnIndicator = GObject.registerClass({
 
         _openSettings() {
             try {
-
-            if (typeof ExtensionUtils.openPrefs === `function`) {
-                ExtensionUtils.openPrefs();
-            } else {
-                Util.spawn([
-                    `gnome-shell-extension-prefs`,
-                    Me.uuid
-                ]);
-            }
-            }catch (e) {
+                if (typeof ExtensionUtils.openPrefs === `function`) {
+                    ExtensionUtils.openPrefs();
+                } else {
+                    Util.spawn([
+                        `gnome-shell-extension-prefs`,
+                        Me.uuid
+                    ]);
+                }
+            } catch (e) {
                 log(e, `Gnordvpn: Error opening preferences`);
             }
         }
@@ -242,7 +241,7 @@ const VpnIndicator = GObject.registerClass({
 
                 // Add `Connect` menu item
                 this._connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
-                const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, () => this._connect().catch(e => log(e,  `Gnordvpn: Unable to connect`)));
+                const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, () => this._connect().catch(e => log(e, `Gnordvpn: Unable to connect`)));
                 this._signals.register(connectMenuItemClickId, function () {
                     this._connectMenuItem.disconnect(connectMenuItemClickId)
                 }.bind(this));
