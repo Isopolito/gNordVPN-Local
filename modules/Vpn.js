@@ -203,7 +203,7 @@ var Vpn = class Vpn {
         }
     }
 
-    connectVpn(query) {
+    async connectVpn(query) {
         // Throttle connection attempts to prevent freezes
         if ((Date.now() - this.lastConnectedAt) < 9000) return;
         this.lastConnectedAt = Date.now();
@@ -217,7 +217,7 @@ var Vpn = class Vpn {
         }
     }
 
-    disconnectVpn() {
+    async disconnectVpn() {
         return this._execAsync(CMD_DISCONNECT);
     }
 
