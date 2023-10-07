@@ -68,11 +68,7 @@ var PanelIcon = class PanelIcon {
         });
 
         this._label = new St.Label();
-        this._label.connect('destroy', () => {
-            this._label.isDisposed = true;
-            log(`\ngnordvn: label disposed is true`);
-        });
-
+        this._label.connect('destroy', () => this._label.isDisposed = true);
         this._button.set_child(this._label);
     }
 }
