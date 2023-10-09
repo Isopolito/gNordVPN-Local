@@ -134,7 +134,7 @@ var Vpn = class Vpn {
     }
 
     async setToDefaults() {
-        await this._execAsync(`${CMD_SETTINGS} defaults`);
+        return this._execAsync(`${CMD_SETTINGS} defaults`);
     }
 
     getAccount() {
