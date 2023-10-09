@@ -19,6 +19,7 @@ const CommonFavorite = Me.imports.modules.CommonFavorite.CommonFavorite;
 const PanelIcon = Me.imports.modules.PanelIcon.PanelIcon;
 
 let vpnIndicator;
+let isExtensionEnabled = false;
 const indicatorName = `VPN Indicator`;
 
 const VpnIndicator = GObject.registerClass({
@@ -376,13 +377,20 @@ function init() {
 }
 
 function enable() {
+    if (isExtensionEnabled) return;
+    isExtensionEnabled = true;
+
     vpnIndicator = new VpnIndicator();
     vpnIndicator.enable();
     Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0, vpnIndicator.settings.get_string(`panel-position`));
 }
 
 function disable() {
-    vpnIndicator.disable();
-    vpnIndicator.destroy();
-    vpnIndicator = null;
+    if (vpnIndicator) {
+        vpnIndicator.disable();
+        vpnIndicator.destroy();
+        vpnIndicator = null;
+    }
+
+    isExtensionEnabled = false; // Reset the flag
 }
