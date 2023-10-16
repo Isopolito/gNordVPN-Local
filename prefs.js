@@ -3,10 +3,16 @@
 const {Adw, GLib, Gio, Gtk, GObject} = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Vpn = Me.imports.modules.Vpn.Vpn;
 const StylesManager = Me.imports.modules.prefs.StylesManager.StylesManager;
 const ResetManager = Me.imports.modules.prefs.ResetManager.ResetManager;
 const Common = Me.imports.modules.common;
+const Vpn = Me.imports.modules.Vpn.Vpn;
+
+const vpn = new Vpn();
+const stylesManager = new StylesManager();
+const resetManager = new ResetManager();
+const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+let techCbox, protoCbox, countryMap, normalRender, countryMapWithID, countryNames, cityScroll, serverScroll;
 
 function init() {
 }
@@ -26,22 +32,22 @@ function createGeneralPage() {
     panelPositionCombo.append("right", "Right");
     generalGrid.attach(panelPositionCombo, 1, 0, 1, 1);
 
-    let initialPosition = this.settings.get_string('panel-position');
+    let initialPosition = settings.get_string('panel-position');
     panelPositionCombo.set_active_id(initialPosition);
 
     panelPositionCombo.connect('changed', function () {
         const newPosition = panelPositionCombo.get_active_id();
-        this.settings.set_string('panel-position', newPosition);
+        settings.set_string('panel-position', newPosition);
     }.bind(this));
 
     // Common Favorite Toggle
     const commonFavLabel = new Gtk.Label({label: "Display a common favorite tab:", halign: Gtk.Align.START});
     const commonFavToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`commonfavorite`),
+        active: settings.get_boolean(`commonfavorite`),
         halign: Gtk.Align.START,
         visible: true
     });
-    this.settings.bind(`commonfavorite`, commonFavToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`commonfavorite`, commonFavToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     commonFavToggle.set_hexpand(false);  // Don't expand horizontally
     generalGrid.attach(commonFavLabel, 0, 2, 1, 1);
@@ -61,15 +67,15 @@ function createAccountsPage() {
 
     // Show Login Toggle
     const showLoginLabel = new Gtk.Label({label: "Show login button in menu:", halign: Gtk.Align.START});
-    const showLoginToggle = new Gtk.Switch({active: this.settings.get_boolean('showlogin'), halign: Gtk.Align.START});
-    this.settings.bind('showlogin', showLoginToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+    const showLoginToggle = new Gtk.Switch({active: settings.get_boolean('showlogin'), halign: Gtk.Align.START});
+    settings.bind('showlogin', showLoginToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
     accountsGrid.attach(showLoginLabel, 0, 0, 1, 1);
     accountsGrid.attach(showLoginToggle, 1, 0, 1, 1);
 
     // Show Logout Toggle
     const showLogoutLabel = new Gtk.Label({label: "Show logout button in menu:", halign: Gtk.Align.START});
-    const showLogoutToggle = new Gtk.Switch({active: this.settings.get_boolean('showlogout'), halign: Gtk.Align.START});
-    this.settings.bind('showlogout', showLogoutToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+    const showLogoutToggle = new Gtk.Switch({active: settings.get_boolean('showlogout'), halign: Gtk.Align.START});
+    settings.bind('showlogout', showLogoutToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
     accountsGrid.attach(showLogoutLabel, 0, 1, 1, 1);
     accountsGrid.attach(showLogoutToggle, 1, 1, 1, 1);
 
@@ -88,22 +94,18 @@ function createAccountsPage() {
     accountsGrid.attach(accountStatus, 1, 4, 1, 1);
 
     const loginButton = new Gtk.Button({label: "Login"});
-    loginButton.connect('clicked', () => {
-        this.vpn.loginVpn();
-    });
+    loginButton.connect('clicked', () => vpn.loginVpn());
     loginButton.set_sensitive(false);
     accountsGrid.attach(loginButton, 0, 5, 1, 1);
 
     const logoutButton = new Gtk.Button({label: "Logout"});
-    logoutButton.connect('clicked', () => {
-        this.vpn.logoutVpn();
-    });
+    logoutButton.connect('clicked', () => vpn.logoutVpn());
     logoutButton.set_sensitive(false);
     accountsGrid.attach(logoutButton, 1, 5, 1, 1);
 
     const refreshAccountButton = new Gtk.Button({label: "Refresh"});
     const refreshAccount = () => {
-        let account = this.vpn.getAccount();
+        let account = vpn.getAccount();
         let loggedIn = !!account.emailAddress;
         accountEmail.set_text(account.emailAddress || "");
         accountStatus.set_text(account.vpnService || "");
@@ -133,37 +135,37 @@ function createConnectionsPage() {
 
     let techModel = new Gtk.ListStore();
     techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-    this.techCbox = new Gtk.ComboBox({model: techModel});
+    techCbox = new Gtk.ComboBox({model: techModel});
     let techRenderer = new Gtk.CellRendererText();
-    this.techCbox.pack_start(techRenderer, true);
-    this.techCbox.add_attribute(techRenderer, 'text', 1);
+    techCbox.pack_start(techRenderer, true);
+    techCbox.add_attribute(techRenderer, 'text', 1);
     techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
     techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
-    let tech = this.settings.get_string(`technology`);
-    this.techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
-    this.techCbox.connect('changed', function (entry) {
-        let [success, iter] = this.techCbox.get_active_iter();
+    let tech = settings.get_string(`technology`);
+    techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
+    techCbox.connect('changed', function (entry) {
+        let [success, iter] = techCbox.get_active_iter();
         if (!success) return;
         let tech = techModel.get_value(iter, 0);
-        this.settings.set_string(`technology`, tech);
+        settings.set_string(`technology`, tech);
         onTechChange.call(this, tech);
     }.bind(this));
-    this.techCbox.show();
-    connectionsGrid.attach(this.techCbox, 1, 0, 1, 1);
+    techCbox.show();
+    connectionsGrid.attach(techCbox, 1, 0, 1, 1);
 
     // Autoconnect Toggle
     const autoConnectLabel = new Gtk.Label({label: "Autoconnect to VPN on startup:", halign: Gtk.Align.START});
     const autoConnectToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`autoconnect`),
+        active: settings.get_boolean(`autoconnect`),
         halign: Gtk.Align.END,
         visible: true
     });
-    this.settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     autoConnectToggle.connect('state-set', (widget, state) => {
-        this.settings.set_boolean('autoconnect', state);
+        settings.set_boolean('autoconnect', state);
         log(`Set autoconnect to: ${state}`);
-        log(`Retrieved autoconnect as: ${this.settings.get_boolean('autoconnect')}`);
+        log(`Retrieved autoconnect as: ${settings.get_boolean('autoconnect')}`);
     });
 
     autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
@@ -179,12 +181,12 @@ function createConnectionsPage() {
     connectionsGrid.attach(cybersecLabel, 0, 2, 1, 1);
 
     const cyberSecToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`cybersec`),
+        active: settings.get_boolean(`cybersec`),
         halign: Gtk.Align.END,
         visible: true
     });
     connectionsGrid.attach(cyberSecToggle, 1, 2, 1, 1);
-    this.settings.bind(`cybersec`, cyberSecToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`cybersec`, cyberSecToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Firewall
     const firewallLabel = new Gtk.Label({
@@ -195,12 +197,12 @@ function createConnectionsPage() {
     connectionsGrid.attach(firewallLabel, 0, 3, 1, 1);
 
     const firewallToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`firewall`),
+        active: settings.get_boolean(`firewall`),
         halign: Gtk.Align.END,
         visible: true
     });
     connectionsGrid.attach(firewallToggle, 1, 3, 1, 1);
-    this.settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Killswitch
     const killswitchLabel = new Gtk.Label({
@@ -211,12 +213,12 @@ function createConnectionsPage() {
     connectionsGrid.attach(killswitchLabel, 0, 4, 1, 1);
 
     const killswitchToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`killswitch`),
+        active: settings.get_boolean(`killswitch`),
         halign: Gtk.Align.END,
         visible: true
     });
     connectionsGrid.attach(killswitchToggle, 1, 4, 1, 1);
-    this.settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Obfuscate
     const obfuscateLabel = new Gtk.Label({
@@ -227,12 +229,12 @@ function createConnectionsPage() {
     connectionsGrid.attach(obfuscateLabel, 0, 5, 1, 1);
 
     const obfuscateToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`obfuscate`),
+        active: settings.get_boolean(`obfuscate`),
         halign: Gtk.Align.END,
         visible: true
     });
     connectionsGrid.attach(obfuscateToggle, 1, 5, 1, 1);
-    this.settings.bind(`obfuscate`, obfuscateToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`obfuscate`, obfuscateToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Analytics
     const analyticsLabel = new Gtk.Label({
@@ -243,12 +245,12 @@ function createConnectionsPage() {
     connectionsGrid.attach(analyticsLabel, 0, 6, 1, 1);
 
     const analyticsToggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`analytics`),
+        active: settings.get_boolean(`analytics`),
         halign: Gtk.Align.END,
         visible: true
     });
     connectionsGrid.attach(analyticsToggle, 1, 6, 1, 1);
-    this.settings.bind(`analytics`, analyticsToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`analytics`, analyticsToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Ipv6
     const ipv6Label = new Gtk.Label({
@@ -259,12 +261,12 @@ function createConnectionsPage() {
     connectionsGrid.attach(ipv6Label, 0, 7, 1, 1);
 
     const ipV6Toggle = new Gtk.Switch({
-        active: this.settings.get_boolean(`ipv6`),
+        active: settings.get_boolean(`ipv6`),
         halign: Gtk.Align.END,
         visible: true
     });
     connectionsGrid.attach(ipV6Toggle, 1, 7, 1, 1);
-    this.settings.bind(`ipv6`, ipV6Toggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`ipv6`, ipV6Toggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Protocol
     const protocolLabel = new Gtk.Label({
@@ -276,22 +278,22 @@ function createConnectionsPage() {
 
     let protoModel = new Gtk.ListStore();
     protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-    this.protoCbox = new Gtk.ComboBox({model: protoModel});
+    protoCbox = new Gtk.ComboBox({model: protoModel});
     let protoRenderer = new Gtk.CellRendererText();
-    this.protoCbox.pack_start(protoRenderer, true);
-    this.protoCbox.add_attribute(protoRenderer, 'text', 1);
+    protoCbox.pack_start(protoRenderer, true);
+    protoCbox.add_attribute(protoRenderer, 'text', 1);
     protoModel.set(protoModel.append(), [0, 1], ['UDP', 'UDP']);
     protoModel.set(protoModel.append(), [0, 1], ['TCP', 'TCP']);
-    let protocol = this.settings.get_string(`protocol`);
-    this.protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
-    this.protoCbox.connect('changed', function (entry) {
-        let [success, iter] = this.protoCbox.get_active_iter();
+    let protocol = settings.get_string(`protocol`);
+    protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
+    protoCbox.connect('changed', function (entry) {
+        let [success, iter] = protoCbox.get_active_iter();
         if (!success) return;
         let protocol = protoModel.get_value(iter, 0);
-        this.settings.set_string(`protocol`, protocol);
+        settings.set_string(`protocol`, protocol);
     }.bind(this));
-    this.protoCbox.show();
-    connectionsGrid.attach(this.protoCbox, 1, 8, 1, 1);
+    protoCbox.show();
+    connectionsGrid.attach(protoCbox, 1, 8, 1, 1);
 
     // Reset connection settings
     const resetConnection = new Gtk.Button({
@@ -304,10 +306,10 @@ function createConnectionsPage() {
         const isOpenVpn = tech === 'OPENVPN';
         if (isOpenVpn) {
             obfuscateToggle.sensitive = true;
-            this.protoCbox.sensitive = true;
+            protoCbox.sensitive = true;
         } else {
             obfuscateToggle.sensitive = false;
-            this.protoCbox.sensitive = false;
+            protoCbox.sensitive = false;
         }
     }
 
@@ -336,9 +338,7 @@ function createConnectionsSaveFooter() {
     // Add some margin to the button for spacing
     button.margin_top = 20;
 
-    button.connect('clicked', function () {
-        this.vpn.applySettingsToNord();
-    }.bind(this));
+    button.connect('clicked', () => vpn.applySettingsToNord());
 
     box.append(button);  // Use append() in GTK 4
 
@@ -363,7 +363,7 @@ function createCitiesPage() {
 
     cityGrid.attach(maxCityPerCountryInput, 1, 0, 1, 1);
 
-    this.settings.bind(`number-cities-per-countries`, maxCityPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`number-cities-per-countries`, maxCityPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const citySelectLabel = new Gtk.Label({
         label: `Select countries for cities tab:\n<small>Hold down CTRL to select multiple</small>`,
@@ -393,14 +393,14 @@ function createCitiesPage() {
     cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
     let cityTreeIterMap = {};
-    let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
-    if (this.countryNames) {
-        this.countryNames.forEach(country => {
+    let cityCountries = settings.get_value('countries-selected-for-cities').deep_unpack();
+    if (countryNames) {
+        countryNames.forEach(country => {
             let iter = cityStore.append(null);
             cityStore.set(iter, [0], [country]);
             cityTreeIterMap[country] = iter;
 
-            if (cityCountries.includes(this.countryMap[country])) {
+            if (cityCountries.includes(countryMap[country])) {
                 cityTreeView.get_selection().select_iter(iter);
             }
         });
@@ -413,18 +413,18 @@ function createCitiesPage() {
         cityPathList.forEach(path => {
             let model = cityTreeView.get_model();
             let [ok, iter] = model.get_iter(path);
-            selected.push(this.countryMap[model.get_value(iter, 0)]);
+            selected.push(countryMap[model.get_value(iter, 0)]);
         });
 
         settings.set_value('countries-selected-for-cities', new GLib.Variant('as', selected));
     });
 
-    this.cityScroll = new Gtk.ScrolledWindow();
-    this.cityScroll.set_child(cityTreeView);
-    this.cityScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
-    this.cityScroll.set_min_content_height(400);
+    cityScroll = new Gtk.ScrolledWindow();
+    cityScroll.set_child(cityTreeView);
+    cityScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+    cityScroll.set_min_content_height(400);
 
-    cityGrid.attach(this.cityScroll, 1, 1, 1, 1);
+    cityGrid.attach(cityScroll, 1, 1, 1, 1);
 
     return {cityGrid, cityTreeView, cityTreeIterMap};
 }
@@ -447,7 +447,7 @@ function createServersPage() {
 
     serverGrid.attach(maxServerPerCountryInput, 1, 0, 1, 1);
 
-    this.settings.bind(`number-servers-per-countries`, maxServerPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(`number-servers-per-countries`, maxServerPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const serverSelectLabel = new Gtk.Label({
         label: `Select countries to list in servers tab:\n<small>Hold down CTRL to select multiple</small>`,
@@ -465,8 +465,8 @@ function createServersPage() {
         expand: true,
         min_width: 200
     });
-    serverColumn.pack_start(this.normalRender, true);
-    serverColumn.add_attribute(this.normalRender, "text", 0);
+    serverColumn.pack_start(normalRender, true);
+    serverColumn.add_attribute(normalRender, "text", 0);
 
     let serverTreeView = new Gtk.TreeView({
         model: serverStore
@@ -475,14 +475,15 @@ function createServersPage() {
     serverTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
     let serverTreeIterMap = {}
-    let serverCountries = this.settings.get_value('countries-selected-for-servers').deep_unpack();
-    if (this.countryNames) {
-        this.countryNames.forEach(country => {
+    let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
+    if (countryNames) {
+        countryNames.forEach(country => {
             let iter = serverStore.append(null);
             serverStore.set(iter, [0], [country]);
             serverTreeIterMap[country] = iter;
 
-            if (serverCountries.includes(this.countryMapWithID[country])) {
+            if (serverCountries.includes(countryMapWithID[country])) {
+                log(`gnord: country for server: ${countryMapWithID[country]}`)
                 serverTreeView.get_selection().select_iter(iter);
             }
         });
@@ -495,29 +496,25 @@ function createServersPage() {
         serverPathList.forEach(path => {
             let model = serverTreeView.get_model();
             let [ok, iter] = model.get_iter(path);
-            selected.push(this.countryMapWithID[model.get_value(iter, 0)]);
+            selected.push(countryMapWithID[model.get_value(iter, 0)]);
         });
 
-        this.settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
+        settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
     });
 
-    this.serverScroll = new Gtk.ScrolledWindow();
-    this.serverScroll.set_child(serverTreeView);
-    this.serverScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
-    this.serverScroll.set_min_content_height(150);
-    this.serverScroll.set_min_content_height(400);
+    serverScroll = new Gtk.ScrolledWindow();
+    serverScroll.set_child(serverTreeView);
+    serverScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+    serverScroll.set_min_content_height(150);
+    serverScroll.set_min_content_height(400);
 
-    serverGrid.attach(this.serverScroll, 1, 1, 1, 1);
+    serverGrid.attach(serverScroll, 1, 1, 1, 1);
 
     return {serverGrid, serverTreeView, serverTreeIterMap};
 }
 
 function fillPreferencesWindow(window) {
-    this.vpn = new Vpn();
-    this.stylesManager = new StylesManager();
-    this.resetManager = new ResetManager();
-    this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
-    this.vpn.setSettingsFromNord();
+    vpn.setSettingsFromNord();
 
     // *** GENERAL
     const generalPage = new Adw.PreferencesPage();
@@ -543,7 +540,7 @@ function fillPreferencesWindow(window) {
     stylesPage.set_title("Styles");
     stylesPage.set_icon_name("edit-select-all-symbolic");
     const stylesGroup = new Adw.PreferencesGroup();
-    stylesGroup.add(this.stylesManager.createStylesPage());
+    stylesGroup.add(stylesManager.createStylesPage());
     stylesPage.add(stylesGroup);
     window.add(stylesPage);
 
@@ -558,10 +555,10 @@ function fillPreferencesWindow(window) {
     connectionsPage.add(connectionsGroup);
     window.add(connectionsPage);
 
-    this.countryMap = this.vpn.getCountries();
-    this.normalRender = new Gtk.CellRendererText();
-    this.countryMapWithID = this.vpn.getCountries(true);
-    this.countryNames = Common.safeObjectKeys(this.countryMap);
+    countryMap = vpn.getCountries();
+    normalRender = new Gtk.CellRendererText();
+    countryMapWithID = vpn.getCountries(true);
+    countryNames = Common.safeObjectKeys(countryMap);
 
     // *** CITIES
     const cityPage = new Adw.PreferencesPage();
@@ -584,11 +581,11 @@ function fillPreferencesWindow(window) {
     window.add(serverPage);
 
     resetAll.connect('clicked', () => {
-        this.resetManager.resetAllSettings(this.settings, this.protoCbox, this.techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
+        resetManager.resetAllSettings(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
     });
 
     resetConnection.connect('clicked', () => {
-        this.resetManager.resetConnectionSettings(this.settings, this.protoCbox, this.techCbox);
+        resetManager.resetConnectionSettings(settings, protoCbox, techCbox);
     });
 
     return window;
