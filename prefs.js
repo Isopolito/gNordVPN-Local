@@ -35,10 +35,10 @@ function createGeneralPage() {
     let initialPosition = settings.get_string('panel-position');
     panelPositionCombo.set_active_id(initialPosition);
 
-    panelPositionCombo.connect('changed', function () {
+    panelPositionCombo.connect('changed', () => {
         const newPosition = panelPositionCombo.get_active_id();
         settings.set_string('panel-position', newPosition);
-    }.bind(this));
+    });
 
     // Common Favorite Toggle
     const commonFavLabel = new Gtk.Label({label: "Display a common favorite tab:", halign: Gtk.Align.START});
@@ -143,13 +143,13 @@ function createConnectionsPage() {
     techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
     let tech = settings.get_string(`technology`);
     techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
-    techCbox.connect('changed', function (entry) {
+    techCbox.connect('changed', (entry) => {
         let [success, iter] = techCbox.get_active_iter();
         if (!success) return;
         let tech = techModel.get_value(iter, 0);
         settings.set_string(`technology`, tech);
-        onTechChange.call(this, tech);
-    }.bind(this));
+        onTechChange(tech);
+    });
     techCbox.show();
     connectionsGrid.attach(techCbox, 1, 0, 1, 1);
 
@@ -286,12 +286,12 @@ function createConnectionsPage() {
     protoModel.set(protoModel.append(), [0, 1], ['TCP', 'TCP']);
     let protocol = settings.get_string(`protocol`);
     protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
-    protoCbox.connect('changed', function (entry) {
+    protoCbox.connect('changed', (entry) => {
         let [success, iter] = protoCbox.get_active_iter();
         if (!success) return;
         let protocol = protoModel.get_value(iter, 0);
         settings.set_string(`protocol`, protocol);
-    }.bind(this));
+    });
     protoCbox.show();
     connectionsGrid.attach(protoCbox, 1, 8, 1, 1);
 
@@ -313,7 +313,7 @@ function createConnectionsPage() {
         }
     }
 
-    onTechChange.call(this, tech);
+    onTechChange(tech);
     return {connectionsGrid, resetConnection};
 }
 
@@ -476,6 +476,7 @@ function createServersPage() {
 
     let serverTreeIterMap = {}
     let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
+    log(`gnord: serverCountries: ${JSON.stringify(serverCountries)}`)
     if (countryNames) {
         countryNames.forEach(country => {
             let iter = serverStore.append(null);
@@ -521,7 +522,7 @@ function fillPreferencesWindow(window) {
     generalPage.set_title("General");
     generalPage.set_icon_name("emblem-system-symbolic");
     const generalGroup = new Adw.PreferencesGroup();
-    const {generalGrid, resetAll} = createGeneralPage.call(this);
+    const {generalGrid, resetAll} = createGeneralPage();
     generalGroup.add(generalGrid);
     generalPage.add(generalGroup);
     window.add(generalPage);
@@ -531,7 +532,7 @@ function fillPreferencesWindow(window) {
     accountsPage.set_title("Account");
     accountsPage.set_icon_name("user-home-symbolic");
     const accountsGroup = new Adw.PreferencesGroup();
-    accountsGroup.add(createAccountsPage.call(this));
+    accountsGroup.add(createAccountsPage());
     accountsPage.add(accountsGroup);
     window.add(accountsPage);
 
@@ -549,7 +550,7 @@ function fillPreferencesWindow(window) {
     connectionsPage.set_title("Connection");
     connectionsPage.set_icon_name("network-server-symbolic");
     const connectionsGroup = new Adw.PreferencesGroup();
-    const {connectionsGrid, resetConnection} = createConnectionsPage.call(this);
+    const {connectionsGrid, resetConnection} = createConnectionsPage();
     connectionsGroup.add(connectionsGrid);
     connectionsGroup.add(createConnectionsSaveFooter());
     connectionsPage.add(connectionsGroup);
@@ -565,7 +566,7 @@ function fillPreferencesWindow(window) {
     cityPage.set_title("Cities");
     cityPage.set_icon_name("document-open-symbolic");
     const cityGroup = new Adw.PreferencesGroup();
-    const {cityGrid, cityTreeView, cityTreeIterMap} = createCitiesPage.call(this);
+    const {cityGrid, cityTreeView, cityTreeIterMap} = createCitiesPage();
     cityGroup.add(cityGrid);
     cityPage.add(cityGroup);
     window.add(cityPage);
@@ -575,7 +576,7 @@ function fillPreferencesWindow(window) {
     serverPage.set_title("Servers");
     serverPage.set_icon_name("network-workgroup-symbolic");
     const serverGroup = new Adw.PreferencesGroup();
-    const {serverGrid, serverTreeView, serverTreeIterMap} = createServersPage.call(this);
+    const {serverGrid, serverTreeView, serverTreeIterMap} = createServersPage();
     serverGroup.add(serverGrid);
     serverPage.add(serverGroup);
     window.add(serverPage);
