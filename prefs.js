@@ -162,12 +162,7 @@ function createConnectionsPage() {
     });
     settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
-    autoConnectToggle.connect('state-set', (widget, state) => {
-        settings.set_boolean('autoconnect', state);
-        log(`Set autoconnect to: ${state}`);
-        log(`Retrieved autoconnect as: ${settings.get_boolean('autoconnect')}`);
-    });
-
+    autoConnectToggle.connect('state-set', (widget, state) => settings.set_boolean('autoconnect', state));
     autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
     connectionsGrid.attach(autoConnectLabel, 0, 1, 1, 1);
     connectionsGrid.attach(autoConnectToggle, 1, 1, 1, 1);
@@ -476,7 +471,6 @@ function createServersPage() {
 
     let serverTreeIterMap = {}
     let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
-    log(`gnord: serverCountries: ${JSON.stringify(serverCountries)}`)
     if (countryNames) {
         countryNames.forEach(country => {
             let iter = serverStore.append(null);
@@ -484,7 +478,6 @@ function createServersPage() {
             serverTreeIterMap[country] = iter;
 
             if (serverCountries.includes(countryMapWithID[country])) {
-                log(`gnord: country for server: ${countryMapWithID[country]}`)
                 serverTreeView.get_selection().select_iter(iter);
             }
         });

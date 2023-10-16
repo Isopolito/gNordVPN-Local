@@ -2,6 +2,9 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
+
+const { versions } = imports.gi;
+versions.Soup = '2.4';  // Update this string to the latest version when necessary
 const Soup = imports.gi.Soup;
 
 const CMD_VPNSTATUS = `nordvpn status`;
@@ -27,15 +30,12 @@ var Vpn = class Vpn {
 
     _httpGet = (url) => {
         const msg = Soup.Message.new(`GET`, url);
-        switch (this.soupVersion) {
-            case 2:
-                this.session.send_message(msg);
-                break;
-            default:
-                this.session.send(msg, null);
-                break;
+        if (this.soupVersion >= 2) {
+            this.session.send_message(msg);
+        } else {
+            this.session.send(msg, null);
         }
-        return JSON.parse(this._getString(msg.response_body_data.get_data()));
+        return JSON.parse(this._getString(msg.response_body.data));
     }
 
     // Remove the junk that shows up from messages in the nordvpn output
@@ -274,7 +274,6 @@ var Vpn = class Vpn {
         // If the list of countries from NordVpn cli is less then 5 there's most likely a problem with the connection.
         // Better to return nothing so calling code can handle appropriately rather than a list of error message words
         if (Object.keys(processedCountries).length < 5) return null;
-
         return processedCountries;
     }
 
