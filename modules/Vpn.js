@@ -305,7 +305,6 @@ var Vpn = class Vpn {
         return processedCities;
     }
 
-    // TODO: Why does this keep getting called?
     getServers() {
         // Using nordvpn undocumented public api since the app does not give that information
         // Useful source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
