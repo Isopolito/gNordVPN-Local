@@ -256,10 +256,10 @@ var Vpn = class Vpn {
 
     getCountries(withId = false) {
         if (withId) {
-            let countrieMap;
+            let countriesMap;
             try {
                 let data = this._httpGet(`https://api.nordvpn.com/v1/servers/countries`);
-                countrieMap = data.reduce((acc, v) => {
+                countriesMap = data.reduce((acc, v) => {
                     acc[v['name']] = v['id'];
                     return acc;
                 }, {});
@@ -267,7 +267,7 @@ var Vpn = class Vpn {
                 return [null, null];
             }
 
-            return countrieMap;
+            return countriesMap;
         }
 
         const standardOut = this._execSyncIfVpnOn(CMD_COUNTRIES);
@@ -313,17 +313,17 @@ var Vpn = class Vpn {
 
         let url = `https://api.nordvpn.com/v1/servers/recommendations?limit=` + countriesMax
         let technology = this.settings.get_string(`technology`);
-        if (technology == 'NORDLYNX') {
+        if (technology === 'NORDLYNX') {
             url += `&filters[servers_technologies][identifier]=wireguard_udp`;
 
-        } else if (technology == 'OPENVPN') {
+        } else if (technology === 'OPENVPN') {
             let obfuscate = this.settings.get_boolean(`obfuscate`);
             let protocol = this.settings.get_string(`protocol`);
 
-            if (protocol == `UDP`) {
+            if (protocol === `UDP`) {
                 if (obfuscate) url += `&filters[servers_technologies][identifier]=openvpn_xor_udp`;
                 else url += `&filters[servers_technologies][identifier]=openvpn_udp`;
-            } else if (protocol == `TCP`) {
+            } else if (protocol === `TCP`) {
                 if (obfuscate) url += `&filters[servers_technologies][identifier]=openvpn_xor_tcp`;
                 else url += `&filters[servers_technologies][identifier]=openvpn_tcp`;
             }
