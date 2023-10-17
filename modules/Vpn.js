@@ -4,7 +4,7 @@ const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
 
 const { versions } = imports.gi;
-versions.Soup = '2.4';  // TODO
+versions.Soup = '2.4';  // Update this string to the latest version when necessary
 const Soup = imports.gi.Soup;
 
 const CMD_VPNSTATUS = `nordvpn status`;
@@ -420,7 +420,7 @@ var Vpn = class Vpn {
             return;
         }
 
-        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, (pid, exitCode) => {
+        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, function (pid, exitCode) {
             GLib.spawn_close_pid(pid);
             if (exitCode !== 0) log(`Gnordvpn: (_execAsync) Process [${command}] exited with code ${exitCode}`);
         });

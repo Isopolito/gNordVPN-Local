@@ -61,24 +61,31 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
 
     _buildConnectionMenuItem(connection, isFavorite) {
         const menuItem = new PopupMenu.PopupMenuItem(connection);
-        const menuItemClickId = menuItem.connect(`activate`, (actor, event) => {
-            this._vpn.connectVpn(this._connections[connection]);
-            this._connectionCallback(Constants.status.reconnecting, [this._connectionType, this._connections[connection]]);
-        });
+        const menuItemClickId = menuItem.connect(`activate`, function (actor, event) {
+                this._vpn.connectVpn(this._connections[connection]);
+                this._connectionCallback(Constants.status.reconnecting, [this._connectionType, this._connections[connection]]);
+            }.bind(this)
+        );
 
-        this._signals.register(menuItemClickId, () => menuItem.disconnect(menuItemClickId);
+        this._signals.register(menuItemClickId, function () {
+                menuItem.disconnect(menuItemClickId)
+            }.bind(this)
+        );
 
         const icofavBtn = super.buildFavIcon(isFavorite);
         menuItem.actor.add_child(icofavBtn);
         menuItem.icofavBtn = icofavBtn;
         this._destroyMap[connection] = {menuItemClickId, menuItem, icofavBtn};
-        menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, () => {
-            this._toggleConnectionMenuItem(connection, isFavorite);
-            if (isFavorite) this._favorites.remove(this._favoritesKey, connection);
-            else this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
-        });
+        menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, function () {
+                this._toggleConnectionMenuItem(connection, isFavorite);
+                if (isFavorite) this._favorites.remove(this._favoritesKey, connection);
+                else this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
+            }.bind(this)
+        );
 
-        this._signals.register(menuItem.favoritePressId, () => icofavBtn.disconnect(menuItem.favoritePressId));
+        this._signals.register(menuItem.favoritePressId, function () {
+            icofavBtn.disconnect(menuItem.favoritePressId)
+        }.bind(this));
         return menuItem;
     }
 
