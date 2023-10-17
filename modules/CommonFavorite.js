@@ -63,33 +63,24 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
 
     _buildFavoriteMenuItem(favorite) {
         const menuItem = new PopupMenu.PopupMenuItem(favorite);
-        const menuItemClickId = menuItem.connect(`activate`, function (actor, event) {
+        const menuItemClickId = menuItem.connect(`activate`, (actor, event) => {
                 this._vpn.connectVpn(this.favList[favorite].item);
                 let type = this.favList[favorite].type.substring(this.favList[favorite].type.lastIndexOf('-') + 1)
                 this._connectionCallback(Constants.status.reconnecting, [type, this.favList[favorite].item]);
-            }.bind(this)
-        );
+            });
 
-        this._signals.register(menuItemClickId, function () {
-                menuItem.disconnect(menuItemClickId)
-            }.bind(this)
-        );
+        this._signals.register(menuItemClickId, () => menuItem.disconnect(menuItemClickId));
 
         const icofavBtn = super.buildFavIcon(true);
         menuItem.actor.add_child(icofavBtn);
         menuItem.icofavBtn = icofavBtn;
         this._destroyMap[favorite] = {menuItemClickId, menuItem, icofavBtn};
-        menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, function () {
+        menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, () => {
                 this._favorites.remove(this.favList[favorite].type, favorite); 
                 this._toggleFavoriteMenuItem(favorite, false); 
+            });
 
-            }.bind(this)
-        );
-
-        this._signals.register(menuItem.favoritePressId, function () {
-            icofavBtn.disconnect(menuItem.favoritePressId)
-        }.bind(this));
-
+        this._signals.register(menuItem.favoritePressId, () => icofavBtn.disconnect(menuItem.favoritePressId));
         return menuItem;
     }
 

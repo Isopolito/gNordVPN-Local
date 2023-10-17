@@ -420,7 +420,7 @@ var Vpn = class Vpn {
             return;
         }
 
-        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, function (pid, exitCode) {
+        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, (pid, exitCode) => {
             GLib.spawn_close_pid(pid);
             if (exitCode !== 0) log(`Gnordvpn: (_execAsync) Process [${command}] exited with code ${exitCode}`);
         });
