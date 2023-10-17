@@ -225,10 +225,7 @@ const VpnIndicator = GObject.registerClass({
         async _buildIndicatorMenu() {
             try {
                 this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-                this._statusPopup.menu.connect(`open-state-changed`, function (actor, event) {
-                    this._setQuickRefresh(event);
-                }.bind(this));
-
+                this._statusPopup.menu.connect(`open-state-changed`, (actor, event) => this._setQuickRefresh(event));
                 this.menu.addMenuItem(this._statusPopup);
 
                 this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
@@ -243,17 +240,13 @@ const VpnIndicator = GObject.registerClass({
                 // Add `Connect` menu item
                 this._connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
                 const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, () => this._connect().catch(e => log(e, `Gnordvpn: Unable to connect`)));
-                this._signals.register(connectMenuItemClickId, function () {
-                    this._connectMenuItem.disconnect(connectMenuItemClickId)
-                }.bind(this));
+                this._signals.register(connectMenuItemClickId, () => this._connectMenuItem.disconnect(connectMenuItemClickId));
                 this.menu.addMenuItem(this._connectMenuItem);
 
                 // Add `Disconnect` menu item
                 this._disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
                 const disconnectMenuItemClickId = this._disconnectMenuItem.connect(`activate`, () => this._disconnect().catch(e => log(e, `Gnordvpn: Unable to disconnect`)));
-                this._signals.register(disconnectMenuItemClickId, function () {
-                    this._disconnectMenuItem.disconnect(disconnectMenuItemClickId)
-                }.bind(this));
+                this._signals.register(disconnectMenuItemClickId, () => this._disconnectMenuItem.disconnect(disconnectMenuItemClickId));
                 this.menu.addMenuItem(this._disconnectMenuItem);
 
                 this._commonFavorite.build();
@@ -281,30 +274,26 @@ const VpnIndicator = GObject.registerClass({
                 // Add `Login` menu item
                 this._loginMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.login);
                 const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, () => this._login.catch(e => log(e, `Gnordvpn: Unable to login`)));
-                this._signals.register(loginMenuItemClickId, function () {
-                    this._loginMenuItem.disconnect(loginMenuItemClickId)
-                }.bind(this));
+                this._signals.register(loginMenuItemClickId, () => this._loginMenuItem.disconnect(loginMenuItemClickId));
                 this.menu.addMenuItem(this._loginMenuItem);
 
                 // Add `Logout` menu item
                 this._logoutMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.logout);
                 const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, () => this._logout.catch(e => log(e, `Gnordvpn: Unable to logout`)));
-                this._signals.register(logoutMenuItemClickId, function () {
-                    this._logoutMenuItem.disconnect(logoutMenuItemClickId)
-                }.bind(this));
+                this._signals.register(logoutMenuItemClickId, () => this._logoutMenuItem.disconnect(logoutMenuItemClickId));
                 this.menu.addMenuItem(this._logoutMenuItem);
 
                 this._panelIcon.build();
                 this.add_actor(this._panelIcon.button());
 
-                this._panelIcon.button().connect(`button-press-event`, function (actor, event) {
+                this._panelIcon.button().connect(`button-press-event`, (actor, event) => {
                     //Only checking login state when clicking on menu
                     //Cannot check periodically because:
                     //If checking with `nordvpn account` it fetches from a server that limit request
                     //If checking with `nordvpn login` it generate a new url, preventing the use from login in
                     this.isLoggedIn = this._vpn.checkLogin();
                     this._refresh();
-                }.bind(this));
+                });
 
                 this.isLoggedIn = this._vpn.checkLogin();
             } catch (e) {
@@ -322,9 +311,9 @@ const VpnIndicator = GObject.registerClass({
                 this._vpn = new Vpn();
                 this._signals = new Signals();
                 this._commonFavorite = new CommonFavorite(this._overrideRefresh.bind(this));
-                this._countryMenu = new ConnectionMenu(`Countries`, `countries`, Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this));
-                this._cityMenu = new ConnectionMenu(`Cities`, `cities`, Constants.favorites.favoriteCities, this._overrideRefresh.bind(this));
-                this._serverMenu = new ConnectionMenu(`Servers`, `servers`, Constants.favorites.favoriteServers, this._overrideRefresh.bind(this));
+                this._countryMenu = new ConnectionMenu(`Countries`, `countries`, Constants.favorites.favoriteCountries, () => this._overrideRefresh());
+                this._cityMenu = new ConnectionMenu(`Cities`, `cities`, Constants.favorites.favoriteCities, () => this._overrideRefresh());
+                this._serverMenu = new ConnectionMenu(`Servers`, `servers`, Constants.favorites.favoriteServers, () => this._overrideRefresh(this));
                 this._panelIcon = new PanelIcon();
                 this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
