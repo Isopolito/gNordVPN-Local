@@ -45,7 +45,6 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         toRemoveFromFav.forEach(connection => {
             this._toggleConnectionMenuItem(connection, !false);
         })
-
     }
 
     rebuild() {

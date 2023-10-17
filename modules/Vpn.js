@@ -2,9 +2,6 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ExtensionUtils = imports.misc.extensionUtils;
-
-const { versions } = imports.gi;
-versions.Soup = '2.4';  // Update this string to the latest version when necessary
 const Soup = imports.gi.Soup;
 
 const CMD_VPNSTATUS = `nordvpn status`;
@@ -30,12 +27,22 @@ var Vpn = class Vpn {
 
     _httpGet = (url) => {
         const msg = Soup.Message.new(`GET`, url);
-        if (this.soupVersion >= 2) {
-            this.session.send_message(msg);
-        } else {
+        if (this.soupVersion < 2) {
             this.session.send(msg, null);
+            return JSON.parse(this._getString(msg.response_body.data));
+        } else if (this.soupVersion >= 2 && this.soupVersion < 3) {
+            this.session.send_message(msg);
+            return JSON.parse(this._getString(msg.response_body.data));
+        } else if (this.soupVersion >= 3) {
+            let bytes = this.session.send_and_read(msg, null);
+            if (msg.get_status() === Soup.Status.OK) {
+                let decoder = new TextDecoder('utf-8');
+                return JSON.parse(decoder.decode(bytes.get_data()));
+            } else {
+                log(`gnordvpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
+                return null;
+            }
         }
-        return JSON.parse(this._getString(msg.response_body.data));
     }
 
     // Remove the junk that shows up from messages in the nordvpn output
@@ -298,10 +305,10 @@ var Vpn = class Vpn {
         return processedCities;
     }
 
+    // TODO: Why does this keep getting called?
     getServers() {
-        //Using nordvpn undocumented public api since the app does not give that information
-        //Usefull source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
-
+        // Using nordvpn undocumented public api since the app does not give that information
+        // Useful source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
         let countriesMax = this.settings.get_value('number-servers-per-countries').unpack();
         let countriesSaved = this.settings.get_value('countries-selected-for-servers').deep_unpack();
 
@@ -334,6 +341,7 @@ var Vpn = class Vpn {
                 });
             }
         } catch (e) {
+            log(e, `gnordvpn: error getting servers`);
             return null;
         }
 
