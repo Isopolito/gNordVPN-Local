@@ -162,7 +162,6 @@ var ConnectionMenu = class ConnectionMenu extends MenuBase {
         this._menuSeperator = new PopupMenu.PopupSeparatorMenuItem();
         this._connectionMenu.menu.addMenuItem(this._menuSeperator);
 
-
         for (const connection of Common.safeObjectKeys(connectionFavs.itemsMinusFavorites).sort()) {
             const menuItem = this._buildConnectionMenuItem(connection, false);
             this._connectionMenuItems.push(connection);
