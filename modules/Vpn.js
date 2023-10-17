@@ -27,15 +27,22 @@ var Vpn = class Vpn {
 
     _httpGet = (url) => {
         const msg = Soup.Message.new(`GET`, url);
-        switch (this.soupVersion) {
-            case 2:
-                this.session.send_message(msg);
-                break;
-            default:
-                this.session.send(msg, null);
-                break;
+        if (this.soupVersion < 2) {
+            this.session.send(msg, null);
+            return JSON.parse(this._getString(msg.response_body.data));
+        } else if (this.soupVersion >= 2 && this.soupVersion < 3) {
+            this.session.send_message(msg);
+            return JSON.parse(this._getString(msg.response_body.data));
+        } else if (this.soupVersion >= 3) {
+            let bytes = this.session.send_and_read(msg, null);
+            if (msg.get_status() === Soup.Status.OK) {
+                let decoder = new TextDecoder('utf-8');
+                return JSON.parse(decoder.decode(bytes.get_data()));
+            } else {
+                log(`gnordvpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
+                return null;
+            }
         }
-        return JSON.parse(this._getString(msg.response_body_data.get_data()));
     }
 
     // Remove the junk that shows up from messages in the nordvpn output
@@ -274,7 +281,6 @@ var Vpn = class Vpn {
         // If the list of countries from NordVpn cli is less then 5 there's most likely a problem with the connection.
         // Better to return nothing so calling code can handle appropriately rather than a list of error message words
         if (Object.keys(processedCountries).length < 5) return null;
-
         return processedCountries;
     }
 
@@ -299,10 +305,10 @@ var Vpn = class Vpn {
         return processedCities;
     }
 
+    // TODO: Why does this keep getting called?
     getServers() {
-        //Using nordvpn undocumented public api since the app does not give that information
-        //Usefull source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
-
+        // Using nordvpn undocumented public api since the app does not give that information
+        // Useful source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
         let countriesMax = this.settings.get_value('number-servers-per-countries').unpack();
         let countriesSaved = this.settings.get_value('countries-selected-for-servers').deep_unpack();
 
@@ -335,6 +341,7 @@ var Vpn = class Vpn {
                 });
             }
         } catch (e) {
+            log(e, `gnordvpn: error getting servers`);
             return null;
         }
 
@@ -421,7 +428,7 @@ var Vpn = class Vpn {
             return;
         }
 
-        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, function (pid, exitCode) {
+        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, (pid, exitCode) => {
             GLib.spawn_close_pid(pid);
             if (exitCode !== 0) log(`Gnordvpn: (_execAsync) Process [${command}] exited with code ${exitCode}`);
         });
