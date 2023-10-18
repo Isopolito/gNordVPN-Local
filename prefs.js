@@ -7,7 +7,7 @@ import Adw from 'gi://Adw';
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
-import * as Vpn from './Vpn';
+import * as Vpn from './modules/Vpn';
 import * as StylesManager from './modules/prefs/StylesManager';
 import * as ResetManager from './modules/prefs/ResetManager';
 

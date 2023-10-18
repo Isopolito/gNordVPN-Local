@@ -5,7 +5,7 @@ import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils
 
 // gNordVpn-Local modules
 import * as Common from '../common';
-import * as Constants from './constants';
+import * as Constants from '../constants';
 
 var StylesManager = class StylesManager {
     constructor() {
