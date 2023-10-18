@@ -1,9 +1,11 @@
-`use strict`;
-const {GLib, Gtk} = imports.gi;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Constants = Me.imports.modules.constants;
-const Common = Me.imports.modules.common;
+import GLib from 'gi://GLib';
+import Gtk from 'gi://Gtk';
+
+import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+
+// gNordVpn-Local modules
+import * as Common from '../common';
+import * as Constants from './constants';
 
 var StylesManager = class StylesManager {
     constructor() {

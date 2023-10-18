@@ -1,8 +1,8 @@
-`use strict`;
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Soup = imports.gi.Soup;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+
+import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+import Soup from 'gi://Soup';
 
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;

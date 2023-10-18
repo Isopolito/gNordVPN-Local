@@ -1,8 +1,7 @@
-const St = imports.gi.St;
-const ExtensionUtils = imports.misc.extensionUtils;
+import St from 'gi://St';
+import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
-const Me = ExtensionUtils.getCurrentExtension();
-const Constants = Me.imports.modules.constants;
+import * as Constants from './constants';
 
 var PanelIcon = class PanelIcon {
     constructor() {
@@ -29,7 +28,7 @@ var PanelIcon = class PanelIcon {
 
         let config = this.uiMap[status.currentState.stateName];
         let msg = config.panelText
-        if (status.currentState.stateName == 'Status: Connected')
+        if (status.currentState.stateName === 'Status: Connected')
             msg = msg.replaceAll('{country}',      status.country)
                      .replaceAll('{COUNTRY}',      status.country.toUpperCase())
                      .replaceAll('{ctry}',         status.currentServer.replace(/(\d|.nordvpn.com)/g, '').toUpperCase())

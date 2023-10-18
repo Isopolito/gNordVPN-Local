@@ -1,15 +1,12 @@
-'use strict';
-const PopupMenu = imports.ui.popupMenu;
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 // gNordVpn-Local modules
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Vpn = Me.imports.modules.Vpn.Vpn;
-const Constants = Me.imports.modules.constants;
-const Signals = Me.imports.modules.Signals.Signals;
-const MenuBase = Me.imports.modules.MenuBase.MenuBase;
-const Favorites = Me.imports.modules.Favorites.Favorites;
-const Common = Me.imports.modules.common;
+import * as Vpn from './Vpn';
+import * as Constants from './constants';
+import * as Signals from './Signals';
+import * as MenuBase from './MenuBase';
+import * as Favorites from './Favorites';
+import * as Common from './common';
 
 var ConnectionMenu = class ConnectionMenu extends MenuBase {
     constructor(connectionLabel, connectionType, favoritesKey, connectionCallback) {

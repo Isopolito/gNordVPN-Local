@@ -1,5 +1,5 @@
-const St = imports.gi.St;
-const Clutter = imports.gi.Clutter;
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
 
 var MenuBase = class MenuBase {
     buildFavIcon(isFavorite) {

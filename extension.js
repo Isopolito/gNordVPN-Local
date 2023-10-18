@@ -1,22 +1,20 @@
-`use strict`;
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import PanelMenu from 'gi://ui/panelMenu';
+import PopupMenu from 'gi://ui/PopupMenu';
 
-const St = imports.gi.St;
-const Main = imports.ui.main;
-const Mainloop = imports.mainloop;
-const GObject = imports.gi.GObject;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const ExtensionUtils = imports.misc.extensionUtils;
+import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Mainloop from 'resource:///org/gnome/shell/ui/mainloop.js';
 
 // gNordvpn-Local modules
-const Me = ExtensionUtils.getCurrentExtension();
-const Vpn = Me.imports.modules.Vpn.Vpn;
-const Constants = Me.imports.modules.constants;
-const Signals = Me.imports.modules.Signals.Signals;
-const ConnectionMenu = Me.imports.modules.ConnectionMenu.ConnectionMenu;
-const StateManager = Me.imports.modules.StateManager.StateManager;
-const CommonFavorite = Me.imports.modules.CommonFavorite.CommonFavorite;
-const PanelIcon = Me.imports.modules.PanelIcon.PanelIcon;
+import * as Vpn from './modules/Vpn';
+import * as Constants from './modules/constants';
+import * as Signals from './modules/Signals';
+import * as ConnectionMenu from './modules/ConnectionMenu';
+import * as StateManager from './modules/StateManager';
+import * as CommonFavorite from './modules/CommonFavorite';
+import * as PanelIcon from './modules/PanelIcon';
 
 let vpnIndicator;
 let isExtensionEnabled = false;

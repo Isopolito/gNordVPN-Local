@@ -1,10 +1,8 @@
-'use strict';
-
 var ResetManager = class ResetManager {
     resetAllSettings(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap) {
         this._resetGeneralSetting(settings);
         this._resetAccountSetting(settings);
-        this.resetConnectionSetting(settings, protoCbox, techCbox);
+        this.resetConnectionSettings(settings, protoCbox, techCbox);
         this._resetCitySetting(settings, cityTreeView, cityTreeIterMap);
         this.resetServerSetting(settings, serverTreeView, serverTreeIterMap);
     }
