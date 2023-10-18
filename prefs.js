@@ -5,18 +5,17 @@ import Gtk from 'gi://Gtk ';
 import Adw from 'gi://Adw';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
 import * as Vpn from './modules/Vpn';
 import * as StylesManager from './modules/prefs/StylesManager';
 import * as ResetManager from './modules/prefs/ResetManager';
 
-const vpn = new Vpn();
-const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
 export default class GnordVpnPrefs extends ExtensionPreferences {
     constructor() {
         super();
+        this._vpn = new Vpn();
+        this._settings = this.getSettings();
         this._resetManager = new ResetManager();
         this._stylesManager = new StylesManager();
         this._techCbox = null;
@@ -43,22 +42,22 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         panelPositionCombo.append("right", "Right");
         generalGrid.attach(panelPositionCombo, 1, 0, 1, 1);
 
-        let initialPosition = settings.get_string('panel-position');
+        let initialPosition = this._settings.get_string('panel-position');
         panelPositionCombo.set_active_id(initialPosition);
 
         panelPositionCombo.connect('changed', () => {
             const newPosition = panelPositionCombo.get_active_id();
-            settings.set_string('panel-position', newPosition);
+            this._settings.set_string('panel-position', newPosition);
         });
 
         // Common Favorite Toggle
         const commonFavLabel = new Gtk.Label({label: "Display a common favorite tab:", halign: Gtk.Align.START});
         const commonFavToggle = new Gtk.Switch({
-            active: settings.get_boolean(`commonfavorite`),
+            active: this._settings.get_boolean(`commonfavorite`),
             halign: Gtk.Align.START,
             visible: true
         });
-        settings.bind(`commonfavorite`, commonFavToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`commonfavorite`, commonFavToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
         commonFavToggle.set_hexpand(false);  // Don't expand horizontally
         generalGrid.attach(commonFavLabel, 0, 2, 1, 1);
@@ -78,15 +77,15 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
 
         // Show Login Toggle
         const showLoginLabel = new Gtk.Label({label: "Show login button in menu:", halign: Gtk.Align.START});
-        const showLoginToggle = new Gtk.Switch({active: settings.get_boolean('showlogin'), halign: Gtk.Align.START});
-        settings.bind('showlogin', showLoginToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        const showLoginToggle = new Gtk.Switch({active: this._settings.get_boolean('showlogin'), halign: Gtk.Align.START});
+        this._settings.bind('showlogin', showLoginToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
         accountsGrid.attach(showLoginLabel, 0, 0, 1, 1);
         accountsGrid.attach(showLoginToggle, 1, 0, 1, 1);
 
         // Show Logout Toggle
         const showLogoutLabel = new Gtk.Label({label: "Show logout button in menu:", halign: Gtk.Align.START});
-        const showLogoutToggle = new Gtk.Switch({active: settings.get_boolean('showlogout'), halign: Gtk.Align.START});
-        settings.bind('showlogout', showLogoutToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        const showLogoutToggle = new Gtk.Switch({active: this._settings.get_boolean('showlogout'), halign: Gtk.Align.START});
+        this._settings.bind('showlogout', showLogoutToggle, 'active', Gio.SettingsBindFlags.DEFAULT);
         accountsGrid.attach(showLogoutLabel, 0, 1, 1, 1);
         accountsGrid.attach(showLogoutToggle, 1, 1, 1, 1);
 
@@ -109,18 +108,18 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         accountsGrid.attach(accountStatus, 1, 4, 1, 1);
 
         const loginButton = new Gtk.Button({label: "Login"});
-        loginButton.connect('clicked', () => vpn.loginVpn());
+        loginButton.connect('clicked', () => this._vpn.loginVpn());
         loginButton.set_sensitive(false);
         accountsGrid.attach(loginButton, 0, 5, 1, 1);
 
         const logoutButton = new Gtk.Button({label: "Logout"});
-        logoutButton.connect('clicked', () => vpn.logoutVpn());
+        logoutButton.connect('clicked', () => this._vpn.logoutVpn());
         logoutButton.set_sensitive(false);
         accountsGrid.attach(logoutButton, 1, 5, 1, 1);
 
         const refreshAccountButton = new Gtk.Button({label: "Refresh"});
         const refreshAccount = () => {
-            let account = vpn.getAccount();
+            let account = this._vpn.getAccount();
             let loggedIn = !!account.emailAddress;
             accountEmail.set_text(account.emailAddress || "");
             accountStatus.set_text(account.vpnService || "");
@@ -156,13 +155,13 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         this._techCbox.add_attribute(techRenderer, 'text', 1);
         techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
         techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
-        let tech = settings.get_string(`technology`);
+        let tech = this._settings.get_string(`technology`);
         this._techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
         this._techCbox.connect('changed', (entry) => {
             let [success, iter] = this._techCbox.get_active_iter();
             if (!success) return;
             let tech = techModel.get_value(iter, 0);
-            settings.set_string(`technology`, tech);
+            this._settings.set_string(`technology`, tech);
             onTechChange(tech);
         });
         this._techCbox.show();
@@ -171,13 +170,13 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         // Autoconnect Toggle
         const autoConnectLabel = new Gtk.Label({label: "Autoconnect to VPN on startup:", halign: Gtk.Align.START});
         const autoConnectToggle = new Gtk.Switch({
-            active: settings.get_boolean(`autoconnect`),
+            active: this._settings.get_boolean(`autoconnect`),
             halign: Gtk.Align.END,
             visible: true
         });
-        settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
-        autoConnectToggle.connect('state-set', (widget, state) => settings.set_boolean('autoconnect', state));
+        autoConnectToggle.connect('state-set', (widget, state) => this._settings.set_boolean('autoconnect', state));
         autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
         connectionsGrid.attach(autoConnectLabel, 0, 1, 1, 1);
         connectionsGrid.attach(autoConnectToggle, 1, 1, 1, 1);
@@ -191,12 +190,12 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         connectionsGrid.attach(cybersecLabel, 0, 2, 1, 1);
 
         const cyberSecToggle = new Gtk.Switch({
-            active: settings.get_boolean(`cybersec`),
+            active: this._settings.get_boolean(`cybersec`),
             halign: Gtk.Align.END,
             visible: true
         });
         connectionsGrid.attach(cyberSecToggle, 1, 2, 1, 1);
-        settings.bind(`cybersec`, cyberSecToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`cybersec`, cyberSecToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
         // Firewall
         const firewallLabel = new Gtk.Label({
@@ -207,12 +206,12 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         connectionsGrid.attach(firewallLabel, 0, 3, 1, 1);
 
         const firewallToggle = new Gtk.Switch({
-            active: settings.get_boolean(`firewall`),
+            active: this._settings.get_boolean(`firewall`),
             halign: Gtk.Align.END,
             visible: true
         });
         connectionsGrid.attach(firewallToggle, 1, 3, 1, 1);
-        settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
         // Killswitch
         const killswitchLabel = new Gtk.Label({
@@ -223,12 +222,12 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         connectionsGrid.attach(killswitchLabel, 0, 4, 1, 1);
 
         const killswitchToggle = new Gtk.Switch({
-            active: settings.get_boolean(`killswitch`),
+            active: this._settings.get_boolean(`killswitch`),
             halign: Gtk.Align.END,
             visible: true
         });
         connectionsGrid.attach(killswitchToggle, 1, 4, 1, 1);
-        settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
         // Obfuscate
         const obfuscateLabel = new Gtk.Label({
@@ -239,12 +238,12 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         connectionsGrid.attach(obfuscateLabel, 0, 5, 1, 1);
 
         const obfuscateToggle = new Gtk.Switch({
-            active: settings.get_boolean(`obfuscate`),
+            active: this._settings.get_boolean(`obfuscate`),
             halign: Gtk.Align.END,
             visible: true
         });
         connectionsGrid.attach(obfuscateToggle, 1, 5, 1, 1);
-        settings.bind(`obfuscate`, obfuscateToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`obfuscate`, obfuscateToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
         // Analytics
         const analyticsLabel = new Gtk.Label({
@@ -255,12 +254,12 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         connectionsGrid.attach(analyticsLabel, 0, 6, 1, 1);
 
         const analyticsToggle = new Gtk.Switch({
-            active: settings.get_boolean(`analytics`),
+            active: this._settings.get_boolean(`analytics`),
             halign: Gtk.Align.END,
             visible: true
         });
         connectionsGrid.attach(analyticsToggle, 1, 6, 1, 1);
-        settings.bind(`analytics`, analyticsToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`analytics`, analyticsToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
         // Ipv6
         const ipv6Label = new Gtk.Label({
@@ -271,12 +270,12 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         connectionsGrid.attach(ipv6Label, 0, 7, 1, 1);
 
         const ipV6Toggle = new Gtk.Switch({
-            active: settings.get_boolean(`ipv6`),
+            active: this._settings.get_boolean(`ipv6`),
             halign: Gtk.Align.END,
             visible: true
         });
         connectionsGrid.attach(ipV6Toggle, 1, 7, 1, 1);
-        settings.bind(`ipv6`, ipV6Toggle, `active`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`ipv6`, ipV6Toggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
         // Protocol
         const protocolLabel = new Gtk.Label({
@@ -294,13 +293,13 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         this._protoCbox.add_attribute(protoRenderer, 'text', 1);
         protoModel.set(protoModel.append(), [0, 1], ['UDP', 'UDP']);
         protoModel.set(protoModel.append(), [0, 1], ['TCP', 'TCP']);
-        let protocol = settings.get_string(`protocol`);
+        let protocol = this._settings.get_string(`protocol`);
         this._protoCbox.set_active(protocol === 'UDP' ? 0 : 1);
         this._protoCbox.connect('changed', (entry) => {
             let [success, iter] = this._protoCbox.get_active_iter();
             if (!success) return;
             let protocol = protoModel.get_value(iter, 0);
-            settings.set_string(`protocol`, protocol);
+            this._settings.set_string(`protocol`, protocol);
         });
         this._protoCbox.show();
         connectionsGrid.attach(this._protoCbox, 1, 8, 1, 1);
@@ -348,7 +347,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         // Add some margin to the button for spacing
         button.margin_top = 20;
 
-        button.connect('clicked', () => vpn.applySettingsToNord());
+        button.connect('clicked', () => this._vpn.applySettingsToNord());
 
         box.append(button);  // Use append() in GTK 4
 
@@ -373,7 +372,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
 
         cityGrid.attach(maxCityPerCountryInput, 1, 0, 1, 1);
 
-        settings.bind(`number-cities-per-countries`, maxCityPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`number-cities-per-countries`, maxCityPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
         const citySelectLabel = new Gtk.Label({
             label: `Select countries for cities tab:\n<small>Hold down CTRL to select multiple</small>`,
@@ -403,7 +402,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
         let cityTreeIterMap = {};
-        let cityCountries = settings.get_value('countries-selected-for-cities').deep_unpack();
+        let cityCountries = this._settings.get_value('countries-selected-for-cities').deep_unpack();
         if (this._countryNames) {
             this._countryNames.forEach(country => {
                 let iter = cityStore.append(null);
@@ -426,7 +425,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
                 selected.push(this._countryMap[model.get_value(iter, 0)]);
             });
 
-            settings.set_value('countries-selected-for-cities', new GLib.Variant('as', selected));
+            this._settings.set_value('countries-selected-for-cities', new GLib.Variant('as', selected));
         });
 
         this._cityScroll = new Gtk.ScrolledWindow();
@@ -457,7 +456,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
 
         serverGrid.attach(maxServerPerCountryInput, 1, 0, 1, 1);
 
-        settings.bind(`number-servers-per-countries`, maxServerPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind(`number-servers-per-countries`, maxServerPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
         const serverSelectLabel = new Gtk.Label({
             label: `Select countries to list in servers tab:\n<small>Hold down CTRL to select multiple</small>`,
@@ -485,7 +484,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         serverTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
         let serverTreeIterMap = {}
-        let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
+        let serverCountries = this._settings.get_value('countries-selected-for-servers').deep_unpack();
         if (this._countryNames) {
             this._countryNames.forEach(country => {
                 let iter = serverStore.append(null);
@@ -508,7 +507,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
                 selected.push(this._countryMapWithID[model.get_value(iter, 0)]);
             });
 
-            settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
+            this._settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
         });
 
         this._serverScroll = new Gtk.ScrolledWindow();
@@ -523,14 +522,14 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
     }
 
     fillPreferencesWindow(window) {
-        vpn.setSettingsFromNord();
+        this._vpn.setSettingsFromNord();
 
         // *** GENERAL
         const generalPage = new Adw.PreferencesPage();
         generalPage.set_title("General");
         generalPage.set_icon_name("emblem-system-symbolic");
         const generalGroup = new Adw.PreferencesGroup();
-        const {generalGrid, resetAll} = createGeneralPage();
+        const {generalGrid, resetAll} = this._createGeneralPage();
         generalGroup.add(generalGrid);
         generalPage.add(generalGroup);
         window.add(generalPage);
@@ -540,7 +539,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         accountsPage.set_title("Account");
         accountsPage.set_icon_name("user-home-symbolic");
         const accountsGroup = new Adw.PreferencesGroup();
-        accountsGroup.add(createAccountsPage());
+        accountsGroup.add(this._createAccountsPage());
         accountsPage.add(accountsGroup);
         window.add(accountsPage);
 
@@ -558,15 +557,15 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         connectionsPage.set_title("Connection");
         connectionsPage.set_icon_name("network-server-symbolic");
         const connectionsGroup = new Adw.PreferencesGroup();
-        const {connectionsGrid, resetConnection} = createConnectionsPage();
+        const {connectionsGrid, resetConnection} = this._createConnectionsPage();
         connectionsGroup.add(connectionsGrid);
-        connectionsGroup.add(createConnectionsSaveFooter());
+        connectionsGroup.add(this._createConnectionsSaveFooter());
         connectionsPage.add(connectionsGroup);
         window.add(connectionsPage);
 
-        this._countryMap = vpn.getCountries();
+        this._countryMap = this._vpn.getCountries();
         this._normalRender = new Gtk.CellRendererText();
-        this._countryMapWithID = vpn.getCountries(true);
+        this._countryMapWithID = this._vpn.getCountries(true);
         this._countryNames = Common.safeObjectKeys(this._countryMap);
 
         // *** CITIES
@@ -574,7 +573,7 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         cityPage.set_title("Cities");
         cityPage.set_icon_name("document-open-symbolic");
         const cityGroup = new Adw.PreferencesGroup();
-        const {cityGrid, cityTreeView, cityTreeIterMap} = createCitiesPage();
+        const {cityGrid, cityTreeView, cityTreeIterMap} = this._createCitiesPage();
         cityGroup.add(cityGrid);
         cityPage.add(cityGroup);
         window.add(cityPage);
@@ -584,17 +583,17 @@ export default class GnordVpnPrefs extends ExtensionPreferences {
         serverPage.set_title("Servers");
         serverPage.set_icon_name("network-workgroup-symbolic");
         const serverGroup = new Adw.PreferencesGroup();
-        const {serverGrid, serverTreeView, serverTreeIterMap} = createServersPage();
+        const {serverGrid, serverTreeView, serverTreeIterMap} = this._createServersPage();
         serverGroup.add(serverGrid);
         serverPage.add(serverGroup);
         window.add(serverPage);
 
         resetAll.connect('clicked', () => {
-            this._resetManager.resetAllSettings(settings, this._protoCbox, this._techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
+            this._resetManager.resetAllSettings(this._settings, this._protoCbox, this._techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
         });
 
         resetConnection.connect('clicked', () => {
-            this._resetManager.resetConnectionSettings(settings, this._protoCbox, this._techCbox);
+            this._resetManager.resetConnectionSettings(this._settings, this._protoCbox, this._techCbox);
         });
 
         return window;

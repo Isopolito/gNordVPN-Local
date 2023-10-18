@@ -3,7 +3,7 @@ import St from 'gi://St';
 import PanelMenu from 'gi://ui/panelMenu';
 import PopupMenu from 'gi://ui/PopupMenu';
 
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Mainloop from 'resource:///org/gnome/shell/ui/mainloop.js';
 
@@ -25,13 +25,13 @@ const VpnIndicator = GObject.registerClass({
     }, class VpnIndicator extends PanelMenu.Button {
         _init() {
             super._init(0.5, indicatorName, false);
-            this.isLoggedIn = false;
-            this.isRefreshing = false;
-            this.stateManager = new StateManager();
-            this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+            this._isLoggedIn = false;
+            this._isRefreshing = false;
+            this._stateManager = new StateManager();
+            this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
 
             this._moveIndicator();
-            this.settings.connect(`changed`, (settings, key) => {
+            this._settings.connect(`changed`, (settings, key) => {
                 switch (key) {
                     case `panel-position`:
                         this._moveIndicator();
@@ -74,29 +74,29 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _setQuickRefresh(quick) {
-            this.stateManager.setQuickRefresh(quick);
+            this._stateManager.setQuickRefresh(quick);
             this._refresh();
         }
 
         _overrideRefresh(state, overrideKeys) {
-            this.stateManager.refreshOverride(state, overrideKeys);
+            this._stateManager.refreshOverride(state, overrideKeys);
             this._refresh();
         }
 
         async _refresh() {
             let status;
             try {
-                if (this.isRefreshing) return;
+                if (this._isRefreshing) return;
                 this.isRefreshing = true;
 
                 // Stop the refreshes
                 this._clearTimeout();
 
                 status = await this._vpn.getStatus();
-                status.loggedin = this.isLoggedIn;
+                status.loggedin = this._isLoggedIn;
                 status.currentState = this._vpn.isNordVpnRunning()
-                    ? this.stateManager.resolveState(status)
-                    : this.stateManager.resolveState(null);
+                    ? this._stateManager.resolveState(status)
+                    : this._stateManager.resolveState(null);
 
                 // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
                 // to provide available cities, countries, etc
@@ -111,7 +111,7 @@ const VpnIndicator = GObject.registerClass({
                 this._panelIcon.update(status);
 
                 // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
-                const timeoutInSec = this.settings.get_boolean(`extra-large-button`) ? 1 : status.currentState.refreshTimeout;
+                const timeoutInSec = this._settings.get_boolean(`extra-large-button`) ? 1 : status.currentState.refreshTimeout;
                 this._setTimeout(timeoutInSec);
             } catch (e) {
                 log(e, `gnordvpn: Unable to refresh`);
@@ -139,7 +139,7 @@ const VpnIndicator = GObject.registerClass({
                 }
             })
 
-            if (!this.isLoggedIn) {
+            if (!this._isLoggedIn) {
                 this._statusPopup.hide();
                 this._statusLabel.hide();
             } else if (hasItems) {
@@ -164,10 +164,10 @@ const VpnIndicator = GObject.registerClass({
             this._countryMenu.showHide(status.currentState.showLists);
             this._cityMenu.showHide(status.currentState.showLists);
             this._serverMenu.showHide(status.currentState.showLists);
-            this._commonFavorite.showHide(status.currentState.showLists && this.settings.get_boolean(`commonfavorite`));
+            this._commonFavorite.showHide(status.currentState.showLists && this._settings.get_boolean(`commonfavorite`));
 
-            this._loginMenuItem.actor.visible = !status.loggedin && this.settings.get_boolean(`showlogin`);
-            this._logoutMenuItem.actor.visible = status.loggedin && this.settings.get_boolean(`showlogout`);
+            this._loginMenuItem.actor.visible = !status.loggedin && this._settings.get_boolean(`showlogin`);
+            this._logoutMenuItem.actor.visible = status.loggedin && this._settings.get_boolean(`showlogout`);
         }
 
         async _connect() {
@@ -250,7 +250,7 @@ const VpnIndicator = GObject.registerClass({
                 this._commonFavorite.build();
                 this.menu.addMenuItem(this._commonFavorite.menu);
 
-                if (this.settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show();
+                if (this._settings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show();
                 else this._commonFavorite.menu.hide();
 
                 this._countryMenu.tryBuild();
@@ -340,7 +340,7 @@ const VpnIndicator = GObject.registerClass({
         }
 
         _moveIndicator() {
-            let position = this.settings.get_string(`panel-position`);
+            let position = this._settings.get_string(`panel-position`);
             let box;
 
             if (position === `left`) {
@@ -369,7 +369,7 @@ function enable() {
 
     vpnIndicator = new VpnIndicator();
     vpnIndicator.enable();
-    Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0, vpnIndicator.settings.get_string(`panel-position`));
+    Main.panel.addToStatusArea(indicatorName, vpnIndicator, 0, vpnIndicator._settings.get_string(`panel-position`));
 }
 
 function disable() {

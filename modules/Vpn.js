@@ -1,7 +1,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Soup from 'gi://Soup';
 
 const CMD_VPNSTATUS = `nordvpn status`;
@@ -19,22 +19,22 @@ const CMD_LOGOUT = `nordvpn logout`;
 
 var Vpn = class Vpn {
     constructor() {
-        this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-        this.session = Soup.Session.new();
-        this.soupVersion = Soup.get_major_version();
-        this.lastConnectedAt = 0;
+        this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
+        this._session = Soup.Session.new();
+        this._soupVersion = Soup.get_major_version();
+        this._lastConnectedAt = 0;
     }
 
     _httpGet = (url) => {
         const msg = Soup.Message.new(`GET`, url);
-        if (this.soupVersion < 2) {
-            this.session.send(msg, null);
+        if (this._soupVersion < 2) {
+            this._session.send(msg, null);
             return JSON.parse(this._getString(msg.response_body.data));
-        } else if (this.soupVersion >= 2 && this.soupVersion < 3) {
-            this.session.send_message(msg);
+        } else if (this._soupVersion >= 2 && this._soupVersion < 3) {
+            this._session.send_message(msg);
             return JSON.parse(this._getString(msg.response_body.data));
-        } else if (this.soupVersion >= 3) {
-            let bytes = this.session.send_and_read(msg, null);
+        } else if (this._soupVersion >= 3) {
+            let bytes = this._session.send_and_read(msg, null);
             if (msg.get_status() === Soup.Status.OK) {
                 let decoder = new TextDecoder('utf-8');
                 return JSON.parse(decoder.decode(bytes.get_data()));
@@ -115,9 +115,9 @@ var Vpn = class Vpn {
             if (!settingName || settingValue === undefined) continue;
 
             if (settingName === `protocol` || settingName === 'technology') {
-                this.settings.set_string(settingName, settingValue);
+                this._settings.set_string(settingName, settingValue);
             } else {
-                this.settings.set_boolean(settingName, settingValue);
+                this._settings.set_boolean(settingName, settingValue);
             }
         }
     }
@@ -125,19 +125,19 @@ var Vpn = class Vpn {
     applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
-        this._execCommunicateSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} analytics ${this.settings.get_boolean(`analytics`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} autoconnect ${this.settings.get_boolean(`autoconnect`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} cybersec ${this.settings.get_boolean(`cybersec`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} obfuscate ${this.settings.get_boolean(`obfuscate`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} ipv6 ${this.settings.get_boolean(`ipv6`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} notify ${this.settings.get_boolean(`notify`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} protocol ${this.settings.get_string(`protocol`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} technology ${this.settings.get_string(`technology`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} firewall ${this._settings.get_boolean(`firewall`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} analytics ${this._settings.get_boolean(`analytics`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} autoconnect ${this._settings.get_boolean(`autoconnect`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} cybersec ${this._settings.get_boolean(`cybersec`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} killswitch ${this._settings.get_boolean(`killswitch`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} obfuscate ${this._settings.get_boolean(`obfuscate`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} ipv6 ${this._settings.get_boolean(`ipv6`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} notify ${this._settings.get_boolean(`notify`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} protocol ${this._settings.get_string(`protocol`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} technology ${this._settings.get_string(`technology`)}`);
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
-        this._execCommunicateSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
+        this._execCommunicateSync(`${CMD_SETTINGS} firewall ${this._settings.get_boolean(`firewall`)}`);
     }
 
     async setToDefaults() {
@@ -212,8 +212,8 @@ var Vpn = class Vpn {
 
     async connectVpn(query) {
         // Throttle connection attempts to prevent freezes
-        if ((Date.now() - this.lastConnectedAt) < 9000) return;
-        this.lastConnectedAt = Date.now();
+        if ((Date.now() - this._lastConnectedAt) < 9000) return;
+        this._lastConnectedAt = Date.now();
 
         if (query) {
             this._execCommunicateSync(CMD_AUTOCONNECT_OFF);
@@ -285,8 +285,8 @@ var Vpn = class Vpn {
     }
 
     getCities() {
-        let citiesMax = this.settings.get_value('number-cities-per-countries').unpack() - 1;
-        let citiesSaved = this.settings.get_value('countries-selected-for-cities').deep_unpack();
+        let citiesMax = this._settings.get_value('number-cities-per-countries').unpack() - 1;
+        let citiesSaved = this._settings.get_value('countries-selected-for-cities').deep_unpack();
 
         let processedCities = {};
 
@@ -308,17 +308,17 @@ var Vpn = class Vpn {
     getServers() {
         // Using nordvpn undocumented public api since the app does not give that information
         // Useful source: https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
-        let countriesMax = this.settings.get_value('number-servers-per-countries').unpack();
-        let countriesSaved = this.settings.get_value('countries-selected-for-servers').deep_unpack();
+        let countriesMax = this._settings.get_value('number-servers-per-countries').unpack();
+        let countriesSaved = this._settings.get_value('countries-selected-for-servers').deep_unpack();
 
         let url = `https://api.nordvpn.com/v1/servers/recommendations?limit=` + countriesMax
-        let technology = this.settings.get_string(`technology`);
+        let technology = this._settings.get_string(`technology`);
         if (technology === 'NORDLYNX') {
             url += `&filters[servers_technologies][identifier]=wireguard_udp`;
 
         } else if (technology === 'OPENVPN') {
-            let obfuscate = this.settings.get_boolean(`obfuscate`);
-            let protocol = this.settings.get_string(`protocol`);
+            let obfuscate = this._settings.get_boolean(`obfuscate`);
+            let protocol = this._settings.get_string(`protocol`);
 
             if (protocol === `UDP`) {
                 if (obfuscate) url += `&filters[servers_technologies][identifier]=openvpn_xor_udp`;

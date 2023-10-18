@@ -1,7 +1,7 @@
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 // gNordVpn-Local modules
 import * as Common from '../common';
@@ -9,11 +9,11 @@ import * as Constants from '../constants';
 
 var StylesManager = class StylesManager {
     constructor() {
-        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.gnordvpn-local');
+        this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
     }
 
     createStylesPage() {
-        const {
+        let {
             stylePage,
             monoToggle,
             altToggle,
@@ -44,7 +44,7 @@ var StylesManager = class StylesManager {
                 'LOGGING_OUT': 'VPN LOGGING OUT',
             }
 
-            this.settings.set_boolean(`extra-large-button`, true);
+            this._settings.set_boolean(`extra-large-button`, true);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -62,7 +62,7 @@ var StylesManager = class StylesManager {
                 'LOGGING_OUT': 'LOGGING OUT',
             }
 
-            this.settings.set_boolean(`extra-large-button`, false);
+            this._settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -81,7 +81,7 @@ var StylesManager = class StylesManager {
 
             }
 
-            this.settings.set_boolean(`extra-large-button`, false);
+            this._settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -99,7 +99,7 @@ var StylesManager = class StylesManager {
                 'LOGGING_OUT': '.',
             }
 
-            this.settings.set_boolean(`extra-large-button`, false);
+            this._settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -139,7 +139,10 @@ var StylesManager = class StylesManager {
         stylePage.attach(altToggle, 1, 1, 1, 1);
 
         const loadDefault = new Gtk.Label({
-            label: '<b>Build default: </b>\n<small>Extra Large will cause the panel to refresh every 1 second</small>', halign: Gtk.Align.START, use_markup: true, visible: true
+            label: '<b>Build default: </b>\n<small>Extra Large will cause the panel to refresh every 1 second</small>',
+            halign: Gtk.Align.START,
+            use_markup: true,
+            visible: true
         });
 
         stylePage.attach(loadDefault, 0, 2, 1, 1);
@@ -218,16 +221,16 @@ var StylesManager = class StylesManager {
         stylePage.attach(commonCsslabel, 0, row, 1, 1);
 
         const commonCss = new Gtk.Entry();
-        let cps = this.settings.get_string(`common-panel-style`);
+        let cps = this._settings.get_string(`common-panel-style`);
         commonCss.get_buffer().set_text(cps, cps.length);
         commonCss.connect(`changed`, () => {
             let gv = new GLib.Variant("s", commonCss.get_buffer().get_text());
-            this.settings.set_value(`common-panel-style`, gv);
+            this._settings.set_value(`common-panel-style`, gv);
         });
 
         stylePage.attach(commonCss, 1, row++, 4, 1);
 
-        let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
+        let savedStyle = this._settings.get_value('panel-styles').deep_unpack();
         this._loadStyle(savedStyle, styleItems);
 
         const connectedKeyLabel = new Gtk.Label({
@@ -245,7 +248,6 @@ var StylesManager = class StylesManager {
     _saveStyle(styleItems) {
 
         let data = {};
-        let invalid = false;
         styleItems.every(item => {
             data[item.state] = {};
             data[item.state].panelText = item.format.get_buffer().get_text();
@@ -254,7 +256,7 @@ var StylesManager = class StylesManager {
             return true;
         });
 
-        this.settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', data));
+        this._settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', data));
     }
 
     _loadStyle(data, styleItems) {

@@ -1,11 +1,11 @@
 import St from 'gi://St';
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Constants from './constants';
 
 var PanelIcon = class PanelIcon {
     constructor() {
-        this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+        this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
 
         this.uiMap = {};
         this.commonStyle = "";
@@ -13,14 +13,14 @@ var PanelIcon = class PanelIcon {
     }
 
     updateStyle() {
-        let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
+        let savedStyle = this._settings.get_value('panel-styles').deep_unpack();
 
         this.uiMap = {};
         Object.keys(savedStyle).forEach(key => {
             this.uiMap[Constants.states[key]] = savedStyle[key];
         });
 
-        this.commonStyle = this.settings.get_string(`common-panel-style`);
+        this.commonStyle = this._settings.get_string(`common-panel-style`);
     }
 
     update(status) {

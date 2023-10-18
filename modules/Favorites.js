@@ -1,8 +1,8 @@
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 var Favorites = class Favorites {
     constructor() {
-        this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+        this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
     }
 
     _getData(a) { return this._settings.get_string(a); }
