@@ -4,10 +4,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import VpnIndicator from './modules/VpnIndicator.js';
 
 export default class GnordVpnExtension extends Extension {
-    constructor() {
-        super();
-        this._isExtensionEnabled = false;
-    }
+    _isExtensionEnabled = false;
+
     enable() {
         if (this._isExtensionEnabled) return;
         this._isExtensionEnabled = true;
@@ -15,7 +13,7 @@ export default class GnordVpnExtension extends Extension {
         this._vpnIndicator = new VpnIndicator();
         this._vpnIndicator.enable();
 
-        Main.panel.addToStatusArea(indicatorName, this._vpnIndicator, 0, this._vpnIndicator._settings.get_string(`panel-position`));
+        Main.panel.addToStatusArea(indicatorName, this._vpnIndicator, 0, this._vpnIndicator.getPanelPosition());
     }
 
     disable() {
