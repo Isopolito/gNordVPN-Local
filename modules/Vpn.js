@@ -17,7 +17,7 @@ const CMD_DISCONNECT = `nordvpn d`;
 const CMD_LOGIN = `nordvpn login`;
 const CMD_LOGOUT = `nordvpn logout`;
 
-var Vpn = class Vpn {
+export default class Vpn {
     constructor() {
         this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
         this._session = Soup.Session.new();

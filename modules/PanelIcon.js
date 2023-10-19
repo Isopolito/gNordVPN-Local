@@ -1,9 +1,9 @@
 import St from 'gi://St';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import * as Constants from './constants';
+import * as Constants from './constants.js';
 
-var PanelIcon = class PanelIcon {
+export default class PanelIcon {
     constructor() {
         this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
 

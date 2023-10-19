@@ -1,13 +1,13 @@
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 // gNordVpn-Local modules
-import * as Vpn from './Vpn';
-import * as Constants from './constants';
-import * as Signals from './Signals';
-import * as MenuBase from './MenuBase';
-import * as Favorites from './Favorites';
+import * as Vpn from './Vpn.js';
+import * as Constants from './constants.js';
+import * as Signals from './Signals.js';
+import * as MenuBase from './MenuBase.js';
+import * as Favorites from './Favorites.js';
 
-var CommonFavorite = class CommonFavorite extends MenuBase {
+export default class CommonFavorite extends MenuBase {
     constructor(connectionCallback) {
         super();
         this._connectionCallback = connectionCallback;

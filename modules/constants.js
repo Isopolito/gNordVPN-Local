@@ -1,21 +1,21 @@
-var panel = {
+export const panel = {
     panelStyles: 'panel-styles'
 }
 
-var favorites = {
+export const favorites = {
     favoriteCountries: 'favorite-countries',
     favoriteCities: 'favorite-cities',
     favoriteServers: 'favorite-servers',
 }
 
-var menus = {
+export const menus = {
     connect: 'Connect',
     disconnect: 'Disconnect',
     login: 'Login',
     logout: 'Logout',
 }
 
-var status = {
+export const status = {
    connecting: 'Status: Connecting',
    disconnecting: 'Status: Disconnecting',
    reconnecting: 'Status: Reconnecting',
@@ -23,11 +23,11 @@ var status = {
    logout: 'Status: Logging out',
 }
 
-var messages = {
+export const messages = {
     updateAvailable: 'Update available'
 }
 
-var states = {
+export const states = {
     'CONNECTED':     'Status: Connected',
     'CONNECTING':    'Status: Connecting',
     'DISCONNECTED':  'Status: Disconnected',

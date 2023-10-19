@@ -7,7 +7,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Common from '../common';
 import * as Constants from '../constants';
 
-var StylesManager = class StylesManager {
+ export default class StylesManager {
     constructor() {
         this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
     }

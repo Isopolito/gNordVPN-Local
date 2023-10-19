@@ -1,4 +1,4 @@
-var Signals = class Signals {
+export default class Signals {
     constructor() {
         this._ids = {};
     }

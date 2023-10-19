@@ -1,6 +1,6 @@
-import * as Constants from './constants';
+import * as Constants from './constants.js';
 
-var StateManager = class StateManager {
+export default class StateManager {
     constructor() {
         this.STATE_OVERRIDE_UNSET = -1;
         this.stateOverride = undefined;
