@@ -1,10 +1,10 @@
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import * as Vpn from './Vpn.js';
+import Vpn from './Vpn.js';
+import Signals from './Signals.js';
+import Favorites from './Favorites.js';
+import MenuBase from './MenuBase.js';
 import * as Constants from './constants.js';
-import * as Signals from './Signals.js';
-import * as MenuBase from './MenuBase.js';
-import * as Favorites from './Favorites.js';
 
 export default class CommonFavorite extends MenuBase {
     constructor(connectionCallback) {

@@ -6,9 +6,9 @@ import Adw from 'gi://Adw';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import * as Vpn from './modules/Vpn.js';
-import * as StylesManager from './modules/prefs/StylesManager.js';
-import * as ResetManager from './modules/prefs/ResetManager.js';
+import Vpn from './modules/Vpn.js';
+import StylesManager from './modules/prefs/StylesManager.js';
+import ResetManager from './modules/prefs/ResetManager.js';
 
 export default class GnordVpnPrefs extends ExtensionPreferences {
     constructor() {

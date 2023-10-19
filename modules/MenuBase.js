@@ -2,6 +2,9 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 
 export default class MenuBase {
+    constructor() {
+    }
+
     buildFavIcon(isFavorite) {
         const icon_name = isFavorite ? `starred-symbolic` : `non-starred-symbolic`;
         const iconfav = new St.Icon({

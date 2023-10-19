@@ -7,15 +7,13 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 const Mainloop = imports.mainloop;
 
-
-// gNordvpn-Local modules
-import * as Vpn from './modules/Vpn.js';
+import Vpn from './modules/Vpn.js';
+import Signals from './modules/Signals.js';
+import ConnectionMenu from './modules/ConnectionMenu.js';
+import StateManager from './modules/StateManager.js';
+import CommonFavorite from './modules/CommonFavorite.js';
+import PanelIcon from './modules/PanelIcon.js';
 import * as Constants from './modules/constants.js';
-import * as Signals from './modules/Signals.js';
-import * as ConnectionMenu from './modules/ConnectionMenu.js';
-import * as StateManager from './modules/StateManager.js';
-import * as CommonFavorite from './modules/CommonFavorite.js';
-import * as PanelIcon from './modules/PanelIcon.js';
 
 let vpnIndicator;
 let isExtensionEnabled = false;
