@@ -81,11 +81,11 @@ export default class CommonFavorite extends MenuBase {
     }
 
     _toggleFavoriteMenuItem(favorite, toAdd) {
-        let d = this._destroyMap[favorite];
-        if (d) {
-            this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
-            d.icofavBtn.destroy();
-            d.menuItem.destroy();
+        let menuItemElements = this._destroyMap[favorite];
+        if (menuItemElements) {
+            this._signals.disconnect([menuItemElements.menuItemClickId, menuItemElements.menuItem.favoritePressId]);
+            menuItemElements.icofavBtn.destroy();
+            menuItemElements.menuItem.destroy();
         }
 
         if (toAdd) { 
