@@ -1,6 +1,5 @@
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-// gNordVpn-Local modules
 import * as Vpn from './Vpn.js';
 import * as Constants from './constants.js';
 import * as Signals from './Signals.js';

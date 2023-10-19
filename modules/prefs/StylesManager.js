@@ -3,11 +3,10 @@ import Gtk from 'gi://Gtk';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-// gNordVpn-Local modules
 import * as Common from '../common';
 import * as Constants from '../constants';
 
- export default class StylesManager {
+export default class StylesManager {
     constructor() {
         this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
     }
@@ -115,27 +114,23 @@ import * as Constants from '../constants';
 
     _createStylesBuildSection() {
         const stylePage = new Gtk.Grid({
-            margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
+            margin_start: 18,
+            margin_top: 10,
+            column_spacing: 12,
+            row_spacing: 12,
+            visible: true
         });
 
-        const monoLabel = new Gtk.Label({
-            label: `Build as monochrome:`, halign: Gtk.Align.START, visible: true
-        });
+        const monoLabel = new Gtk.Label({label: `Build as monochrome:`, halign: Gtk.Align.START, visible: true});
         stylePage.attach(monoLabel, 0, 0, 1, 1);
 
-        const monoToggle = new Gtk.Switch({
-            active: false, halign: Gtk.Align.START, visible: true
-        });
+        const monoToggle = new Gtk.Switch({active: false, halign: Gtk.Align.START, visible: true});
         stylePage.attach(monoToggle, 1, 0, 1, 1);
 
-        const altLabel = new Gtk.Label({
-            label: `Build with alt style:`, halign: Gtk.Align.START, visible: true
-        });
+        const altLabel = new Gtk.Label({label: `Build with alt style:`, halign: Gtk.Align.START, visible: true});
         stylePage.attach(altLabel, 0, 1, 1, 1);
 
-        const altToggle = new Gtk.Switch({
-            active: false, halign: Gtk.Align.START, visible: true
-        });
+        const altToggle = new Gtk.Switch({active: false, halign: Gtk.Align.START, visible: true});
         stylePage.attach(altToggle, 1, 1, 1, 1);
 
         const loadDefault = new Gtk.Label({
@@ -147,25 +142,18 @@ import * as Constants from '../constants';
 
         stylePage.attach(loadDefault, 0, 2, 1, 1);
 
-        const styleSmall = new Gtk.Button({
-            label: `Small default`, visible: true
-        });
+        const styleSmall = new Gtk.Button({label: `Small default`, visible: true});
         stylePage.attach(styleSmall, 1, 2, 1, 1);
 
-        const styleMedium = new Gtk.Button({
-            label: `Medium default`, visible: true
-        });
+        const styleMedium = new Gtk.Button({label: `Medium default`, visible: true});
         stylePage.attach(styleMedium, 2, 2, 1, 1);
 
-        const styleLarge = new Gtk.Button({
-            label: `Large default`, visible: true
-        });
+        const styleLarge = new Gtk.Button({label: `Large default`, visible: true});
         stylePage.attach(styleLarge, 3, 2, 1, 1);
 
-        const styleExtraLarge = new Gtk.Button({
-            label: `Extra Large default`, visible: true
-        });
+        const styleExtraLarge = new Gtk.Button({label: `Extra Large default`, visible: true});
         stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
+
         return {stylePage, monoToggle, altToggle, styleSmall, styleMedium, styleLarge, styleExtraLarge};
     }
 
