@@ -8,7 +8,7 @@ import * as Constants from '../constants';
 
 export default class StylesManager {
     constructor() {
-        this._settings = Extension.lookupByUrl('org.gnome.shell.extensions.gnordvpn-local').getSettings();
+        this.settings = Extension.lookupByURL(import.meta.url).getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     }
 
     createStylesPage() {

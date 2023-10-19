@@ -16,12 +16,13 @@ import CommonFavorite from './CommonFavorite.js';
 import PanelIcon from './PanelIcon.js';
 import * as Constants from './constants.js';
 
-const indicatorName = `VPN Indicator`;
 export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
+
         _init() {
-            super._init(0.5, indicatorName, false);
-            this._extSettings = Extension.lookupByURL(import.meta.url).getSettings();
+            this._indicatorName = `VPN Indicator`;
+            super._init(0.5, this._indicatorName, false);
+            this._extSettings = Extension.lookupByURL(import.meta.url).getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
             this._isLoggedIn = false;
             this._isRefreshing = false;
             this._stateManager = new StateManager();
@@ -337,6 +338,10 @@ export default GObject.registerClass(
 
         getPanelPosition() {
             return this._extSettings.get_string(`panel-position`)
+        }
+
+        getName() {
+            return this._indicatorName;
         }
 
         _moveIndicator() {

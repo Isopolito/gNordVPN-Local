@@ -13,7 +13,7 @@ export default class GnordVpnExtension extends Extension {
         this._vpnIndicator = new VpnIndicator();
         this._vpnIndicator.enable();
 
-        Main.panel.addToStatusArea(indicatorName, this._vpnIndicator, 0, this._vpnIndicator.getPanelPosition());
+        Main.panel.addToStatusArea(this._vpnIndicator.getName(), this._vpnIndicator, 0, this._vpnIndicator.getPanelPosition());
     }
 
     disable() {
