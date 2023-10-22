@@ -18,14 +18,14 @@ import * as Constants from './constants.js';
 
 export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
-
         _init() {
-            this._indicatorName = `VPN Indicator`;
-            super._init(0.5, this._indicatorName, false);
-            this._extSettings = Extension.lookupByURL(import.meta.url).getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
             this._isLoggedIn = false;
             this._isRefreshing = false;
+            this._indicatorName = `VPN Indicator`;
             this._stateManager = new StateManager();
+            super._init(0.5, this._indicatorName, false);
+            this._extension = Extension.lookupByURL(import.meta.url);
+            this._extSettings = this._extension.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
             this._moveIndicator();
 
@@ -205,14 +205,7 @@ export default GObject.registerClass(
 
         _openSettings() {
             try {
-                if (typeof ExtensionUtils.openPrefs === `function`) {
-                    ExtensionUtils.openPrefs();
-                } else {
-                    Util.spawn([
-                        `gnome-shell-extension-prefs`,
-                        Me.uuid
-                    ]);
-                }
+                this._extension.openPreferences();
             } catch (e) {
                 log(e, `Gnordvpn: Error opening preferences`);
             }
@@ -220,6 +213,7 @@ export default GObject.registerClass(
 
         async _buildIndicatorMenu() {
             try {
+                log(`gnordvpn: building indicator menu`)
                 this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
                 this._statusPopup.menu.connect(`open-state-changed`, (actor, event) => this._setQuickRefresh(event));
                 this.menu.addMenuItem(this._statusPopup);
@@ -269,13 +263,13 @@ export default GObject.registerClass(
 
                 // Add `Login` menu item
                 this._loginMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.login);
-                const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, () => this._login.catch(e => log(e, `Gnordvpn: Unable to login`)));
+                const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, () => this._login().catch(e => log(e, `Gnordvpn: Unable to login`)));
                 this._signals.register(loginMenuItemClickId, () => this._loginMenuItem.disconnect(loginMenuItemClickId));
                 this.menu.addMenuItem(this._loginMenuItem);
 
                 // Add `Logout` menu item
                 this._logoutMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.logout);
-                const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, () => this._logout.catch(e => log(e, `Gnordvpn: Unable to logout`)));
+                const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, () => this._logout().catch(e => log(e, `Gnordvpn: Unable to logout`)));
                 this._signals.register(logoutMenuItemClickId, () => this._logoutMenuItem.disconnect(logoutMenuItemClickId));
                 this.menu.addMenuItem(this._logoutMenuItem);
 
@@ -287,11 +281,11 @@ export default GObject.registerClass(
                     //Cannot check periodically because:
                     //If checking with `nordvpn account` it fetches from a server that limit request
                     //If checking with `nordvpn login` it generate a new url, preventing the use from login in
-                    this.isLoggedIn = this._vpn.checkLogin();
+                    this._isLoggedIn = this._vpn.checkLogin();
                     this._refresh();
                 });
 
-                this.isLoggedIn = this._vpn.checkLogin();
+                this._isLoggedIn = this._vpn.checkLogin();
             } catch (e) {
                 log(e, `gnordvpn: unable to build indicator menu`);
             }
