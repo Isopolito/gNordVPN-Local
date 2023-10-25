@@ -3,7 +3,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import VpnIndicator from './modules/VpnIndicator.js';
 
-export default class GnordVpnExtension extends Extension {
+export default class GnordVpnLocal extends Extension {
     _isExtensionEnabled = false;
 
     enable() {
