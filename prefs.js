@@ -138,6 +138,7 @@ function createConnectionsPage() {
     techCbox.add_attribute(techRenderer, 'text', 1);
     techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
     techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
+    const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     let tech = settings.get_string(`technology`);
     techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
     techCbox.connect('changed', (entry) => {
@@ -159,7 +160,6 @@ function createConnectionsPage() {
     });
     settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
-    autoConnectToggle.connect('state-set', (widget, state) => settings.set_boolean('autoconnect', state));
     autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
     connectionsGrid.attach(autoConnectLabel, 0, 1, 1, 1);
     connectionsGrid.attach(autoConnectToggle, 1, 1, 1, 1);
@@ -330,6 +330,7 @@ function createConnectionsSaveFooter() {
     // Add some margin to the button for spacing
     button.margin_top = 20;
 
+    const vpn = new Vpn();
     button.connect('clicked', () => vpn.applySettingsToNord());
 
     box.append(button);  // Use append() in GTK 4
