@@ -128,6 +128,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    techLabel.set_tooltip_text("Switch between the underlying technologies, OpenVPN and NordLynx (WireGuard). Use NordLynx for potentially better performance");
     connectionsGrid.attach(techLabel, 0, 0, 1, 1);
 
     let techModel = new Gtk.ListStore();
@@ -158,6 +159,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.END,
         visible: true
     });
+    autoConnectLabel.set_tooltip_text("Automatically connects to the last selected VPN server when the application starts");
     settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
@@ -170,6 +172,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    cybersecLabel.set_tooltip_text("Uses a variety of methods to protect you from online threats, including: Ad blocking, Tracker blocking, Malicious website blocking");
     connectionsGrid.attach(cybersecLabel, 0, 2, 1, 1);
 
     const cyberSecToggle = new Gtk.Switch({
@@ -186,6 +189,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    firewallLabel.set_tooltip_text("Used to control which traffic is allowed through the VPN tunnel and which traffic is allowed to bypass the VPN tunnel. Use whitelist option from CLI to configure");
     connectionsGrid.attach(firewallLabel, 0, 3, 1, 1);
 
     const firewallToggle = new Gtk.Switch({
@@ -201,6 +205,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    killswitchLabel.set_tooltip_text("Prevents your system from making any connections outside the VPN tunnel, ensuring your real IP address is never exposed in case of a network disconnect");
     connectionsGrid.attach(killswitchLabel, 0, 4, 1, 1);
 
     const killswitchToggle = new Gtk.Switch({
@@ -221,6 +226,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    obfuscateLabel.set_tooltip_text("Encrypt VPN traffic to make it look like regular HTTPS traffic. This can make it more difficult for firewalls and other network monitoring tools to detect a VPN. NOTE: This will reduce available countries for servers");
     connectionsGrid.attach(obfuscateLabel, 0, 5, 1, 1);
 
     const obfuscateToggle = new Gtk.Switch({
@@ -237,6 +243,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    analyticsLabel.set_tooltip_text("Collect and send anonymous analytics data to NordVPN");
     connectionsGrid.attach(analyticsLabel, 0, 6, 1, 1);
 
     const analyticsToggle = new Gtk.Switch({
@@ -269,6 +276,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    protocolLabel.set_tooltip_text("UDP is preferable for streaming or audio/video content, while TCP is better for other types of data transfer");
     connectionsGrid.attach(protocolLabel, 0, 8, 1, 1);
 
     let protoModel = new Gtk.ListStore();
@@ -411,11 +419,10 @@ function createCitiesPage(countryMap, countryNames) {
         settings.set_value('countries-selected-for-cities', new GLib.Variant('as', selected));
     });
 
-    let cityScroll = new Gtk.ScrolledWindow();
+    const cityScroll = new Gtk.ScrolledWindow();
     cityScroll.set_child(cityTreeView);
     cityScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
     cityScroll.set_min_content_height(400);
-
     cityGrid.attach(cityScroll, 1, 1, 1, 1);
 
     return {cityGrid, cityTreeView, cityTreeIterMap};
@@ -553,16 +560,16 @@ function fillPreferencesWindow(window) {
     connectionsPage.add(connectionsGroup);
     window.add(connectionsPage);
 
-    let countryMap = vpn.getCountries();
-    let countryNames = Common.safeObjectKeys(countryMap);
+    const countryMap = vpn.getCountries();
+    const countryNames = Common.safeObjectKeys(countryMap);
 
     // *** CITIES
-    const cityPage = new Adw.PreferencesPage();
-    cityPage.set_title("Cities");
-    cityPage.set_icon_name("document-open-symbolic");
     const cityGroup = new Adw.PreferencesGroup();
     const {cityGrid, cityTreeView, cityTreeIterMap} = createCitiesPage(countryMap, countryNames);
     cityGroup.add(cityGrid);
+    const cityPage = new Adw.PreferencesPage();
+    cityPage.set_title("Cities");
+    cityPage.set_icon_name("document-open-symbolic");
     cityPage.add(cityGroup);
     window.add(cityPage);
 
@@ -571,7 +578,7 @@ function fillPreferencesWindow(window) {
     serverPage.set_title("Servers");
     serverPage.set_icon_name("network-workgroup-symbolic");
     const serverGroup = new Adw.PreferencesGroup();
-    let countryMapWithID = vpn.getCountries(true);
+    const countryMapWithID = vpn.getCountries(true);
     const {
         serverGrid,
         serverTreeView,

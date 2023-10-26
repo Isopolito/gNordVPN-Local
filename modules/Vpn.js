@@ -138,7 +138,6 @@ var Vpn = class Vpn {
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
         this._execCommunicateSync(`${CMD_SETTINGS} firewall ${this.settings.get_boolean(`firewall`)}`);
-        this._execCommunicateSync(`${CMD_SETTINGS} killswitch ${this.settings.get_boolean(`killswitch`)}`);
     }
 
     async setToDefaults() {
