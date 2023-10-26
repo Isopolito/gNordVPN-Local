@@ -194,11 +194,10 @@ function createConnectionsPage() {
         visible: true
     });
     connectionsGrid.attach(firewallToggle, 1, 3, 1, 1);
-    settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
-    // Killswitch
+    // Kill Switch
     const killswitchLabel = new Gtk.Label({
-        label: `Enable Killswitch:`,
+        label: `Enable Kill Switch:`,
         halign: Gtk.Align.START,
         visible: true
     });
@@ -210,6 +209,10 @@ function createConnectionsPage() {
         visible: true
     });
     connectionsGrid.attach(killswitchToggle, 1, 4, 1, 1);
+    firewallToggle.connect('notify::active', (toggle) => {
+        killswitchToggle.sensitive = toggle.active;
+        settings.set_boolean(`firewall`, toggle.active);
+    });
     settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Obfuscate
@@ -321,19 +324,14 @@ function createConnectionsSaveFooter() {
         visible: true,
     });
 
-    // Set custom style
     button.get_style_context().add_class('suggested-action');
-
-    // Adjust the width by setting size request
     button.set_size_request(80, -1);
-
-    // Add some margin to the button for spacing
     button.margin_top = 20;
 
     const vpn = new Vpn();
     button.connect('clicked', () => vpn.applySettingsToNord());
 
-    box.append(button);  // Use append() in GTK 4
+    box.append(button);
 
     return box;
 }
@@ -423,7 +421,7 @@ function createCitiesPage(countryMap, countryNames) {
     return {cityGrid, cityTreeView, cityTreeIterMap};
 }
 
-function createServersPage(normalRender, countryMapWithID, countryMap, countryNames) {
+function createServersPage(countryMapWithID, countryMap, countryNames) {
     const serverGrid = new Gtk.Grid({
         margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
@@ -460,6 +458,8 @@ function createServersPage(normalRender, countryMapWithID, countryMap, countryNa
         expand: true,
         min_width: 200
     });
+
+    let normalRender = new Gtk.CellRendererText();
     serverColumn.pack_start(normalRender, true);
     serverColumn.add_attribute(normalRender, "text", 0);
 
@@ -571,12 +571,12 @@ function fillPreferencesWindow(window) {
     serverPage.set_title("Servers");
     serverPage.set_icon_name("network-workgroup-symbolic");
     const serverGroup = new Adw.PreferencesGroup();
-    let normalRender = new Gtk.CellRendererText();
     let countryMapWithID = vpn.getCountries(true);
     const {
         serverGrid,
-        serverTreeView, serverTreeIterMap
-    } = createServersPage(normalRender, countryMapWithID, countryMap, countryNames);
+        serverTreeView,
+        serverTreeIterMap
+    } = createServersPage(countryMapWithID, countryMap, countryNames);
     serverGroup.add(serverGrid);
     serverPage.add(serverGroup);
     window.add(serverPage);
