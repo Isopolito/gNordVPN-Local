@@ -8,12 +8,6 @@ const ResetManager = Me.imports.modules.prefs.ResetManager.ResetManager;
 const Common = Me.imports.modules.common;
 const Vpn = Me.imports.modules.Vpn.Vpn;
 
-const vpn = new Vpn();
-const stylesManager = new StylesManager();
-const resetManager = new ResetManager();
-const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-let techCbox, protoCbox, countryMap, normalRender, countryMapWithID, countryNames, cityScroll, serverScroll;
-
 function init() {
 }
 
@@ -32,7 +26,8 @@ function createGeneralPage() {
     panelPositionCombo.append("right", "Right");
     generalGrid.attach(panelPositionCombo, 1, 0, 1, 1);
 
-    let initialPosition = settings.get_string('panel-position');
+    const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    const initialPosition = settings.get_string('panel-position');
     panelPositionCombo.set_active_id(initialPosition);
 
     panelPositionCombo.connect('changed', () => {
@@ -60,10 +55,12 @@ function createGeneralPage() {
     return {generalGrid, resetAll};
 }
 
-function createAccountsPage() {
+function createAccountsPage(vpn) {
     const accountsGrid = new Gtk.Grid({
         column_spacing: 12, row_spacing: 12, margin_top: 10, margin_bottom: 10, margin_start: 10, margin_end: 10
     });
+
+    const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
 
     // Show Login Toggle
     const showLoginLabel = new Gtk.Label({label: "Show login button in menu:", halign: Gtk.Align.START});
@@ -105,8 +102,8 @@ function createAccountsPage() {
 
     const refreshAccountButton = new Gtk.Button({label: "Refresh"});
     const refreshAccount = () => {
-        let account = vpn.getAccount();
-        let loggedIn = !!account.emailAddress;
+        const account = vpn.getAccount();
+        const loggedIn = !!account.emailAddress;
         accountEmail.set_text(account.emailAddress || "");
         accountStatus.set_text(account.vpnService || "");
         loginButton.set_sensitive(!loggedIn);
@@ -131,16 +128,18 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    techLabel.set_tooltip_text("Switch between the underlying technologies, OpenVPN and NordLynx (WireGuard). Use NordLynx for potentially better performance");
     connectionsGrid.attach(techLabel, 0, 0, 1, 1);
 
-    let techModel = new Gtk.ListStore();
+    const techModel = new Gtk.ListStore();
     techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-    techCbox = new Gtk.ComboBox({model: techModel});
-    let techRenderer = new Gtk.CellRendererText();
+    const techCbox = new Gtk.ComboBox({model: techModel});
+    const techRenderer = new Gtk.CellRendererText();
     techCbox.pack_start(techRenderer, true);
     techCbox.add_attribute(techRenderer, 'text', 1);
     techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
     techModel.set(techModel.append(), [0, 1], ['NORDLYNX', 'NordLynx']);
+    const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     let tech = settings.get_string(`technology`);
     techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
     techCbox.connect('changed', (entry) => {
@@ -160,9 +159,9 @@ function createConnectionsPage() {
         halign: Gtk.Align.END,
         visible: true
     });
+    autoConnectLabel.set_tooltip_text("Automatically connects to the last selected VPN server when the application starts");
     settings.bind(`autoconnect`, autoConnectToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
-    autoConnectToggle.connect('state-set', (widget, state) => settings.set_boolean('autoconnect', state));
     autoConnectToggle.set_hexpand(false);  // Don't expand horizontally
     connectionsGrid.attach(autoConnectLabel, 0, 1, 1, 1);
     connectionsGrid.attach(autoConnectToggle, 1, 1, 1, 1);
@@ -173,6 +172,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    cybersecLabel.set_tooltip_text("Uses a variety of methods to protect you from online threats, including: Ad blocking, Tracker blocking, Malicious website blocking");
     connectionsGrid.attach(cybersecLabel, 0, 2, 1, 1);
 
     const cyberSecToggle = new Gtk.Switch({
@@ -189,6 +189,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    firewallLabel.set_tooltip_text("Used to control which traffic is allowed through the VPN tunnel and which traffic is allowed to bypass the VPN tunnel. Use whitelist option from CLI to configure");
     connectionsGrid.attach(firewallLabel, 0, 3, 1, 1);
 
     const firewallToggle = new Gtk.Switch({
@@ -197,14 +198,14 @@ function createConnectionsPage() {
         visible: true
     });
     connectionsGrid.attach(firewallToggle, 1, 3, 1, 1);
-    settings.bind(`firewall`, firewallToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
-    // Killswitch
+    // Kill Switch
     const killswitchLabel = new Gtk.Label({
-        label: `Enable Killswitch:`,
+        label: `Enable Kill Switch:`,
         halign: Gtk.Align.START,
         visible: true
     });
+    killswitchLabel.set_tooltip_text("Prevents your system from making any connections outside the VPN tunnel, ensuring your real IP address is never exposed in case of a network disconnect");
     connectionsGrid.attach(killswitchLabel, 0, 4, 1, 1);
 
     const killswitchToggle = new Gtk.Switch({
@@ -213,6 +214,10 @@ function createConnectionsPage() {
         visible: true
     });
     connectionsGrid.attach(killswitchToggle, 1, 4, 1, 1);
+    firewallToggle.connect('notify::active', (toggle) => {
+        killswitchToggle.sensitive = toggle.active;
+        settings.set_boolean(`firewall`, toggle.active);
+    });
     settings.bind(`killswitch`, killswitchToggle, `active`, Gio.SettingsBindFlags.DEFAULT);
 
     // Obfuscate
@@ -221,6 +226,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    obfuscateLabel.set_tooltip_text("Encrypt VPN traffic to make it look like regular HTTPS traffic. This can make it more difficult for firewalls and other network monitoring tools to detect a VPN. NOTE: This will reduce available countries for servers");
     connectionsGrid.attach(obfuscateLabel, 0, 5, 1, 1);
 
     const obfuscateToggle = new Gtk.Switch({
@@ -237,6 +243,7 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    analyticsLabel.set_tooltip_text("Collect and send anonymous analytics data to NordVPN");
     connectionsGrid.attach(analyticsLabel, 0, 6, 1, 1);
 
     const analyticsToggle = new Gtk.Switch({
@@ -269,12 +276,13 @@ function createConnectionsPage() {
         halign: Gtk.Align.START,
         visible: true
     });
+    protocolLabel.set_tooltip_text("UDP is preferable for streaming or audio/video content, while TCP is better for other types of data transfer");
     connectionsGrid.attach(protocolLabel, 0, 8, 1, 1);
 
-    let protoModel = new Gtk.ListStore();
+    const protoModel = new Gtk.ListStore();
     protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-    protoCbox = new Gtk.ComboBox({model: protoModel});
-    let protoRenderer = new Gtk.CellRendererText();
+    const protoCbox = new Gtk.ComboBox({model: protoModel});
+    const protoRenderer = new Gtk.CellRendererText();
     protoCbox.pack_start(protoRenderer, true);
     protoCbox.add_attribute(protoRenderer, 'text', 1);
     protoModel.set(protoModel.append(), [0, 1], ['UDP', 'UDP']);
@@ -309,7 +317,7 @@ function createConnectionsPage() {
     }
 
     onTechChange(tech);
-    return {connectionsGrid, resetConnection};
+    return {connectionsGrid, resetConnection, techCbox, protoCbox};
 }
 
 function createConnectionsSaveFooter() {
@@ -324,23 +332,19 @@ function createConnectionsSaveFooter() {
         visible: true,
     });
 
-    // Set custom style
     button.get_style_context().add_class('suggested-action');
-
-    // Adjust the width by setting size request
     button.set_size_request(80, -1);
-
-    // Add some margin to the button for spacing
     button.margin_top = 20;
 
+    const vpn = new Vpn();
     button.connect('clicked', () => vpn.applySettingsToNord());
 
-    box.append(button);  // Use append() in GTK 4
+    box.append(button);
 
     return box;
 }
 
-function createCitiesPage() {
+function createCitiesPage(countryMap, countryNames) {
     const cityGrid = new Gtk.Grid({
         margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
@@ -358,6 +362,7 @@ function createCitiesPage() {
 
     cityGrid.attach(maxCityPerCountryInput, 1, 0, 1, 1);
 
+    const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     settings.bind(`number-cities-per-countries`, maxCityPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const citySelectLabel = new Gtk.Label({
@@ -368,12 +373,12 @@ function createCitiesPage() {
     });
     cityGrid.attach(citySelectLabel, 0, 1, 1, 1);
 
-    let cityStore = new Gtk.TreeStore();
+    const cityStore = new Gtk.TreeStore();
     cityStore.set_column_types([GObject.TYPE_STRING]);
 
-    let cityColumnRenderer = new Gtk.CellRendererText();
+    const cityColumnRenderer = new Gtk.CellRendererText();
     cityColumnRenderer.height = 30;
-    let cityColumn = new Gtk.TreeViewColumn({
+    const cityColumn = new Gtk.TreeViewColumn({
         title: "Countries",
         expand: true,
         min_width: 200
@@ -381,14 +386,14 @@ function createCitiesPage() {
     cityColumn.pack_start(cityColumnRenderer, true);
     cityColumn.add_attribute(cityColumnRenderer, "text", 0);
 
-    let cityTreeView = new Gtk.TreeView({
+    const cityTreeView = new Gtk.TreeView({
         model: cityStore
     });
     cityTreeView.insert_column(cityColumn, 0);
     cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
-    let cityTreeIterMap = {};
-    let cityCountries = settings.get_value('countries-selected-for-cities').deep_unpack();
+    const cityTreeIterMap = {};
+    const cityCountries = settings.get_value('countries-selected-for-cities').deep_unpack();
     if (countryNames) {
         countryNames.forEach(country => {
             let iter = cityStore.append(null);
@@ -414,17 +419,16 @@ function createCitiesPage() {
         settings.set_value('countries-selected-for-cities', new GLib.Variant('as', selected));
     });
 
-    cityScroll = new Gtk.ScrolledWindow();
+    const cityScroll = new Gtk.ScrolledWindow();
     cityScroll.set_child(cityTreeView);
     cityScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
     cityScroll.set_min_content_height(400);
-
     cityGrid.attach(cityScroll, 1, 1, 1, 1);
 
     return {cityGrid, cityTreeView, cityTreeIterMap};
 }
 
-function createServersPage() {
+function createServersPage(countryMapWithID, countryMap, countryNames) {
     const serverGrid = new Gtk.Grid({
         margin_start: 18, margin_top: 10, column_spacing: 12, row_spacing: 12, visible: true
     });
@@ -442,6 +446,7 @@ function createServersPage() {
 
     serverGrid.attach(maxServerPerCountryInput, 1, 0, 1, 1);
 
+    const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
     settings.bind(`number-servers-per-countries`, maxServerPerCountryInput, `value`, Gio.SettingsBindFlags.DEFAULT);
 
     const serverSelectLabel = new Gtk.Label({
@@ -452,25 +457,27 @@ function createServersPage() {
     });
     serverGrid.attach(serverSelectLabel, 0, 1, 1, 1);
 
-    let serverStore = new Gtk.TreeStore();
+    const serverStore = new Gtk.TreeStore();
     serverStore.set_column_types([GObject.TYPE_STRING]);
 
-    let serverColumn = new Gtk.TreeViewColumn({
+    const serverColumn = new Gtk.TreeViewColumn({
         title: "Countries",
         expand: true,
         min_width: 200
     });
+
+    const normalRender = new Gtk.CellRendererText();
     serverColumn.pack_start(normalRender, true);
     serverColumn.add_attribute(normalRender, "text", 0);
 
-    let serverTreeView = new Gtk.TreeView({
+    const serverTreeView = new Gtk.TreeView({
         model: serverStore
     });
     serverTreeView.insert_column(serverColumn, 0);
     serverTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
-    let serverTreeIterMap = {}
-    let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
+    const serverTreeIterMap = {}
+    const serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
     if (countryNames) {
         countryNames.forEach(country => {
             let iter = serverStore.append(null);
@@ -496,7 +503,7 @@ function createServersPage() {
         settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
     });
 
-    serverScroll = new Gtk.ScrolledWindow();
+    const serverScroll = new Gtk.ScrolledWindow();
     serverScroll.set_child(serverTreeView);
     serverScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
     serverScroll.set_min_content_height(150);
@@ -508,6 +515,7 @@ function createServersPage() {
 }
 
 function fillPreferencesWindow(window) {
+    const vpn = new Vpn();
     vpn.setSettingsFromNord();
 
     // *** GENERAL
@@ -525,7 +533,7 @@ function fillPreferencesWindow(window) {
     accountsPage.set_title("Account");
     accountsPage.set_icon_name("user-home-symbolic");
     const accountsGroup = new Adw.PreferencesGroup();
-    accountsGroup.add(createAccountsPage());
+    accountsGroup.add(createAccountsPage(vpn));
     accountsPage.add(accountsGroup);
     window.add(accountsPage);
 
@@ -534,7 +542,7 @@ function fillPreferencesWindow(window) {
     stylesPage.set_title("Styles");
     stylesPage.set_icon_name("edit-select-all-symbolic");
     const stylesGroup = new Adw.PreferencesGroup();
-    stylesGroup.add(stylesManager.createStylesPage());
+    stylesGroup.add(new StylesManager().createStylesPage());
     stylesPage.add(stylesGroup);
     window.add(stylesPage);
 
@@ -543,24 +551,25 @@ function fillPreferencesWindow(window) {
     connectionsPage.set_title("Connection");
     connectionsPage.set_icon_name("network-server-symbolic");
     const connectionsGroup = new Adw.PreferencesGroup();
-    const {connectionsGrid, resetConnection} = createConnectionsPage();
+    const {
+        connectionsGrid, resetConnection,
+        techCbox, protoCbox
+    } = createConnectionsPage();
     connectionsGroup.add(connectionsGrid);
     connectionsGroup.add(createConnectionsSaveFooter());
     connectionsPage.add(connectionsGroup);
     window.add(connectionsPage);
 
-    countryMap = vpn.getCountries();
-    normalRender = new Gtk.CellRendererText();
-    countryMapWithID = vpn.getCountries(true);
-    countryNames = Common.safeObjectKeys(countryMap);
+    const countryMap = vpn.getCountries();
+    const countryNames = Common.safeObjectKeys(countryMap);
 
     // *** CITIES
+    const cityGroup = new Adw.PreferencesGroup();
+    const {cityGrid, cityTreeView, cityTreeIterMap} = createCitiesPage(countryMap, countryNames);
+    cityGroup.add(cityGrid);
     const cityPage = new Adw.PreferencesPage();
     cityPage.set_title("Cities");
     cityPage.set_icon_name("document-open-symbolic");
-    const cityGroup = new Adw.PreferencesGroup();
-    const {cityGrid, cityTreeView, cityTreeIterMap} = createCitiesPage();
-    cityGroup.add(cityGrid);
     cityPage.add(cityGroup);
     window.add(cityPage);
 
@@ -569,11 +578,18 @@ function fillPreferencesWindow(window) {
     serverPage.set_title("Servers");
     serverPage.set_icon_name("network-workgroup-symbolic");
     const serverGroup = new Adw.PreferencesGroup();
-    const {serverGrid, serverTreeView, serverTreeIterMap} = createServersPage();
+    const countryMapWithID = vpn.getCountries(true);
+    const {
+        serverGrid,
+        serverTreeView,
+        serverTreeIterMap
+    } = createServersPage(countryMapWithID, countryMap, countryNames);
     serverGroup.add(serverGrid);
     serverPage.add(serverGroup);
     window.add(serverPage);
 
+    const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    const resetManager = new ResetManager();
     resetAll.connect('clicked', () => {
         resetManager.resetAllSettings(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap);
     });
