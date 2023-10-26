@@ -27,7 +27,7 @@ function createGeneralPage() {
     generalGrid.attach(panelPositionCombo, 1, 0, 1, 1);
 
     const settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
-    let initialPosition = settings.get_string('panel-position');
+    const initialPosition = settings.get_string('panel-position');
     panelPositionCombo.set_active_id(initialPosition);
 
     panelPositionCombo.connect('changed', () => {
@@ -102,8 +102,8 @@ function createAccountsPage(vpn) {
 
     const refreshAccountButton = new Gtk.Button({label: "Refresh"});
     const refreshAccount = () => {
-        let account = vpn.getAccount();
-        let loggedIn = !!account.emailAddress;
+        const account = vpn.getAccount();
+        const loggedIn = !!account.emailAddress;
         accountEmail.set_text(account.emailAddress || "");
         accountStatus.set_text(account.vpnService || "");
         loginButton.set_sensitive(!loggedIn);
@@ -131,10 +131,10 @@ function createConnectionsPage() {
     techLabel.set_tooltip_text("Switch between the underlying technologies, OpenVPN and NordLynx (WireGuard). Use NordLynx for potentially better performance");
     connectionsGrid.attach(techLabel, 0, 0, 1, 1);
 
-    let techModel = new Gtk.ListStore();
+    const techModel = new Gtk.ListStore();
     techModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-    let techCbox = new Gtk.ComboBox({model: techModel});
-    let techRenderer = new Gtk.CellRendererText();
+    const techCbox = new Gtk.ComboBox({model: techModel});
+    const techRenderer = new Gtk.CellRendererText();
     techCbox.pack_start(techRenderer, true);
     techCbox.add_attribute(techRenderer, 'text', 1);
     techModel.set(techModel.append(), [0, 1], ['OPENVPN', 'OpenVpn']);
@@ -279,10 +279,10 @@ function createConnectionsPage() {
     protocolLabel.set_tooltip_text("UDP is preferable for streaming or audio/video content, while TCP is better for other types of data transfer");
     connectionsGrid.attach(protocolLabel, 0, 8, 1, 1);
 
-    let protoModel = new Gtk.ListStore();
+    const protoModel = new Gtk.ListStore();
     protoModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-    let protoCbox = new Gtk.ComboBox({model: protoModel});
-    let protoRenderer = new Gtk.CellRendererText();
+    const protoCbox = new Gtk.ComboBox({model: protoModel});
+    const protoRenderer = new Gtk.CellRendererText();
     protoCbox.pack_start(protoRenderer, true);
     protoCbox.add_attribute(protoRenderer, 'text', 1);
     protoModel.set(protoModel.append(), [0, 1], ['UDP', 'UDP']);
@@ -373,12 +373,12 @@ function createCitiesPage(countryMap, countryNames) {
     });
     cityGrid.attach(citySelectLabel, 0, 1, 1, 1);
 
-    let cityStore = new Gtk.TreeStore();
+    const cityStore = new Gtk.TreeStore();
     cityStore.set_column_types([GObject.TYPE_STRING]);
 
-    let cityColumnRenderer = new Gtk.CellRendererText();
+    const cityColumnRenderer = new Gtk.CellRendererText();
     cityColumnRenderer.height = 30;
-    let cityColumn = new Gtk.TreeViewColumn({
+    const cityColumn = new Gtk.TreeViewColumn({
         title: "Countries",
         expand: true,
         min_width: 200
@@ -386,14 +386,14 @@ function createCitiesPage(countryMap, countryNames) {
     cityColumn.pack_start(cityColumnRenderer, true);
     cityColumn.add_attribute(cityColumnRenderer, "text", 0);
 
-    let cityTreeView = new Gtk.TreeView({
+    const cityTreeView = new Gtk.TreeView({
         model: cityStore
     });
     cityTreeView.insert_column(cityColumn, 0);
     cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
-    let cityTreeIterMap = {};
-    let cityCountries = settings.get_value('countries-selected-for-cities').deep_unpack();
+    const cityTreeIterMap = {};
+    const cityCountries = settings.get_value('countries-selected-for-cities').deep_unpack();
     if (countryNames) {
         countryNames.forEach(country => {
             let iter = cityStore.append(null);
@@ -457,27 +457,27 @@ function createServersPage(countryMapWithID, countryMap, countryNames) {
     });
     serverGrid.attach(serverSelectLabel, 0, 1, 1, 1);
 
-    let serverStore = new Gtk.TreeStore();
+    const serverStore = new Gtk.TreeStore();
     serverStore.set_column_types([GObject.TYPE_STRING]);
 
-    let serverColumn = new Gtk.TreeViewColumn({
+    const serverColumn = new Gtk.TreeViewColumn({
         title: "Countries",
         expand: true,
         min_width: 200
     });
 
-    let normalRender = new Gtk.CellRendererText();
+    const normalRender = new Gtk.CellRendererText();
     serverColumn.pack_start(normalRender, true);
     serverColumn.add_attribute(normalRender, "text", 0);
 
-    let serverTreeView = new Gtk.TreeView({
+    const serverTreeView = new Gtk.TreeView({
         model: serverStore
     });
     serverTreeView.insert_column(serverColumn, 0);
     serverTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
-    let serverTreeIterMap = {}
-    let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
+    const serverTreeIterMap = {}
+    const serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
     if (countryNames) {
         countryNames.forEach(country => {
             let iter = serverStore.append(null);
@@ -503,7 +503,7 @@ function createServersPage(countryMapWithID, countryMap, countryNames) {
         settings.set_value('countries-selected-for-servers', new GLib.Variant('ai', selected));
     });
 
-    let serverScroll = new Gtk.ScrolledWindow();
+    const serverScroll = new Gtk.ScrolledWindow();
     serverScroll.set_child(serverTreeView);
     serverScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
     serverScroll.set_min_content_height(150);
