@@ -298,12 +298,12 @@ export default GObject.registerClass(
 
         enable() {
             try {
-                this._vpn = new Vpn();
+                this._vpn = new Vpn(this._extSettings);
                 this._signals = new Signals();
-                this._commonFavorite = new CommonFavorite(this._overrideRefresh.bind(this));
-                this._countryMenu = new ConnectionMenu(`Countries`, `countries`, Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this));
-                this._cityMenu = new ConnectionMenu(`Cities`, `cities`, Constants.favorites.favoriteCities, this._overrideRefresh.bind(this));
-                this._serverMenu = new ConnectionMenu(`Servers`, `servers`, Constants.favorites.favoriteServers, this._overrideRefresh.bind(this));
+                this._commonFavorite = new CommonFavorite(this._overrideRefresh.bind(this), this._extSettings);
+                this._countryMenu = new ConnectionMenu(`Countries`, `countries`, Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this), this._extSettings);
+                this._cityMenu = new ConnectionMenu(`Cities`, `cities`, Constants.favorites.favoriteCities, this._overrideRefresh.bind(this), this._extSettings);
+                this._serverMenu = new ConnectionMenu(`Servers`, `servers`, Constants.favorites.favoriteServers, this._overrideRefresh.bind(this), this._extSettings);
                 this._panelIcon = new PanelIcon();
 
                 this._buildIndicatorMenu().then(() => {

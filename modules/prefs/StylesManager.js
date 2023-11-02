@@ -1,14 +1,12 @@
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
-
 import * as Common from '../common';
 import * as Constants from '../constants';
 
 export default class StylesManager {
-    constructor() {
-        this.settings = Extension.lookupByURL(import.meta.url).getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    constructor(settings) {
+        this._settings = settings;
     }
 
     createStylesPage() {

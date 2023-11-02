@@ -13,10 +13,10 @@ import ResetManager from './modules/prefs/ResetManager.js';
 export default class GnordVpnPrefs extends ExtensionPreferences {
     constructor() {
         super();
-        this._vpn = new Vpn();
         this._settings = this.getSettings();
+        this._vpn = new Vpn(this._settings);
         this._resetManager = new ResetManager();
-        this._stylesManager = new StylesManager();
+        this._stylesManager = new StylesManager(this._settings);
         this._techCbox = null;
         this._protoCbox = null;
         this._normalRender = null;

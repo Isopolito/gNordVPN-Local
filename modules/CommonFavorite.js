@@ -7,7 +7,7 @@ import MenuBase from './MenuBase.js';
 import * as Constants from './constants.js';
 
 export default class CommonFavorite extends MenuBase {
-    constructor(connectionCallback) {
+    constructor(connectionCallback, settings) {
         super();
         this._connectionCallback = connectionCallback;
         this._isBuilt = false;
@@ -17,7 +17,7 @@ export default class CommonFavorite extends MenuBase {
         this.prevShowHide = true;
 
         this._favorites = new Favorites();
-        this._vpn = new Vpn();
+        this._vpn = new Vpn(settings);
         this._signals = new Signals();
     }
 

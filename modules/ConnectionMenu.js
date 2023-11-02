@@ -8,7 +8,7 @@ import * as Common from './common.js';
 import * as Constants from './constants.js';
 
 export default class ConnectionMenu extends MenuBase {
-    constructor(connectionLabel, connectionType, favoritesKey, connectionCallback) {
+    constructor(connectionLabel, connectionType, favoritesKey, connectionCallback, settings) {
         super();
         this._connectionCallback = connectionCallback;
         this._connectionMenu = null;
@@ -19,7 +19,7 @@ export default class ConnectionMenu extends MenuBase {
         this._destroyMap = {};
 
         this._favorites = new Favorites();
-        this._vpn = new Vpn();
+        this._vpn = new Vpn(settings);
         this._signals = new Signals();
 
         this._connectionLabel = connectionLabel;

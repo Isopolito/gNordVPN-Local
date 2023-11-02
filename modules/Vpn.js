@@ -1,7 +1,6 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import Soup from 'gi://Soup';
 
 const CMD_VPNSTATUS = `nordvpn status`;
@@ -18,8 +17,8 @@ const CMD_LOGIN = `nordvpn login`;
 const CMD_LOGOUT = `nordvpn logout`;
 
 export default class Vpn {
-    constructor() {
-        this._settings = Extension.lookupByURL(import.meta.url).getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    constructor(settings) {
+        this._settings = settings
         this._session = Soup.Session.new();
         this._soupVersion = Soup.get_major_version();
         this._lastConnectedAt = 0;
