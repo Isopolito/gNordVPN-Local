@@ -1,8 +1,8 @@
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
-import * as Common from '../common';
-import * as Constants from '../constants';
+import * as Common from '../common.js';
+import * as Constants from '../constants.js';
 
 export default class StylesManager {
     constructor(settings) {
