@@ -3,6 +3,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import Adw from 'gi://Adw';
+import Gdk from 'gi://Gdk';
 
 import Vpn from '../Vpn.js';
 import StylesManager from './StylesManager.js';
@@ -523,6 +524,25 @@ export default class GnordVpnPrefs {
         return {serverGrid, serverTreeView, serverTreeIterMap};
     }
 
+    _setWindowSize(window) {
+        const [pmWidth, pmHeight, pmScale] = this._getPrimaryMonitorInfo();
+        const width = pmWidth * .8;
+        const height = pmHeight * .6;
+
+        window.set_default_size(width > 900 ? 900 : width, height > 700 ?  700 : height);
+    }
+
+    _getPrimaryMonitorInfo() {
+        const display = Gdk.Display.get_default();
+        const pm = display.get_monitors().get_item(0);
+        if (!pm) return [700, 500, 1];
+
+        const geo = pm.get_geometry();
+        const scale = pm.get_scale_factor();
+
+        return [geo.width, geo.height, scale];
+    }
+
     fillPreferencesWindow(window) {
         this._vpn.setSettingsFromNord();
 
@@ -598,7 +618,7 @@ export default class GnordVpnPrefs {
             resetManager.resetConnectionSettings(this._settings, this._protoCbox, this._techCbox);
         });
 
-        window.set_default_size(1000, 600);
+        this._setWindowSize(window);
         return window;
     }
 }

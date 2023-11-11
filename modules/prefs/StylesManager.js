@@ -132,7 +132,7 @@ export default class StylesManager {
         stylePage.attach(altToggle, 1, 1, 1, 1);
 
         const loadDefault = new Gtk.Label({
-            label: '<b>Build default: </b>\n<small>Extra Large will cause the panel to refresh every 1 second</small>',
+            label: '<b>Build default: </b>',
             halign: Gtk.Align.START,
             use_markup: true,
             visible: true
@@ -150,6 +150,7 @@ export default class StylesManager {
         stylePage.attach(styleLarge, 3, 2, 1, 1);
 
         const styleExtraLarge = new Gtk.Button({label: `Extra Large default`, visible: true});
+        styleExtraLarge.set_tooltip_text('Extra Large will cause the panel to refresh every 1 second');
         stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
 
         return {stylePage, monoToggle, altToggle, styleSmall, styleMedium, styleLarge, styleExtraLarge};
@@ -220,7 +221,7 @@ export default class StylesManager {
         this._loadStyle(savedStyle, styleItems);
 
         const connectedKeyLabel = new Gtk.Label({
-            label: `<b>* Available keys for CONNECTED: {country},{COUNTRY},{ctry},{city},{CITY},{number},{server},{ip},{tech},{protocol},{transfer},{transferUp},{transferDown},{uptime},{uptimeHr},{uptimeMin},{uptimeSec}</b>`,
+            label: `<b>* Available keys for CONNECTED:</b> {country},{COUNTRY},{ctry},{city},{CITY},{number},{server},{ip},{tech},{protocol},\n{transfer},{transferUp},{transferDown},{uptime},{uptimeHr},{uptimeMin},{uptimeSec}`,
             halign: Gtk.Align.START,
             use_markup: true,
             visible: true,
