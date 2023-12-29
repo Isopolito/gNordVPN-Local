@@ -8,8 +8,6 @@ export default class ProcCom {
 
     async execCommunicateAsync(command, input = null) {
         let argv = command.split(/\s+/);
-        log(`gnordvpn: executing '${command}'`)
-
         try {
             const proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
             const [stdout, stderr] = await proc.communicate_utf8_async(null, null);

@@ -1,12 +1,12 @@
 import St from 'gi://St';
 import GObject from 'gi://GObject';
+import GLib from 'gi://GLib';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const Mainloop = imports.mainloop;
 
 import Vpn from './Vpn.js';
 import Signals from './Signals.js';
@@ -100,8 +100,6 @@ export default GObject.registerClass(
 
                 this._throttledMenuBuild(status);
 
-                log(`\ngnordvpn status: ${JSON.stringify(status)}\n`);
-
                 // Update the menu and panel based on the current state
                 this._updateMenu(status);
                 this._panelIcon.update(status);
@@ -123,7 +121,6 @@ export default GObject.registerClass(
                 // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
                 // to provide available cities, countries, etc
                 if (status.currentState.stateName !== Constants.states[`ERROR`]) {
-                    log(`gnordvpn: building menus`)
                     this._countryMenu.tryBuild();
                     this._cityMenu.tryBuild();
                     this._serverMenu.tryBuild();
@@ -215,7 +212,7 @@ export default GObject.registerClass(
         _clearTimeout() {
             // Remove the refresh timer if active
             if (this._timeout) {
-                Mainloop.source_remove(this._timeout);
+                GLib.Source.remove(this._timeout);
                 this._timeout = undefined;
             }
         }
@@ -310,7 +307,10 @@ export default GObject.registerClass(
 
         _setTimeout(timeoutDuration) {
             // Refresh after an interval
-            this._timeout = Mainloop.timeout_add_seconds(timeoutDuration, () => this._refresh().catch(e => log(e, `Gnordvpn: Unable to refresh`)));
+            this._timeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, timeoutDuration, () => {
+                this._refresh().catch(e => log(e, `Gnordvpn: Unable to refresh`));
+                return GLib.SOURCE_REMOVE; // Ensure the timeout is only run once
+            });
         }
 
         enable() {
