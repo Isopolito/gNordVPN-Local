@@ -7,7 +7,6 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-
 import Vpn from './Vpn.js';
 import Signals from './Signals.js';
 import ConnectionMenu from './ConnectionMenu.js';
@@ -105,7 +104,7 @@ export default GObject.registerClass(
                 this._panelIcon.update(status);
 
                 // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
-                const timeoutInSec = this._extSettings.get_boolean(`extra-large-button`) ? 5 : status.currentState.refreshTimeout;
+                const timeoutInSec = this._extSettings.get_boolean(`extra-large-button`) ? 3 : status.currentState.refreshTimeout;
                 this._setTimeout(timeoutInSec);
             } catch (e) {
                 log(e, `gnordvpn: Unable to refresh`);
@@ -134,7 +133,11 @@ export default GObject.registerClass(
 
             // Set the status text on the menu
             this._statusLabel.text = status.connectStatus;
-            this._statusPopup.get_label_actor().set_text(status.connectStatus);
+
+            const actor = this._statusPopup.get_label_actor();
+            if (!actor) return;
+            actor.set_text(status.connectStatus);
+
             this._statusPopup.menu.removeAll();
 
             let hasItems = false;
