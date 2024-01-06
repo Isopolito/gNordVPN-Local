@@ -38,7 +38,7 @@ Enable on gnome-extensions at [gNordVPN Local on gnome extensions](https://exten
 
 ## Troubleshooting
 
-If the extension shows an error state, make sure NordVPN CLI is functioning (`nordvpn status`). The extension relies on NordVPN CLI being operational. If any behavior suddenly changes, check `nordvpn` CLI to see if anything has changed there, sometimes they make intentional changes that need to be handled by the extesion. Other times they have transient errors on their end that eventually clear up.
+If the extension shows an error state, make sure NordVPN CLI is functioning (`nordvpn status`). The extension relies on NordVPN CLI being operational. If any behavior suddenly changes, check `nordvpn` CLI to see if anything has changed there, sometimes they make breaking changes that need to be handled by the extesion. Other times they have transient errors on their end that eventually clear up.
 
 ## Development
 
