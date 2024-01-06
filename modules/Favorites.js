@@ -1,8 +1,6 @@
-const ExtensionUtils = imports.misc.extensionUtils;
-
-var Favorites = class Favorites {
-    constructor() {
-        this._settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+export default class Favorites {
+    constructor(settings) {
+        this._settings = settings;
     }
 
     _getData(a) { return this._settings.get_string(a); }

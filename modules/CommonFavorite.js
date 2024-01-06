@@ -1,17 +1,13 @@
-'use strict';
-const PopupMenu = imports.ui.popupMenu;
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-// gNordVpn-Local modules
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Vpn = Me.imports.modules.Vpn.Vpn;
-const Constants = Me.imports.modules.constants;
-const Signals = Me.imports.modules.Signals.Signals;
-const MenuBase = Me.imports.modules.MenuBase.MenuBase;
-const Favorites = Me.imports.modules.Favorites.Favorites;
+import Vpn from './Vpn.js';
+import Signals from './Signals.js';
+import Favorites from './Favorites.js';
+import MenuBase from './MenuBase.js';
+import * as Constants from './constants.js';
 
-var CommonFavorite = class CommonFavorite extends MenuBase {
-    constructor(connectionCallback) {
+export default class CommonFavorite extends MenuBase {
+    constructor(connectionCallback, settings) {
         super();
         this._connectionCallback = connectionCallback;
         this._isBuilt = false;
@@ -20,8 +16,8 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
         this._destroyMap = {};
         this.prevShowHide = true;
 
-        this._favorites = new Favorites();
-        this._vpn = new Vpn();
+        this._favorites = new Favorites(settings);
+        this._vpn = new Vpn(settings);
         this._signals = new Signals();
     }
 
@@ -85,11 +81,11 @@ var CommonFavorite = class CommonFavorite extends MenuBase {
     }
 
     _toggleFavoriteMenuItem(favorite, toAdd) {
-        let d = this._destroyMap[favorite];
-        if (d) {
-            this._signals.disconnect([d.menuItemClickId, d.menuItem.favoritePressId]);
-            d.icofavBtn.destroy();
-            d.menuItem.destroy();
+        let menuItemElements = this._destroyMap[favorite];
+        if (menuItemElements) {
+            this._signals.disconnect([menuItemElements.menuItemClickId, menuItemElements.menuItem.favoritePressId]);
+            menuItemElements.icofavBtn.destroy();
+            menuItemElements.menuItem.destroy();
         }
 
         if (toAdd) { 

@@ -1,11 +1,6 @@
-// noinspection ES6ConvertVarToLetConst
-'use strict';
-const ExtensionUtils = imports.misc.extensionUtils;
+import * as Constants from './constants.js';
 
-const Me = ExtensionUtils.getCurrentExtension();
-const Constants = Me.imports.modules.constants;
-
-var StateManager = class StateManager {
+export default class StateManager {
     constructor() {
         this.STATE_OVERRIDE_UNSET = -1;
         this.stateOverride = undefined;

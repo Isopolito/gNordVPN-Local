@@ -1,6 +1,4 @@
-'use strict';
-
-var ResetManager = class ResetManager {
+export default class ResetManager {
     resetAllSettings(settings, protoCbox, techCbox, cityTreeView, cityTreeIterMap, serverTreeView, serverTreeIterMap) {
         this._resetGeneralSetting(settings);
         this._resetAccountSetting(settings);

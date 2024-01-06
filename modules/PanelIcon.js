@@ -1,12 +1,11 @@
-const St = imports.gi.St;
-const ExtensionUtils = imports.misc.extensionUtils;
+import St from 'gi://St';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const Me = ExtensionUtils.getCurrentExtension();
-const Constants = Me.imports.modules.constants;
+import * as Constants from './constants.js';
 
-var PanelIcon = class PanelIcon {
-    constructor() {
-        this.settings = ExtensionUtils.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+export default class PanelIcon {
+    constructor(settings) {
+        this._settings = settings;
 
         this.uiMap = {};
         this.commonStyle = "";
@@ -14,14 +13,14 @@ var PanelIcon = class PanelIcon {
     }
 
     updateStyle() {
-        let savedStyle = this.settings.get_value('panel-styles').deep_unpack();
+        let savedStyle = this._settings.get_value('panel-styles').deep_unpack();
 
         this.uiMap = {};
         Object.keys(savedStyle).forEach(key => {
             this.uiMap[Constants.states[key]] = savedStyle[key];
         });
 
-        this.commonStyle = this.settings.get_string(`common-panel-style`);
+        this.commonStyle = this._settings.get_string(`common-panel-style`);
     }
 
     update(status) {
@@ -29,7 +28,7 @@ var PanelIcon = class PanelIcon {
 
         let config = this.uiMap[status.currentState.stateName];
         let msg = config.panelText
-        if (status.currentState.stateName == 'Status: Connected')
+        if (status.currentState.stateName === 'Status: Connected')
             msg = msg.replaceAll('{country}',      status.country)
                      .replaceAll('{COUNTRY}',      status.country.toUpperCase())
                      .replaceAll('{ctry}',         status.currentServer.replace(/(\d|.nordvpn.com)/g, '').toUpperCase())
