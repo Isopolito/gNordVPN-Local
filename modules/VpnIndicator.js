@@ -19,7 +19,6 @@ export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
         _isLoggedIn = false;
         _isRefreshing = false;
-        _isDisconnected = false;
         _indicatorName = `VPN Indicator`;
         _stateManager = new StateManager();
         _lastMenuBuild = null;
@@ -89,7 +88,7 @@ export default GObject.registerClass(
 
         async _refresh() {
             try {
-                if (this._isRefreshing || this._isDisconnected) return;
+                if (this._isRefreshing) return;
                 this.isRefreshing = true;
 
                 // Stop the refreshes
@@ -187,10 +186,8 @@ export default GObject.registerClass(
         }
 
         async _connect() {
-            this._isDisconnected = true;
             this._vpn.connectVpn().then(() => {
                 // Set an override on the status as the command line status takes a while to catch up
-                this._isDisconnected = false;
                 this._overrideRefresh(Constants.status.connecting)
             }).catch(e => log(e, `Gnordvpn: unable to connect to vpn`));
         }
@@ -200,7 +197,6 @@ export default GObject.registerClass(
             this._vpn.disconnectVpn().then(() => {
                 // Set an override on the status as the command line status takes a while to catch up
                 this._overrideRefresh(Constants.status.disconnecting)
-                this._isDisconnected = true;
             }).catch(e => log(e, `Gnordvpn: unable to disconnect`));
         }
 
