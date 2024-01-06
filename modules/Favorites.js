@@ -1,8 +1,6 @@
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
-
 export default class Favorites {
-    constructor() {
-        this._settings = Extension.lookupByURL(import.meta.url).getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    constructor(settings) {
+        this._settings = settings;
     }
 
     _getData(a) { return this._settings.get_string(a); }

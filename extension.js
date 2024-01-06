@@ -10,7 +10,7 @@ export default class GnordVpnLocal extends Extension {
         if (this._isExtensionEnabled) return;
         this._isExtensionEnabled = true;
 
-        this._vpnIndicator = new VpnIndicator();
+        this._vpnIndicator = new VpnIndicator(this);
         this._vpnIndicator.enable();
 
         Main.panel.addToStatusArea(this._vpnIndicator.getName(), this._vpnIndicator, 0, this._vpnIndicator.getPanelPosition());

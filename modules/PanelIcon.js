@@ -4,8 +4,8 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Constants from './constants.js';
 
 export default class PanelIcon {
-    constructor() {
-        this._settings = Extension.lookupByURL(import.meta.url).getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+    constructor(settings) {
+        this._settings = settings;
 
         this.uiMap = {};
         this.commonStyle = "";

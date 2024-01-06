@@ -22,9 +22,13 @@ export default GObject.registerClass(
         _isDisconnected = false;
         _indicatorName = `VPN Indicator`;
         _stateManager = new StateManager();
-        _extension = Extension.lookupByURL(import.meta.url);
-        _extSettings = this._extension.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
         _lastMenuBuild = null;
+
+        constructor(extension) {
+            super();
+            this._extension = extension;
+            this._extSettings = extension.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+        }
 
         _init() {
             super._init(0.5, this._indicatorName, false);
@@ -230,7 +234,6 @@ export default GObject.registerClass(
 
         async _buildIndicatorMenu() {
             try {
-                log(`gnordvpn: building indicator menu`)
                 this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
                 this._statusPopup.menu.connect(`open-state-changed`, (actor, event) => this._setQuickRefresh(event));
                 this.menu.addMenuItem(this._statusPopup);
@@ -326,7 +329,7 @@ export default GObject.registerClass(
                 this._countryMenu = new ConnectionMenu(`Countries`, `countries`, Constants.favorites.favoriteCountries, this._overrideRefresh.bind(this), this._extSettings);
                 this._cityMenu = new ConnectionMenu(`Cities`, `cities`, Constants.favorites.favoriteCities, this._overrideRefresh.bind(this), this._extSettings);
                 this._serverMenu = new ConnectionMenu(`Servers`, `servers`, Constants.favorites.favoriteServers, this._overrideRefresh.bind(this), this._extSettings);
-                this._panelIcon = new PanelIcon();
+                this._panelIcon = new PanelIcon(this._extSettings);
 
                 this._buildIndicatorMenu().then(() => {
                     this._refresh().then(() => {

@@ -16,7 +16,7 @@ export default class CommonFavorite extends MenuBase {
         this._destroyMap = {};
         this.prevShowHide = true;
 
-        this._favorites = new Favorites();
+        this._favorites = new Favorites(settings);
         this._vpn = new Vpn(settings);
         this._signals = new Signals();
     }

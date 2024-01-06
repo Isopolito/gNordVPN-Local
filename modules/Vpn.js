@@ -54,8 +54,9 @@ export default class Vpn {
     }
 
     _getString = (data) => {
+        const decoder = new TextDecoder('utf-8');
         return data instanceof Uint8Array
-            ? imports.byteArray.toString(data)
+            ? decoder.decode(data)
             : data.toString();
     }
 

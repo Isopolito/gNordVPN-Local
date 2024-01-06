@@ -18,7 +18,7 @@ export default class ConnectionMenu extends MenuBase {
         this._menuSeperator = null;
         this._destroyMap = {};
 
-        this._favorites = new Favorites();
+        this._favorites = new Favorites(settings);
         this._vpn = new Vpn(settings);
         this._signals = new Signals();
 
