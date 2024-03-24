@@ -47,11 +47,11 @@ export default class Vpn {
 
     // Remove the junk that shows up from messages in the nordvpn output
     _processCityCountryOutput = (input) => {
-        const match = input.match(/(^\w+?,\s(\w+?,\s)+?(\w+?$)|^\s*?\w+?\s*?$)/gm);
-        return match && match.length === 1
-            ? match[0].split(',').map(c => c.trim()).sort()
-            : [];
-    }
+        input = input.replace(/^[\W_]+/, ''); // Remove any leading junk
+        const countries = input.split(',').map(c => c.trim()); // Split and trim each country name
+        const validCountries = countries.filter(c => /\b\w[\w\s'-]*\b/.test(c)); // Keep valid country names
+        return validCountries.sort(); // Sort and return the valid country names
+    };
 
     _getString = (data) => {
         const decoder = new TextDecoder('utf-8');
