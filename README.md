@@ -40,6 +40,14 @@ Enable on gnome-extensions at [gNordVPN Local on gnome extensions](https://exten
 
 If the extension shows an error state, make sure NordVPN CLI is functioning (`nordvpn status`). The extension relies on NordVPN CLI being operational. If any behavior suddenly changes, check `nordvpn` CLI to see if anything has changed there, sometimes they make breaking changes that need to be handled by the extension. Other times they have transient errors on their end that eventually clear up.
 
+## Known Issues
+
+When this extension is used in conjunction with **Dash to Panel**, the gNordVpn panel icon is unusually large. This can be fixed by manually changing the css styling in the settings, here:
+![image](https://github.com/Isopolito/gNordVPN-Local/assets/13524742/81ac579f-a7e2-42a0-b951-cb894be2f5c0)
+
+
+As an example, one user who has Dash to Panel and gNordVpn used this css at the bottom in the **Common CSS** input: _font-weight: bold; border-radius: 20px; padding: 12px 11px 0; margin: 6px 0px 5px 05px;_
+
 ## Development
 
 Contributions welcome! If you find any issues or think of any cool features, check to see if it's already documented under Issues, if not--raise it.
