@@ -235,11 +235,11 @@ export default GObject.registerClass(
                 this.menu.addMenuItem(this._statusPopup);
 
                 this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
-                this.menu.box.add(this._statusLabel);
+                this.menu.box.add_child(this._statusLabel);
 
                 // Optionally add `Update` status
                 this._updateMenuLabel = new St.Label({visible: false, style_class: `updatelabel`});
-                this.menu.box.add(this._updateMenuLabel);
+                this.menu.box.add_child(this._updateMenuLabel);
 
                 this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -290,7 +290,7 @@ export default GObject.registerClass(
                 this.menu.addMenuItem(this._logoutMenuItem);
 
                 this._panelIcon.build();
-                this.add_actor(this._panelIcon.button());
+                this.add_child(this._panelIcon.button());
 
                 this._panelIcon.button().connect(`button-press-event`, (actor, event) => {
                     //Only checking login state when clicking on menu
@@ -363,18 +363,14 @@ export default GObject.registerClass(
             let position = this._extSettings.get_string(`panel-position`);
 
             let box;
-            if (position === `left`) {
-                box = Main.panel._leftBox;
-            } else if (position === `center`) {
-                box = Main.panel._centerBox;
-            } else {
-                box = Main.panel._rightBox;
-            }
+            if (position === `left`) box = Main.panel._leftBox;
+            else if (position === `center`) box = Main.panel._centerBox;
+            else box = Main.panel._rightBox;
 
             // Remove the indicator from its current parent
-            this.get_parent().remove_actor(this);
+            this.get_parent().remove_child(this);
 
-            // Add it to the new box
-            box.add(this);
+            // Add it to the new box using the updated method
+            box.add_child(this);
         }
     });
