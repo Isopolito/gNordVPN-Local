@@ -48,6 +48,14 @@ When this extension is used in conjunction with **Dash to Panel**, the gNordVpn 
 
 As an example, one user who has Dash to Panel and gNordVpn used this css at the bottom in the **Common CSS** input: _font-weight: bold; border-radius: 20px; padding: 12px 11px 0; margin: 6px 0px 5px 05px;_
 
+## Bug Reports
+
+Please raise an issue with the following data points:
+  1. Version of gnome: `gnome-shell --version`
+  2. Version of nordvpn: `nordvpn --version`
+  3. Screenshots of the problem if applicable
+  4. Steps to reproduce the issue
+
 ## Development
 
 Contributions welcome! If you find any issues or think of any cool features, check to see if it's already documented under Issues, if not--raise it.
