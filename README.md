@@ -53,8 +53,9 @@ As an example, one user who has Dash to Panel and gNordVpn used this css at the 
 Please raise an issue with the following data points:
   1. Version of gnome: `gnome-shell --version`
   2. Version of nordvpn: `nordvpn --version`
-  3. Screenshots of the problem if applicable
-  4. Steps to reproduce the issue
+  3. Version the gNordVpn extension
+  4. Screenshots of the problem if applicable
+  5. Steps to reproduce the issue
 
 ## Development
 
