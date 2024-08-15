@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Package gNordVpn for publishing to gnome extensions
+
+# Set variables
+EXTENSION_DIR="/home/ash/.local/share/gnome-shell/extensions/gnordvpn-local@isopolito"
+OUTPUT_DIR="$HOME/tmp"  # Use first argument if provided, otherwise default to ~/tmp
+VERSION="${1:-99}"  # Use second argument if provided, otherwise default to 99
+
+# check if the extension directory exists
+check_directory() {
+    if [ ! -d "$EXTENSION_DIR" ]; then
+        echo "Error: Extension directory not found: $EXTENSION_DIR"
+        exit 1
+    fi
+}
+
+delete_orig_files() {
+    find "$EXTENSION_DIR" -name "*.orig" -type f -delete
+}
+
+# delete test-related files and folders
+delete_tests() {
+    find . -name "__tests__" -type d -exec rm -rf {} +
+    find . -name "*.spec.js" -type f -delete
+}
+
+delete_node_artifacts() {
+    rm -rf node_modules package*.json
+}
+
+create_zip() {
+
+    local temp_dir=$(mktemp -d)
+    cp -r "$EXTENSION_DIR" "$temp_dir/gnordvpn-local@isopolito"
+    
+    cd "$temp_dir/gnordvpn-local@isopolito"
+
+    delete_orig_files
+    delete_tests
+    delete_node_artifacts
+
+    # this script should not be included in the raw extension zip either
+    rm makegnordext
+    rm *.swp > /dev/null 2>&1
+    rm .*.swp > /dev/null 2>&1
+
+    mkdir -p "$OUTPUT_DIR"
+    zip -r "$OUTPUT_DIR/gnordvpn-local-v$VERSION.zip" .
+
+    cd - > /dev/null
+    rm -rf "$temp_dir"
+}
+
+######################################
+
+echo "Packaging GNordVPN GNOME extension..."
+
+check_directory
+create_zip
+
+echo "Package created: $OUTPUT_DIR/gnordvpn-local-v$VERSION.zip"
