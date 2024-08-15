@@ -1,3 +1,4 @@
 *.swp
 .idea
 *.orig
+node_modules
