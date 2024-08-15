@@ -1,0 +1,2 @@
+Atlanta           Buffalo           Charlotte         Chicago           Dallas            Denver            Kansas_City       Los_Angeles       Manassas          Miami
+New_York          Phoenix           Saint_Louis       Salt_Lake_City    San_Francisco     Seattle

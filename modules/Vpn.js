@@ -2,6 +2,7 @@ import Gio from 'gi://Gio';
 import Soup from 'gi://Soup';
 
 import ProcCom from './ProcCom.js';
+import VpnUtils from './VpnUtils.js';
 
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
@@ -20,6 +21,7 @@ export default class Vpn {
     constructor(settings) {
         this._settings = settings
         this._procCom = new ProcCom();
+        this._vpnUtils = new VpnUtils();
         this._session = Soup.Session.new();
         this._soupVersion = Soup.get_major_version();
         this._lastConnectedAt = 0;
@@ -29,10 +31,10 @@ export default class Vpn {
         const msg = Soup.Message.new(`GET`, url);
         if (this._soupVersion < 2) {
             this._session.send(msg, null);
-            return JSON.parse(this._getString(msg.response_body.data));
+            return JSON.parse(this._vpnUtils.getString(msg.response_body.data));
         } else if (this._soupVersion >= 2 && this._soupVersion < 3) {
             this._session.send_message(msg);
-            return JSON.parse(this._getString(msg.response_body.data));
+            return JSON.parse(this._vpnUtils.getString(msg.response_body.data));
         } else if (this._soupVersion >= 3) {
             let bytes = this._session.send_and_read(msg, null);
             if (msg.get_status() === Soup.Status.OK) {
@@ -45,58 +47,11 @@ export default class Vpn {
         }
     }
 
-    // Remove the junk that shows up from messages in the nordvpn output
-    _processCityCountryOutput = (input) => {
-        input = input.replace(/\e\[\d+[\x6d]/, ''); // Remove color formatting
-        input = input.replace(/^[\W_]+|\W+/, '\n'); // Remove any leading junk
-        const countries = input.split('\n').map(c => c.trim()); // Split and trim each country name
-        const validCountries = countries.filter(c => /\b\w[\w\s'-]*\b/.test(c)); // Keep valid country names
-        return validCountries.sort(); // Sort and return the valid country names
-    };
-
-    _getString = (data) => {
-        const decoder = new TextDecoder('utf-8');
-        return data instanceof Uint8Array
-            ? decoder.decode(data)
-            : data.toString();
-    }
-
-    _resolveSettingsValue(text) {
-        if (!text) return;
-        const normalizedText = text.trim();
-
-        if (normalizedText === `enabled`) return true;
-        if (normalizedText === `disabled`) return false;
-
-        return normalizedText;
-    }
-
-    _resolveSettingsKey(text) {
-        if (!text) return;
-        const normalizedText = text.trim().toLowerCase()
-
-        if (normalizedText === `firewall`) return `firewall`;
-        if (normalizedText.includes(`tech`)) return `technology`;
-        if (normalizedText === `protocol`) return `protocol`;
-        if (normalizedText === `kill switch`) return `killswitch`;
-        if (normalizedText === `analytics`) return `analytics`;
-        if (normalizedText === `threat protection lite`) return `cybersec`;
-        if (normalizedText === `obfuscate`) return `obfuscate`;
-        if (normalizedText === `notify`) return `notify`;
-        if (normalizedText === `auto-connect`) return `autoconnect`;
-        if (normalizedText === `ipv6`) return `ipv6`;
-
-        // Currently these settings are not supported in this extension
-        //if (normalizedText === `dns`) return `dns`;
-
-        return null;
-    }
-
     _execSyncIfVpnOn(command) {
         if (!this.isNordVpnRunning()) return ``;
 
         const [ok, standardOut, standardError, exitStatus] = this._procCom.execCommunicateSync(command);
-        return this._getString(standardOut);
+        return this._vpnUtils.getString(standardOut);
     }
 
     isNordVpnRunning() {
@@ -112,8 +67,8 @@ export default class Vpn {
         const standardOut = this._execSyncIfVpnOn(CMD_FETCH_SETTINGS);
         for (const line of standardOut.split(`\n`)) {
             let parts = line.split(`:`);
-            const settingName = this._resolveSettingsKey(parts[0]);
-            const settingValue = this._resolveSettingsValue(parts[1]);
+            const settingName = this._vpnUtils.resolveSettingsKey(parts[0]);
+            const settingValue = this._vpnUtils.resolveSettingsValue(parts[1]);
             if (!settingName || settingValue === undefined) continue;
 
             if (settingName === `protocol` || settingName === 'technology') {
@@ -162,7 +117,7 @@ export default class Vpn {
 
     checkLogin() {
         const [ok, standardOut, err, exitStatus] = this._procCom.execCommunicateSync(CMD_LOGIN);
-        return this._getString(standardOut)
+        return this._vpnUtils.getString(standardOut)
             .replace(/\s+/g, ` `)
             .includes('You are already logged in.');
     }
@@ -273,7 +228,7 @@ export default class Vpn {
         }
 
         const standardOut = this._execSyncIfVpnOn(CMD_COUNTRIES);
-        const countries = this._processCityCountryOutput(standardOut);
+        const countries = this._vpnUtils.processCityCountryOutput(standardOut);
 
         let processedCountries = {};
         for (let country of countries) {
@@ -294,7 +249,7 @@ export default class Vpn {
 
         for (let i = 0; i < citiesSaved.length; i++) {
             const [ok, standardOut, standardError, exitStatus] = this._procCom.execCommunicateSync(`${CMD_CITIES} ${citiesSaved[i]}`);
-            const cities = this._processCityCountryOutput(this._getString(standardOut));
+            const cities = this._vpnUtils.processCityCountryOutput(this._vpnUtils.getString(standardOut));
 
             for (let j = 0; j < cities.length; j++) {
                 if (j > citiesMax) break;
