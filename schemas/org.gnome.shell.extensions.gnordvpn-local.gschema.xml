@@ -34,6 +34,10 @@
         <key name="countries-selected-for-servers" type="ai">
             <default>[]</default>
         </key>
+        <key name="refresh-timeout" type="i">
+            <range min="1" max="120"/>
+            <default>5</default>
+        </key>
         <key name="commonfavorite" type="b">
             <default>false</default>
         </key>
