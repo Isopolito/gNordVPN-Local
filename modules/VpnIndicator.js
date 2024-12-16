@@ -368,9 +368,13 @@ export default GObject.registerClass(
             else box = Main.panel._rightBox;
 
             // Remove the indicator from its current parent
-            this.get_parent().remove_child(this);
+            let container = this.container;
+            container.show();
+
+            let parent = container.get_parent();
+            if (parent) parent.remove_child(container);
 
             // Add it to the new box using the updated method
-            box.add_child(this);
+            box.add_child(container);
         }
     });
