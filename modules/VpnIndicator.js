@@ -277,7 +277,7 @@ export default GObject.registerClass(
                 // Add `Settings` menu item
                 const settingsMenuItem = new PopupMenu.PopupMenuItem(`Settings`);
                 this.menu.addMenuItem(settingsMenuItem);
-                settingsMenuItem.connect(`activate`, this._openSettings.bind(this).catch(e => log(e, `Gnordvpn: error opening settings`)));
+                settingsMenuItem.connect(`activate`, this._openSettings.bind(this));
 
                 // Add `Login` menu item
                 this._loginMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.login);
