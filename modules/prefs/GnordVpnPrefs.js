@@ -63,7 +63,6 @@ export default class GnordVpnPrefs {
             halign: Gtk.Align.START
         });
 
-        // Add spinner for seconds here
         const timeRefreshSpinner = new Gtk.SpinButton({
             adjustment: new Gtk.Adjustment({
                 lower: 1,
@@ -76,12 +75,11 @@ export default class GnordVpnPrefs {
             halign: Gtk.Align.START,
             visible: true
         });
-        timeRefreshSpinner.set_hexpand(false);  // Don't expand horizontally
+        timeRefreshSpinner.set_hexpand(false);
 
         generalGrid.attach(timerRefreshLabel, 0, 3, 1, 1);
         generalGrid.attach(timeRefreshSpinner, 1, 3, 1, 1);
 
-        // Bind the spinner to settings
         this._settings.bind(
             'refresh-timeout',
             timeRefreshSpinner.get_adjustment(),
