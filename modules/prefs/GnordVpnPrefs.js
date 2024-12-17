@@ -57,9 +57,41 @@ export default class GnordVpnPrefs {
         generalGrid.attach(commonFavLabel, 0, 2, 1, 1);
         generalGrid.attach(commonFavToggle, 1, 2, 1, 1);
 
+        // Timer Refresh
+        const timerRefreshLabel = new Gtk.Label({
+            label: "Seconds between NordVpn status calls (will take affect on restart)",
+            halign: Gtk.Align.START
+        });
+
+        // Add spinner for seconds here
+        const timeRefreshSpinner = new Gtk.SpinButton({
+            adjustment: new Gtk.Adjustment({
+                lower: 1,
+                upper: 120,
+                step_increment: 1,
+                page_increment: 10,
+                value: this._settings.get_int('refresh-timeout')
+            }),
+            numeric: true,
+            halign: Gtk.Align.START,
+            visible: true
+        });
+        timeRefreshSpinner.set_hexpand(false);  // Don't expand horizontally
+
+        generalGrid.attach(timerRefreshLabel, 0, 3, 1, 1);
+        generalGrid.attach(timeRefreshSpinner, 1, 3, 1, 1);
+
+        // Bind the spinner to settings
+        this._settings.bind(
+            'refresh-timeout',
+            timeRefreshSpinner.get_adjustment(),
+            'value',
+            Gio.SettingsBindFlags.DEFAULT
+        );
+
         // Reset All Settings Button
         const resetAll = new Gtk.Button({label: "Reset All Settings"});
-        generalGrid.attach(resetAll, 0, 3, 2, 1);
+        generalGrid.attach(resetAll, 0, 4, 2, 1);
 
         return {generalGrid, resetAll};
     }

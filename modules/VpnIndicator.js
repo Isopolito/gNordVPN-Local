@@ -29,7 +29,6 @@ export default GObject.registerClass(
             this._extension = extension;
             this._extSettings = extension.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
             this._refreshTimeoutInSec = this._extSettings.get_value(`refresh-timeout`).unpack();
-            log("\n\n\nrefresh_timeout: " + this._refreshTimeoutInSec);
         }
 
         _init() {
@@ -132,7 +131,6 @@ export default GObject.registerClass(
                     this._serverMenu.tryBuild();
                 }
             }
-            ;
         }
 
         _updateMenu(status) {
