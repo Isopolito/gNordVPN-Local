@@ -4,7 +4,8 @@
   "name": "gNordVPN-Local",
   "shell-version": [
       "46",
-      "47"
+      "47",
+      "48"
   ],
   "url": "https://github.com/Isopolito/gNordVPN-Local",
   "uuid": "gnordvpn-local@isopolito",
