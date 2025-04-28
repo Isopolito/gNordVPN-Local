@@ -22,11 +22,13 @@ export default GObject.registerClass(
         _indicatorName = `VPN Indicator`;
         _stateManager = new StateManager();
         _lastMenuBuild = null;
+        _refreshTimeoutInSec;
 
         constructor(extension) {
             super();
             this._extension = extension;
             this._extSettings = extension.getSettings(`org.gnome.shell.extensions.gnordvpn-local`);
+            this._refreshTimeoutInSec = this._extSettings.get_value(`refresh-timeout`).unpack();
         }
 
         _init() {
@@ -36,6 +38,9 @@ export default GObject.registerClass(
         _connectChanged() {
             this._extSettings.connect(`changed`, (settings, key) => {
                 switch (key) {
+                    case 'refresh-timeout':
+                        this._refreshTimeoutInSec = settings.get_value(`refresh-timeout`).unpack();
+                        break;
                     case `panel-position`:
                         this._moveIndicator();
                         break;
@@ -106,9 +111,7 @@ export default GObject.registerClass(
                 this._updateMenu(status);
                 this._panelIcon.update(status);
 
-                // Start the refreshes again. Need the panel to update more frequently for extra large button so uptime/speed is relevant
-                const timeoutInSec = this._extSettings.get_boolean(`extra-large-button`) ? 3 : status.currentState.refreshTimeout;
-                this._setTimeout(timeoutInSec);
+                this._setTimeout(this._refreshTimeoutInSec);
             } catch (e) {
                 log(e, `gnordvpn: Unable to refresh`);
             } finally {
@@ -128,7 +131,6 @@ export default GObject.registerClass(
                     this._serverMenu.tryBuild();
                 }
             }
-            ;
         }
 
         _updateMenu(status) {
@@ -368,9 +370,13 @@ export default GObject.registerClass(
             else box = Main.panel._rightBox;
 
             // Remove the indicator from its current parent
-            this.get_parent().remove_child(this);
+            let container = this.container;
+            container.show();
+
+            let parent = container.get_parent();
+            if (parent) parent.remove_child(container);
 
             // Add it to the new box using the updated method
-            box.add_child(this);
+            box.add_child(container);
         }
     });
