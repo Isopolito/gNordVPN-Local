@@ -19,10 +19,12 @@ export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
         _isLoggedIn = false;
         _isRefreshing = false;
+        _isDestroyed = false;
         _indicatorName = `VPN Indicator`;
         _stateManager = new StateManager();
         _lastMenuBuild = null;
         _refreshTimeoutInSec;
+        _refreshBackoffSec = 0;
 
         constructor(extension) {
             super();
@@ -93,13 +95,14 @@ export default GObject.registerClass(
 
         async _refresh() {
             try {
-                if (this._isRefreshing) return;
-                this.isRefreshing = true;
+                if (this._isDestroyed || this._isRefreshing) return;
+                this._isRefreshing = true;
 
                 // Stop the refreshes
                 this._clearTimeout();
 
                 const status = await this._vpn.getStatus();
+                if (this._isDestroyed) return;
                 status.loggedin = this._isLoggedIn;
                 status.currentState = this._vpn.isNordVpnRunning()
                     ? this._stateManager.resolveState(status)
@@ -111,11 +114,15 @@ export default GObject.registerClass(
                 this._updateMenu(status);
                 this._panelIcon.update(status);
 
-                this._setTimeout(this._refreshTimeoutInSec);
+                this._refreshBackoffSec = 0;
             } catch (e) {
+                this._refreshBackoffSec = Math.min(this._refreshBackoffSec ? this._refreshBackoffSec * 2 : 5, 60);
                 log(e, `gnordvpn: Unable to refresh`);
             } finally {
-                this.isRefreshing = false;
+                this._isRefreshing = false;
+                if (!this._isDestroyed) {
+                    this._setTimeout(this._refreshTimeoutInSec);
+                }
             }
         }
 
@@ -136,42 +143,53 @@ export default GObject.registerClass(
         _updateMenu(status) {
             if (!this._statusPopup || !this._statusLabel) return;
 
-            // Set the status text on the menu
-            this._statusLabel.text = status.connectStatus;
+            // Check if objects are still alive before accessing them
+            try {
+                if (!this._statusLabel || !this._statusLabel.text) return;
 
-            const actor = this._statusPopup.get_label_actor();
-            if (!actor) return;
-            actor.set_text(status.connectStatus);
+                // Set the status text on the menu
+                this._statusLabel.text = status.connectStatus;
 
-            this._statusPopup.menu.removeAll();
-
-            let hasItems = false;
-            let statusToDisplay = [`country`, `city`, `currentServer`, `serverIP`, `transfer`, `uptime`];
-            statusToDisplay.forEach(key => {
-                if (status[key]) {
-                    const label = key.replace(/([A-Z]+)/g, ` $1`).replace(/([A-Z][a-z])/g, ` $1`).replace(/^./, e => e.toUpperCase());
-                    const menuItem = new PopupMenu.PopupMenuItem(label + `: ` + status[key]);
-                    this._statusPopup.menu.addMenuItem(menuItem);
-                    hasItems = true;
+                const actor = this._statusPopup.get_label_actor();
+                if (!actor) return;
+                if (actor.set_text) {
+                    actor.set_text(status.connectStatus);
                 }
-            })
 
-            if (!this._isLoggedIn) {
-                this._statusPopup.hide();
-                this._statusLabel.hide();
-            } else if (hasItems) {
-                this._statusPopup.show();
-                this._statusLabel.hide();
-            } else {
-                this._statusPopup.hide();
-                this._statusLabel.show();
-            }
+                const menu = this._statusPopup.menu;
+                menu.removeAll();
 
-            if (status.updateMessage) {
-                this._updateMenuLabel.text = Constants.messages.updateAvailable;
-                this._updateMenuLabel.visible = true;
-            } else {
-                this._updateMenuLabel.visible = false;
+                let hasItems = false;
+                let statusToDisplay = [`country`, `city`, `currentServer`, `serverIP`, `transfer`, `uptime`];
+                statusToDisplay.forEach(key => {
+                    if (status[key]) {
+                        const label = key.replace(/([A-Z]+)/g, ` $1`).replace(/([A-Z][a-z])/g, ` $1`).replace(/^./, e => e.toUpperCase());
+                        const menuItem = new PopupMenu.PopupMenuItem(label + `: ` + status[key]);
+                        menu.addMenuItem(menuItem);
+                        hasItems = true;
+                    }
+                })
+
+                if (!this._isLoggedIn) {
+                    this._statusPopup.hide();
+                    this._statusLabel.hide();
+                } else if (hasItems) {
+                    this._statusPopup.show();
+                    this._statusLabel.hide();
+                } else {
+                    this._statusPopup.hide();
+                    this._statusLabel.show();
+                }
+
+                if (status.updateMessage) {
+                    this._updateMenuLabel.text = Constants.messages.updateAvailable;
+                    this._updateMenuLabel.visible = true;
+                } else {
+                    this._updateMenuLabel.visible = false;
+                }
+            } catch (e) {
+                // Object was disposed, silently skip this update
+                return;
             }
 
             // Activate / deactivate menu items
@@ -310,8 +328,11 @@ export default GObject.registerClass(
         }
 
         _setTimeout(timeoutDuration) {
+            if (this._isDestroyed) return;
+            const delay = Math.max(1, timeoutDuration + this._refreshBackoffSec);
             // Refresh after an interval
-            this._timeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, timeoutDuration, () => {
+            this._timeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delay, () => {
+                if (this._isDestroyed) return GLib.SOURCE_REMOVE;
                 this._refresh().catch(e => log(e, `Gnordvpn: Unable to refresh`));
                 return GLib.SOURCE_REMOVE; // Ensure the timeout is only run once
             });
@@ -340,6 +361,7 @@ export default GObject.registerClass(
         }
 
         disable() {
+            this._isDestroyed = true;
             this._clearTimeout();
 
             this._commonFavorite.disable();

@@ -36,7 +36,7 @@
         </key>
         <key name="refresh-timeout" type="i">
             <range min="1" max="120"/>
-            <default>5</default>
+            <default>15</default>
         </key>
         <key name="commonfavorite" type="b">
             <default>false</default>
