@@ -23,6 +23,7 @@ export default GObject.registerClass(
         _isLoggedIn = false;
         _isRefreshing = false;
         _isDestroyed = false;
+        _pendingLoginCheck = false;
         _indicatorName = `VPN Indicator`;
         _stateManager = new StateManager();
         _lastMenuBuild = null;
@@ -100,6 +101,7 @@ export default GObject.registerClass(
             try {
                 if (this._isDestroyed || this._isRefreshing) return;
                 this._isRefreshing = true;
+                this._pendingLoginRefresh = false;
 
                 // Stop the refreshes
                 this._clearTimeout();
@@ -138,7 +140,14 @@ export default GObject.registerClass(
             } finally {
                 this._isRefreshing = false;
                 if (!this._isDestroyed) {
-                    this._setTimeout(this._refreshTimeoutInSec);
+                    // If checkLogin() completed while this refresh was in flight, run
+                    // an immediate follow-up so the UI reflects the real login state.
+                    if (this._pendingLoginRefresh) {
+                        this._pendingLoginRefresh = false;
+                        this._refresh();
+                    } else {
+                        this._setTimeout(this._refreshTimeoutInSec);
+                    }
                 }
             }
         }
@@ -338,11 +347,34 @@ export default GObject.registerClass(
                     //Cannot check periodically because:
                     //If checking with `nordvpn account` it fetches from a server that limit request
                     //If checking with `nordvpn login` it generate a new url, preventing the use from login in
-                    this._isLoggedIn = this._vpn.checkLogin();
-                    this._refresh();
+                    // Run checkLogin on idle so it doesn't block the menu from opening (~1s sync call).
+                    // _pendingLoginCheck ensures only one idle is queued even on rapid clicks.
+                    if (!this._pendingLoginCheck) {
+                        this._pendingLoginCheck = true;
+                        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                            this._pendingLoginCheck = false;
+                            if (this._isDestroyed) return GLib.SOURCE_REMOVE;
+                            this._isLoggedIn = this._vpn.checkLogin();
+                            if (this._isRefreshing) this._pendingLoginRefresh = true;
+                            else this._refresh();
+                            return GLib.SOURCE_REMOVE;
+                        });
+                    }
                 });
 
-                this._isLoggedIn = this._vpn.checkLogin();
+                // Defer initial login check to avoid blocking shell startup (~1s sync call).
+                // Only trigger a follow-up refresh if the login state changed; the enable()
+                // startup _refresh() already runs concurrently and covers the common case.
+                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    if (this._isDestroyed) return GLib.SOURCE_REMOVE;
+                    const wasLoggedIn = this._isLoggedIn;
+                    this._isLoggedIn = this._vpn.checkLogin();
+                    if (this._isLoggedIn !== wasLoggedIn) {
+                        if (this._isRefreshing) this._pendingLoginRefresh = true;
+                        else this._refresh();
+                    }
+                    return GLib.SOURCE_REMOVE;
+                });
                 _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu'});
             } catch (e) {
                 _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu', error: e?.message});

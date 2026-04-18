@@ -58,6 +58,9 @@ export default class CommonFavorite extends MenuBase {
 
     rebuild() {
         this._isBuilt = false;
+        this._destroyMap = {};
+        this.favList = {};
+        this.itemList = {};
         this.build();
     }
 

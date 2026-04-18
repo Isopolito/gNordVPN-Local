@@ -50,6 +50,10 @@ export default class ConnectionMenu extends MenuBase {
 
     rebuild() {
         this._isBuilt = false;
+        this._destroyMap = {};
+        this._connectionMenuItems = [];
+        this._favConnectionItems = [];
+        this._menuSeperator = null;
         this._connectionMenu.menu.removeAll();
         this._connectionMenu.menu.addMenuItem(this._buildPlaceHolderMenuItem());
         this.tryBuild();

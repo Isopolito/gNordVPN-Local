@@ -26,16 +26,25 @@ export default class GnordVpnPrefs {
         const name = this._metadata.name ?? 'gNordVpn-Local';
         const version = this._metadata.version ?? 'unknown';
         const url = this._metadata.url ?? '';
-        const box = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 6,
+
+        const frame = new Gtk.Frame({
             margin_top: 10,
             margin_bottom: 10,
             margin_start: 10,
             margin_end: 10,
         });
+
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6,
+            margin_top: 10,
+            margin_bottom: 10,
+            margin_start: 12,
+            margin_end: 12,
+        });
+
         const title = new Gtk.Label({
-            label: `${name} v${version}`,
+            label: `${name}, v${version}`,
             halign: Gtk.Align.START,
             xalign: 0,
         });
@@ -54,7 +63,8 @@ export default class GnordVpnPrefs {
             box.append(link);
         }
 
-        return box;
+        frame.set_child(box);
+        return frame;
     }
 
     _createGeneralPage() {
