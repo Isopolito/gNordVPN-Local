@@ -11,14 +11,27 @@ import ResetManager from './ResetManager.js';
 import * as Common from '../common.js';
 
 export default class GnordVpnPrefs {
-    constructor(settings) {
+    constructor(settings, metadata = {}) {
         this._settings = settings;
+        this._metadata = metadata;
         this._vpn = new Vpn(this._settings);
         this._techCbox = null;
         this._protoCbox = null;
         this._countryMapWithID = null;
         this._countryNames = null;
         this._countryMap = null;
+    }
+
+    _createVersionRow() {
+        const version = this._metadata.version ?? 'unknown';
+        const row = new Adw.ActionRow({
+            title: 'Extension Version',
+            subtitle: `v${version}`,
+            selectable: false,
+            activatable: false,
+        });
+
+        return row;
     }
 
     _createGeneralPage() {
@@ -580,6 +593,9 @@ export default class GnordVpnPrefs {
         const generalPage = new Adw.PreferencesPage();
         generalPage.set_title("General");
         generalPage.set_icon_name("emblem-system-symbolic");
+        const versionGroup = new Adw.PreferencesGroup();
+        versionGroup.add(this._createVersionRow());
+        generalPage.add(versionGroup);
         const generalGroup = new Adw.PreferencesGroup();
         const {generalGrid, resetAll} = this._createGeneralPage();
         generalGroup.add(generalGrid);

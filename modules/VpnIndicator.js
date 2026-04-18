@@ -14,6 +14,9 @@ import StateManager from './StateManager.js';
 import CommonFavorite from './CommonFavorite.js';
 import PanelIcon from './PanelIcon.js';
 import * as Constants from './constants.js';
+import Logger from './Logger.js';
+
+const _log = new Logger('VpnIndicator');
 
 export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
@@ -101,6 +104,7 @@ export default GObject.registerClass(
                 // Stop the refreshes
                 this._clearTimeout();
 
+                const t = _log.startTimer();
                 const status = await this._vpn.getStatus();
                 if (this._isDestroyed) return;
                 status.loggedin = this._isLoggedIn;
@@ -114,9 +118,20 @@ export default GObject.registerClass(
                 this._updateMenu(status);
                 this._panelIcon.update(status);
 
+                const prevBackoff = this._refreshBackoffSec;
                 this._refreshBackoffSec = 0;
+                if (prevBackoff !== 0)
+                    _log.debug('backoff cleared', {prev: prevBackoff});
+
+                _log.endTimer(t, 'SPAN', {
+                    operation: '_refresh',
+                    state: status.currentState?.stateName,
+                    nextDelay: this._refreshTimeoutInSec
+                });
             } catch (e) {
+                const prev = this._refreshBackoffSec;
                 this._refreshBackoffSec = Math.min(this._refreshBackoffSec ? this._refreshBackoffSec * 2 : 5, 60);
+                _log.warn('refresh failed, backoff increased', {prev, next: this._refreshBackoffSec, error: e?.message});
                 log(e, `gnordvpn: Unable to refresh`);
             } finally {
                 this._isRefreshing = false;
@@ -133,10 +148,13 @@ export default GObject.registerClass(
                 // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
                 // to provide available cities, countries, etc
                 if (status.currentState.stateName !== Constants.states[`ERROR`]) {
+                    _log.debug('throttledMenuBuild triggered');
                     this._countryMenu.tryBuild();
                     this._cityMenu.tryBuild();
                     this._serverMenu.tryBuild();
                 }
+            } else {
+                _log.debug('throttledMenuBuild skipped (within 30s window)');
             }
         }
 
@@ -249,6 +267,7 @@ export default GObject.registerClass(
         }
 
         async _buildIndicatorMenu() {
+            const t = _log.startTimer();
             try {
                 this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
                 this._statusPopup.menu.connect(`open-state-changed`, (actor, event) => this._setQuickRefresh(event));
@@ -322,7 +341,9 @@ export default GObject.registerClass(
                 });
 
                 this._isLoggedIn = this._vpn.checkLogin();
+                _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu'});
             } catch (e) {
+                _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu', error: e?.message});
                 log(e, `gnordvpn: unable to build indicator menu`);
             }
         }
@@ -330,6 +351,7 @@ export default GObject.registerClass(
         _setTimeout(timeoutDuration) {
             if (this._isDestroyed) return;
             const delay = Math.max(1, timeoutDuration + this._refreshBackoffSec);
+            _log.debug('next refresh scheduled', {delaySec: delay});
             // Refresh after an interval
             this._timeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delay, () => {
                 if (this._isDestroyed) return GLib.SOURCE_REMOVE;
@@ -339,6 +361,8 @@ export default GObject.registerClass(
         }
 
         enable() {
+            const t = _log.startTimer();
+            _log.debug('enable() called');
             try {
                 this._moveIndicator();
                 this._connectChanged();
@@ -353,9 +377,11 @@ export default GObject.registerClass(
                 this._buildIndicatorMenu().then(() => {
                     this._refresh().then(() => {
                         this._vpn.applySettingsToNord();
+                        _log.endTimer(t, 'SPAN', {operation: 'enable'});
                     }).catch(e => log(e, `Gnordvpn: unable to refresh`));
                 }).catch(e => log(e, `Gnordvpn: unable to build indicator menu`));
             } catch (e) {
+                _log.error('enable() failed', e);
                 log(e, `gnordvpn: unable to build indicator menu and refresh`);
             }
         }

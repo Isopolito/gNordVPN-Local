@@ -6,6 +6,9 @@ import Favorites from './Favorites.js';
 import MenuBase from './MenuBase.js';
 import * as Common from './common.js';
 import * as Constants from './constants.js';
+import Logger from './Logger.js';
+
+const _log = new Logger('ConnectionMenu');
 
 export default class ConnectionMenu extends MenuBase {
     constructor(connectionLabel, connectionType, favoritesKey, connectionCallback, settings) {
@@ -140,8 +143,12 @@ export default class ConnectionMenu extends MenuBase {
         if (!this._connectionMenu) this._connectionMenu = new PopupMenu.PopupSubMenuMenuItem(this._connectionLabel);
         else this._connectionMenu.menu.removeAll();
 
+        const t = _log.startTimer();
         this._connections = this._vpn.getConnectionList(this._connectionType);
-        if (!this._connections) return;
+        if (!this._connections) {
+            _log.endTimer(t, 'SPAN', {operation: `tryBuild:${this._connectionType}`, result: 'no-data'});
+            return;
+        }
 
         this._connectionMenuItems = [];
         this._favConnectionItems = [];
@@ -164,7 +171,10 @@ export default class ConnectionMenu extends MenuBase {
             this._connectionMenu.menu.addMenuItem(menuItem);
         }
 
-        if (Common.safeObjectKeys(this._connections).length < 1) {
+        const itemCount = Common.safeObjectKeys(this._connections).length;
+        _log.endTimer(t, 'SPAN', {operation: `tryBuild:${this._connectionType}`, itemCount});
+
+        if (itemCount < 1) {
             this._connectionMenu.hide();
         } else {
             this._connectionMenu.show();

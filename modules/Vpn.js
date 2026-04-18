@@ -3,6 +3,7 @@ import Soup from 'gi://Soup';
 
 import ProcCom from './ProcCom.js';
 import VpnUtils from './VpnUtils.js';
+import Logger from './Logger.js';
 
 const CMD_VPNSTATUS = `nordvpn status`;
 const CMD_VPNACCOUNT = `nordvpn account`;
@@ -17,6 +18,8 @@ const CMD_DISCONNECT = `nordvpn d`;
 const CMD_LOGIN = `nordvpn login`;
 const CMD_LOGOUT = `nordvpn logout`;
 
+const _log = new Logger('Vpn');
+
 export default class Vpn {
     constructor(settings) {
         this._settings = settings
@@ -28,22 +31,33 @@ export default class Vpn {
     }
 
     _httpGet = (url) => {
-        const msg = Soup.Message.new(`GET`, url);
-        if (this._soupVersion < 2) {
-            this._session.send(msg, null);
-            return JSON.parse(this._vpnUtils.getString(msg.response_body.data));
-        } else if (this._soupVersion >= 2 && this._soupVersion < 3) {
-            this._session.send_message(msg);
-            return JSON.parse(this._vpnUtils.getString(msg.response_body.data));
-        } else if (this._soupVersion >= 3) {
-            let bytes = this._session.send_and_read(msg, null);
-            if (msg.get_status() === Soup.Status.OK) {
-                let decoder = new TextDecoder('utf-8');
-                return JSON.parse(decoder.decode(bytes.get_data()));
-            } else {
-                log(`gnordvpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
-                return null;
+        const domain = url.replace(/^https?:\/\//, '').split('/')[0];
+        const t = _log.startTimer();
+        try {
+            const msg = Soup.Message.new(`GET`, url);
+            let result;
+            if (this._soupVersion < 2) {
+                this._session.send(msg, null);
+                result = JSON.parse(this._vpnUtils.getString(msg.response_body.data));
+            } else if (this._soupVersion >= 2 && this._soupVersion < 3) {
+                this._session.send_message(msg);
+                result = JSON.parse(this._vpnUtils.getString(msg.response_body.data));
+            } else if (this._soupVersion >= 3) {
+                let bytes = this._session.send_and_read(msg, null);
+                if (msg.get_status() === Soup.Status.OK) {
+                    let decoder = new TextDecoder('utf-8');
+                    result = JSON.parse(decoder.decode(bytes.get_data()));
+                } else {
+                    _log.endTimer(t, 'CALL', {cmd: domain, blocking: true, success: false});
+                    log(`gnordvpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
+                    return null;
+                }
             }
+            _log.endTimer(t, 'CALL', {cmd: domain, blocking: true, success: true});
+            return result;
+        } catch (e) {
+            _log.endTimer(t, 'CALL', {cmd: domain, blocking: true, success: false});
+            throw e;
         }
     }
 
@@ -57,8 +71,11 @@ export default class Vpn {
     isNordVpnRunning() {
         try {
             const [ok, standardOut, standardError, exitStatus] = this._procCom.execCommunicateSync(CMD_VPNSTATUS);
-            return exitStatus === 0;
+            const running = exitStatus === 0;
+            _log.debug('isNordVpnRunning', {running});
+            return running;
         } catch {
+            _log.debug('isNordVpnRunning', {running: false, error: true});
             return false;
         }
     }
@@ -82,6 +99,7 @@ export default class Vpn {
     applySettingsToNord() {
         if (!this.isNordVpnRunning()) return;
 
+        const t = _log.startTimer();
         this._procCom.execCommunicateSync(`${CMD_SETTINGS} firewall ${this._settings.get_boolean(`firewall`)}`);
         this._procCom.execCommunicateSync(`${CMD_SETTINGS} analytics ${this._settings.get_boolean(`analytics`)}`);
         this._procCom.execCommunicateSync(`${CMD_SETTINGS} autoconnect ${this._settings.get_boolean(`autoconnect`)}`);
@@ -95,6 +113,7 @@ export default class Vpn {
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
         this._procCom.execCommunicateSync(`${CMD_SETTINGS} firewall ${this._settings.get_boolean(`firewall`)}`);
+        _log.endTimer(t, 'SPAN', {operation: 'applySettingsToNord', subCalls: 11});
     }
 
     async setToDefaults() {
@@ -117,10 +136,13 @@ export default class Vpn {
 
     checkLogin() {
         const [ok, standardOut, err, exitStatus] = this._procCom.execCommunicateSync(CMD_VPNACCOUNT);
-        return exitStatus === 0;
+        const loggedIn = exitStatus === 0;
+        _log.debug('checkLogin', {loggedIn});
+        return loggedIn;
     }
 
     async getStatus() {
+        const t = _log.startTimer();
         let connectStatus, updateMessage, country, serverNumber, city, serverIp,
             currentTech, currentProtocol, transfer, uptime, currentServer;
 
@@ -150,8 +172,11 @@ export default class Vpn {
             }
         }
 
+        const resolved = connectStatus || 'N/A';
+        _log.endTimer(t, 'SPAN', {operation: 'getStatus', connectStatus: resolved});
+
         return {
-            connectStatus: connectStatus || 'N/A',
+            connectStatus: resolved,
             updateMessage,
             country: country || 'N/A',
             city: city || 'N/A',
