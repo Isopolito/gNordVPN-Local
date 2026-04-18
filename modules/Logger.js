@@ -5,16 +5,25 @@ export default class Logger {
         this._component = component;
     }
 
+    _format(level, msg, fields = {}) {
+        const suffix = Object.keys(fields).length > 0 ? ` ${JSON.stringify(fields)}` : '';
+        return `[gNordVpn][${level}][${this._component}] ${msg}${suffix}`;
+    }
+
     debug(msg, fields = {}) {
-        console.debug(`[gnordvpn][DBG][${this._component}] ${msg}`, JSON.stringify(fields));
+        log(this._format('DBG', msg, fields));
     }
 
     warn(msg, fields = {}) {
-        console.warn(`[gnordvpn][WRN][${this._component}] ${msg}`, JSON.stringify(fields));
+        log(this._format('WRN', msg, fields));
     }
 
     error(msg, e = null, fields = {}) {
-        console.error(`[gnordvpn][ERR][${this._component}] ${msg}`, e?.message ?? '', JSON.stringify(fields));
+        const payload = {
+            ...fields,
+            ...(e?.message ? {error: e.message} : {}),
+        };
+        logError(e ?? new Error(msg), this._format('ERR', msg, payload));
     }
 
     startTimer() {
@@ -25,10 +34,10 @@ export default class Logger {
     endTimer(start, tag, fields = {}) {
         const ms = Math.round((GLib.get_monotonic_time() - start) / 1000);
         const level = tag === 'CALL' ? 'CALL' : 'SPAN';
-        console.debug(
-            `[gnordvpn][${level}][${this._component}] ${fields.operation ?? fields.cmd ?? '?'} ${ms}ms`,
-            JSON.stringify({...fields, durationMs: ms})
-        );
+        log(this._format(level, `${fields.operation ?? fields.cmd ?? '?'} ${ms}ms`, {
+            ...fields,
+            durationMs: ms,
+        }));
         return ms;
     }
 }

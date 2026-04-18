@@ -36,7 +36,7 @@ export default class Favorites {
             this._setData(favoriteType, JSON.stringify(favorites));
 
         } catch(e) {
-            log('gnordvpn: ', e);
+            log(`gNordVpn: failed removing favorite - ${e}`);
         }
     }
 
@@ -54,7 +54,7 @@ export default class Favorites {
             favorites[item] = item2;
             this._setData(favoriteType, JSON.stringify(favorites));
         } catch(e) { 
-            log('gnordvpn: ', e);
+            log(`gNordVpn: failed adding favorite - ${e}`);
         }
     }
 }

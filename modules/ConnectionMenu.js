@@ -1,3 +1,4 @@
+import GLib from 'gi://GLib';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import Vpn from './Vpn.js';
@@ -20,6 +21,7 @@ export default class ConnectionMenu extends MenuBase {
         this._isBuilt = false;
         this._menuSeperator = null;
         this._destroyMap = {};
+        this._pendingIdleIds = [];
 
         this._favorites = new Favorites(settings);
         this._vpn = new Vpn(settings);
@@ -71,13 +73,26 @@ export default class ConnectionMenu extends MenuBase {
         menuItem.icofavBtn = icofavBtn;
         this._destroyMap[connection] = {menuItemClickId, menuItem, icofavBtn};
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, () => {
-            this._toggleConnectionMenuItem(connection, isFavorite);
-            if (isFavorite) this._favorites.remove(this._favoritesKey, connection);
-            else this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
+            // Defer both the GSettings write and widget mutation to idle so this
+            // callback doesn't destroy the menu item currently dispatching the event.
+            this._scheduleToggle(connection, isFavorite);
         });
 
         this._signals.register(menuItem.favoritePressId, () => icofavBtn.disconnect(menuItem.favoritePressId));
         return menuItem;
+    }
+
+    _scheduleToggle(connection, isFavorite) {
+        // Each click gets its own idle so rapid clicks on different rows all land.
+        // Writing GSettings on idle (not in the button-press handler) prevents
+        // destroying the menu item that is currently dispatching the event.
+        const id = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._pendingIdleIds = this._pendingIdleIds.filter(i => i !== id);
+            if (isFavorite) this._favorites.remove(this._favoritesKey, connection);
+            else this._favorites.add(this._favoritesKey, connection, this._connections[connection]);
+            return GLib.SOURCE_REMOVE;
+        });
+        this._pendingIdleIds.push(id);
     }
 
     _toggleConnectionMenuItem(connection, isFavorite) {
@@ -131,6 +146,8 @@ export default class ConnectionMenu extends MenuBase {
     }
 
     disable() {
+        this._pendingIdleIds.forEach(id => GLib.Source.remove(id));
+        this._pendingIdleIds = [];
         this._signals.disconnectAll();
         this._connectionMenu.destroy();
         this._connectionMenuItems = [];

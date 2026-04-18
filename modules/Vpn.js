@@ -49,7 +49,7 @@ export default class Vpn {
                     result = JSON.parse(decoder.decode(bytes.get_data()));
                 } else {
                     _log.endTimer(t, 'CALL', {cmd: domain, blocking: true, success: false});
-                    log(`gnordvpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
+                    log(`gNordVpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
                     return null;
                 }
             }
@@ -145,37 +145,50 @@ export default class Vpn {
         const t = _log.startTimer();
         let connectStatus, updateMessage, country, serverNumber, city, serverIp,
             currentTech, currentProtocol, transfer, uptime, currentServer;
+        let running = false;
 
-        const standardOut = await this._procCom.execCommunicateAsync(CMD_VPNSTATUS);
-        if (standardOut) {
-            const allStatusMessages = standardOut.split(`\n`);
+        try {
+            const standardOut = await this._procCom.execCommunicateAsync(CMD_VPNSTATUS);
+            // A successful (exit 0) response means nordvpnd is running.
+            running = true;
+            if (standardOut) {
+                const allStatusMessages = standardOut.split(`\n`);
 
-            // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
-            for (const msg of allStatusMessages) {
-                if (msg.includes(`Status:`)) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
-                else if (msg.includes(`Country:`)) country = msg.replace(`Country: `, ``).toUpperCase();
-                else if (msg.includes(`City:`)) city = msg.replace(`City: `, ``);
-                else if (msg.includes(`Server IP:`)) serverIp = msg.replace(`Server IP: `, ``);
-                else if (msg.includes(`IP:`)) serverIp = msg.replace(`IP: `, ``);
-                else if (msg.includes(`Current protocol:`)) currentProtocol = msg.replace(`Current protocol: `, ``);
-                else if (msg.includes(`Current technology:`)) currentTech = msg.replace(`Current technology: `, ``);
-                else if (msg.includes(`Transfer:`)) transfer = msg.replace(`Transfer: `, ``);
-                else if (msg.includes(`Uptime:`)) uptime = msg.replace(`Uptime: `, ``);
-                else if (msg.includes(`new version`)) updateMessage = msg;
-                else if (msg.includes(`Current server:`)) {
-                    serverNumber = msg.match(/\d+/);
-                    currentServer = msg.replace(`Current server: `, ``)
-                } else if (msg.includes(`Hostname:`)) {
-                    serverNumber = msg.match(/\d+/);
-                    currentServer = msg.replace(`Hostname: `, ``)
+                // NOTE that some of these message formats change across versions, old message formats are left in for backwards compatibility
+                for (const msg of allStatusMessages) {
+                    if (msg.includes(`Status:`)) connectStatus = (msg.match(/Status: \w+/) || [``])[0];
+                    else if (msg.includes(`Country:`)) country = msg.replace(`Country: `, ``).toUpperCase();
+                    else if (msg.includes(`City:`)) city = msg.replace(`City: `, ``);
+                    else if (msg.includes(`Server IP:`)) serverIp = msg.replace(`Server IP: `, ``);
+                    else if (msg.includes(`IP:`)) serverIp = msg.replace(`IP: `, ``);
+                    else if (msg.includes(`Current protocol:`)) currentProtocol = msg.replace(`Current protocol: `, ``);
+                    else if (msg.includes(`Current technology:`)) currentTech = msg.replace(`Current technology: `, ``);
+                    else if (msg.includes(`Transfer:`)) transfer = msg.replace(`Transfer: `, ``);
+                    else if (msg.includes(`Uptime:`)) uptime = msg.replace(`Uptime: `, ``);
+                    else if (msg.includes(`new version`)) updateMessage = msg;
+                    else if (msg.includes(`Current server:`)) {
+                        serverNumber = msg.match(/\d+/);
+                        currentServer = msg.replace(`Current server: `, ``)
+                    } else if (msg.includes(`Hostname:`)) {
+                        serverNumber = msg.match(/\d+/);
+                        currentServer = msg.replace(`Hostname: `, ``)
+                    }
                 }
             }
+        } catch (e) {
+            // A plain Error with a string message means nordvpn ran but exited non-zero
+            // (i.e. nordvpnd is not running). Any other error type (e.g. Gio.IOError from
+            // a spawn failure) means something is genuinely broken — re-throw so _refresh()
+            // can engage its exponential backoff instead of hammering a failing subprocess.
+            if (!(e instanceof Error)) throw e;
+            _log.warn('getStatus: nordvpnd not running or exited non-zero', {error: String(e)});
         }
 
         const resolved = connectStatus || 'N/A';
-        _log.endTimer(t, 'SPAN', {operation: 'getStatus', connectStatus: resolved});
+        _log.endTimer(t, 'SPAN', {operation: 'getStatus', connectStatus: resolved, running});
 
         return {
+            running,
             connectStatus: resolved,
             updateMessage,
             country: country || 'N/A',
@@ -320,7 +333,7 @@ export default class Vpn {
                 });
             }
         } catch (e) {
-            log(e, `gnordvpn: error getting servers`);
+            log(e, `gNordVpn: error getting servers`);
             return null;
         }
 

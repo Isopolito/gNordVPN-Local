@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # debug-logs.sh — gNordVpn extension log viewer
-# Filters GNOME Shell journal to only show [gnordvpn] lines.
+# Filters GNOME Shell journal to only show gNordVpn lines.
 #
 # Usage:
 #   ./debug-logs.sh                        # live tail (default)
@@ -31,6 +31,7 @@ SLOW_FILTER=false
 CAPTURE=false
 CAPTURE_FILE=""
 SUMMARY_FILE=""
+EXTENSION_PATTERN='gNordVpn|gnordvpn-local@isopolito|/gnome-shell/extensions/gnordvpn-local@isopolito/|gNordVPN-Local'
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -131,7 +132,7 @@ if [[ "$MODE" == "summary" ]]; then
 
     # enable() timestamps
     echo "${CYAN}── enable() lifecycle events (login correlation) ──${RESET}"
-    grep -i 'enable.*called\|_buildIndicatorMenu\|applySettingsToNord' "$SUMMARY_FILE" \
+    grep -i 'enable.*called\|_buildIndicatorMenu\|read-only path\|applySettingsToNord' "$SUMMARY_FILE" \
         | sed 's/^/  /' || echo "  (none found)"
 
     echo ""
@@ -180,11 +181,51 @@ colorize() {
     done
 }
 
+filter_extension_logs() {
+    awk -v pattern="$EXTENSION_PATTERN" '
+        BEGIN {
+            in_block = 0;
+        }
+        {
+            if (in_block) {
+                # Blank line ends the error block
+                if ($0 == "") {
+                    print $0; fflush();
+                    in_block = 0;
+                    next;
+                }
+
+                # Continuation lines belonging to a JS stack trace or error block
+                if ($0 ~ /^[[:space:]]/ ||
+                    $0 ~ /^@/ ||
+                    $0 ~ /^[[:alnum:]_.:$-]+@/ ||
+                    $0 ~ /^file:\/\// ||
+                    $0 ~ /^Stack trace:/ ||
+                    $0 ~ /^Caused by:/ ||
+                    $0 ~ /^(TypeError|Error|ReferenceError|SyntaxError):/ ||
+                    $0 ~ /^\.\.\//) {
+                    print $0; fflush();
+                    next;
+                }
+
+                # Non-continuation line from a different source ends the block
+                in_block = 0;
+            }
+
+            if ($0 ~ pattern) {
+                print $0; fflush();
+                in_block = 1;
+                next;
+            }
+        }
+    '
+}
+
 # ── Capture setup ─────────────────────────────────────────────────────────────
 if $CAPTURE; then
     if [[ -z "$CAPTURE_FILE" ]]; then
         mkdir -p "$HOME/tmp"
-        CAPTURE_FILE="$HOME/tmp/gnordvpn-debug-$(date +%Y-%m-%d_%H-%M).log"
+        CAPTURE_FILE="$HOME/tmp/gNordVpn-debug-$(date +%Y-%m-%d_%H-%M).log"
     fi
     echo "Capturing to: ${BOLD}${CAPTURE_FILE}${RESET}" >&2
 fi
@@ -202,17 +243,17 @@ elif [[ "$MODE" == "dump" ]]; then
     fi
 fi
 
-echo "${BOLD}[gnordvpn debug-logs]${RESET} mode=${MODE} errors_only=${ERRORS_ONLY} slow_threshold=${SLOW_THRESHOLD}ms" >&2
+echo "${BOLD}[gNordVpn debug-logs]${RESET} mode=${MODE} errors_only=${ERRORS_ONLY} slow_threshold=${SLOW_THRESHOLD}ms" >&2
 echo "" >&2
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 if $CAPTURE; then
     journalctl "${jctl_args[@]}" \
-        | grep --line-buffered -i '\[gnordvpn\]' \
+        | filter_extension_logs \
         | tee "$CAPTURE_FILE" \
         | colorize
 else
     journalctl "${jctl_args[@]}" \
-        | grep --line-buffered -i '\[gnordvpn\]' \
+        | filter_extension_logs \
         | colorize
 fi

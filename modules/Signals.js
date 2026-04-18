@@ -8,7 +8,7 @@ export default class Signals {
             try {
                 this._ids[id]();
             } catch (e) {
-                log(`gnordvpn: Failure unregistering existing callback for ${id} - ${e}`);
+                log(`gNordVpn: failure unregistering existing callback for ${id} - ${e}`);
             }
         }
         
@@ -22,7 +22,7 @@ export default class Signals {
                     this._ids[id]();
                     this._ids[id] = null;
                 } catch (e) {
-                    log(`gnordvpn: Failure unregistering callback for ${id} - ${e}`);
+                    log(`gNordVpn: failure unregistering callback for ${id} - ${e}`);
                 }
             }
         }
@@ -33,7 +33,7 @@ export default class Signals {
             try {
                 typeof callback === 'function' && callback();
             } catch (e) {
-                log(`gnordvpn: In disconnectAll, failure executing callback - ${e}`);
+                log(`gNordVpn: disconnectAll failed executing callback - ${e}`);
             }
         }
         

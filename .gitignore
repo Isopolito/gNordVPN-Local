@@ -2,3 +2,5 @@
 .idea
 *.orig
 node_modules
+.codex
+.serena

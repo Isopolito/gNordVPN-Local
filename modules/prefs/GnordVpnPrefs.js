@@ -23,15 +23,38 @@ export default class GnordVpnPrefs {
     }
 
     _createVersionRow() {
+        const name = this._metadata.name ?? 'gNordVpn-Local';
         const version = this._metadata.version ?? 'unknown';
-        const row = new Adw.ActionRow({
-            title: 'Extension Version',
-            subtitle: `v${version}`,
-            selectable: false,
-            activatable: false,
+        const url = this._metadata.url ?? '';
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6,
+            margin_top: 10,
+            margin_bottom: 10,
+            margin_start: 10,
+            margin_end: 10,
         });
+        const title = new Gtk.Label({
+            label: `${name} v${version}`,
+            halign: Gtk.Align.START,
+            xalign: 0,
+        });
+        box.append(title);
 
-        return row;
+        if (url) {
+            const escapedUrl = GLib.markup_escape_text(url, -1);
+            const link = new Gtk.Label({
+                use_markup: true,
+                selectable: false,
+                wrap: true,
+                halign: Gtk.Align.START,
+                xalign: 0,
+                label: `<a href="${escapedUrl}">${escapedUrl}</a>`,
+            });
+            box.append(link);
+        }
+
+        return box;
     }
 
     _createGeneralPage() {

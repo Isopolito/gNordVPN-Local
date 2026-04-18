@@ -1,14 +1,21 @@
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import Logger from './modules/Logger.js';
 import VpnIndicator from './modules/VpnIndicator.js';
+
+const _log = new Logger('Extension');
 
 export default class GnordVpnLocal extends Extension {
     _isExtensionEnabled = false;
 
     enable() {
-        if (this._isExtensionEnabled) return;
+        if (this._isExtensionEnabled) {
+            _log.warn('enable() ignored because extension is already enabled');
+            return;
+        }
         this._isExtensionEnabled = true;
+        _log.debug('enable() called', {version: this.metadata.version});
 
         this._vpnIndicator = new VpnIndicator(this);
         this._vpnIndicator.enable();
@@ -17,6 +24,7 @@ export default class GnordVpnLocal extends Extension {
     }
 
     disable() {
+        _log.debug('disable() called');
         if (this._vpnIndicator) {
             this._vpnIndicator.disable();
             this._vpnIndicator.destroy();

@@ -1,3 +1,4 @@
+import GLib from 'gi://GLib';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import Vpn from './Vpn.js';
@@ -19,9 +20,12 @@ export default class CommonFavorite extends MenuBase {
         this._favorites = new Favorites(settings);
         this._vpn = new Vpn(settings);
         this._signals = new Signals();
+        this._pendingIdleIds = [];
     }
 
     disable() {
+        this._pendingIdleIds.forEach(id => GLib.Source.remove(id));
+        this._pendingIdleIds = [];
         this._isBuilt = false;
         this._destroyMap = {};
         this.favList = {};
@@ -72,12 +76,27 @@ export default class CommonFavorite extends MenuBase {
         menuItem.icofavBtn = icofavBtn;
         this._destroyMap[favorite] = {menuItemClickId, menuItem, icofavBtn};
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, () => {
-                this._favorites.remove(this.favList[favorite].type, favorite); 
-                this._toggleFavoriteMenuItem(favorite, false); 
+                // Defer both the GSettings write and widget mutation to idle so this
+                // callback doesn't destroy the menu item currently dispatching the event.
+                this._scheduleToggle(favorite, false);
             });
 
         this._signals.register(menuItem.favoritePressId, () => icofavBtn.disconnect(menuItem.favoritePressId));
         return menuItem;
+    }
+
+    _scheduleToggle(favorite, toAdd) {
+        // Capture the type now (before idle) since favList may change by the time idle fires.
+        const favoriteType = this.favList[favorite]?.type;
+        // Each click gets its own idle so rapid clicks all land. Writing GSettings on
+        // idle (not in the button-press handler) prevents destroying the menu item
+        // that is currently dispatching the event.
+        const id = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._pendingIdleIds = this._pendingIdleIds.filter(i => i !== id);
+            if (favoriteType) this._favorites.remove(favoriteType, favorite);
+            return GLib.SOURCE_REMOVE;
+        });
+        this._pendingIdleIds.push(id);
     }
 
     _toggleFavoriteMenuItem(favorite, toAdd) {

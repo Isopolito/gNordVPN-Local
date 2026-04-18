@@ -23,7 +23,7 @@ export default class ProcCom {
             proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
         } catch (e) {
             _log.endTimer(t, 'CALL', {cmd, blocking: false, success: false});
-            logError(e, `gnordvpn`);
+            logError(e, `gNordVpn`);
             throw e;
         }
         const [stdout, stderr] = await proc.communicate_utf8_async(null, null);

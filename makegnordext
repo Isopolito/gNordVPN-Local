@@ -30,6 +30,26 @@ delete_node_artifacts() {
     rm -rf node_modules package*.json
 }
 
+delete_random_files_and_directories() {
+    find . -type f \( \
+        -name "*.orig" \
+        -o -name "*.spec.js" \
+        -o -name "package.json" \
+        -o -name "package-lock.json" \
+        -o -name "makegnordext" \
+        -o -name ".*.swp" \
+        -o -name "*.swp" \
+    \) -delete
+
+    find . -type d \( \
+        -name "__tests__" \
+        -o -name "__mocks__" \
+        -o -name "node_modules" \
+        -o -name ".serena" \
+        -o -name ".codex" \
+    \) -exec rm -rf {} +
+}
+
 create_zip() {
 
     local temp_dir=$(mktemp -d)
@@ -40,11 +60,7 @@ create_zip() {
     delete_orig_files
     delete_tests
     delete_node_artifacts
-
-    # this script should not be included in the raw extension zip either
-    rm -f makegnordext
-    rm *.swp > /dev/null 2>&1
-    rm .*.swp > /dev/null 2>&1
+    delete_random_files_and_directories
 
     mkdir -p "$OUTPUT_DIR"
     zip -r "$OUTPUT_DIR/gnordvpn-local-v$VERSION.zip" .
