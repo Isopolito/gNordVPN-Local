@@ -1,8 +1,5 @@
 # gNordVPN-Local: GNOME Interface for NordVPN
 
-## Help wanted
-Over time gnome extension api's and related libraries, plus the nordvpn CLI itself have changed. As a result this extension is a bit unstable. I have been swamped on other projects and haven't been able to give it the love it deserves. If you're interested in becoming a co maintainer, please contact me here or simply make an issue and I'll see it. 🙏
-
 <img align="right" src="img/screenshot1.png">
 
 
