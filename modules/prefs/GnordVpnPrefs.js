@@ -600,7 +600,22 @@ export default class GnordVpnPrefs {
     }
 
     fillPreferencesWindow(window) {
-        this._vpn.setSettingsFromNord();
+        let windowDestroyed = false;
+        window.connect('destroy', () => { windowDestroyed = true; });
+
+        // Sync GSettings from NordVPN then refresh combo boxes — they use one-time reads
+        // at construction so we must update them after the async fetch resolves.
+        this._vpn.setSettingsFromNord().then(() => {
+            if (windowDestroyed) return;
+            if (this._techCbox) {
+                const tech = this._settings.get_string('technology');
+                this._techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
+            }
+            if (this._protoCbox) {
+                const proto = this._settings.get_string('protocol');
+                this._protoCbox.set_active(proto === 'UDP' ? 0 : 1);
+            }
+        }).catch(e => log(e, 'gNordVpn: setSettingsFromNord failed'));
 
         // *** GENERAL
         const generalPage = new Adw.PreferencesPage();
@@ -670,8 +685,6 @@ export default class GnordVpnPrefs {
 
         // Populate tree stores after async fetch — the pages exist but start empty.
         // Both stores need country names, so fetch both maps in parallel then populate.
-        let windowDestroyed = false;
-        window.connect('destroy', () => { windowDestroyed = true; });
 
         Promise.all([
             this._vpn.getCountries(false, true).catch(e => { log(e, 'gNordVpn: prefs country load failed'); return null; }),

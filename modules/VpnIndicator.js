@@ -351,30 +351,30 @@ export default GObject.registerClass(
                     // _pendingLoginCheck ensures only one idle is queued even on rapid clicks.
                     if (!this._pendingLoginCheck) {
                         this._pendingLoginCheck = true;
-                        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                        this._vpn.checkLogin().then(loggedIn => {
                             this._pendingLoginCheck = false;
-                            if (this._isDestroyed) return GLib.SOURCE_REMOVE;
-                            this._isLoggedIn = this._vpn.checkLogin();
+                            if (this._isDestroyed) return;
+                            this._isLoggedIn = loggedIn;
                             if (this._isRefreshing) this._pendingLoginRefresh = true;
                             else this._refresh();
-                            return GLib.SOURCE_REMOVE;
+                        }).catch(e => {
+                            this._pendingLoginCheck = false;
+                            log(e, 'gNordVpn: checkLogin failed');
                         });
                     }
                 });
 
-                // Defer initial login check to avoid blocking shell startup (~1s sync call).
-                // Only trigger a follow-up refresh if the login state changed; the enable()
-                // startup _refresh() already runs concurrently and covers the common case.
-                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                    if (this._isDestroyed) return GLib.SOURCE_REMOVE;
+                // Async initial login check — non-blocking.
+                // Only trigger a follow-up refresh if the login state changed.
+                this._vpn.checkLogin().then(loggedIn => {
+                    if (this._isDestroyed) return;
                     const wasLoggedIn = this._isLoggedIn;
-                    this._isLoggedIn = this._vpn.checkLogin();
+                    this._isLoggedIn = loggedIn;
                     if (this._isLoggedIn !== wasLoggedIn) {
                         if (this._isRefreshing) this._pendingLoginRefresh = true;
                         else this._refresh();
                     }
-                    return GLib.SOURCE_REMOVE;
-                });
+                }).catch(e => log(e, 'gNordVpn: initial checkLogin failed'));
                 _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu'});
             } catch (e) {
                 _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu', error: e?.message});
@@ -408,12 +408,14 @@ export default GObject.registerClass(
                 this._serverMenu = new ConnectionMenu(`Servers`, `servers`, Constants.favorites.favoriteServers, this._overrideRefresh.bind(this), this._extSettings);
                 this._panelIcon = new PanelIcon(this._extSettings);
 
-                this._buildIndicatorMenu().then(() => {
+                this._buildIndicatorMenu().then(async () => {
                     // Startup is read-only: build UI, fetch status, schedule refresh.
                     // applySettingsToNord() is intentionally omitted here to avoid
                     // blocking writes during login/unlock (see issue #102).
                     // Settings are applied only from the prefs Apply button.
                     _log.debug('enable() startup: read-only path, skipping applySettingsToNord');
+                    // Sync GSettings from NordVPN so the prefs UI reflects actual settings.
+                    this._vpn.setSettingsFromNord().catch(e => log(e, 'gNordVpn: setSettingsFromNord failed'));
                     this._refresh().then(() => {
                         _log.endTimer(t, 'SPAN', {operation: 'enable'});
                     }).catch(e => log(e, `gNordVpn: unable to refresh`));

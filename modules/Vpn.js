@@ -112,8 +112,15 @@ export default class Vpn {
         }
     }
 
-    setSettingsFromNord() {
-        const standardOut = this._execSyncIfVpnOn(CMD_FETCH_SETTINGS);
+    async setSettingsFromNord() {
+        // Use async status check to determine if nordvpnd is running — avoids blocking sync call.
+        let running = false;
+        try {
+            await this._procCom.execCommunicateAsync(CMD_VPNSTATUS);
+            running = true;
+        } catch { /* nordvpnd not running */ }
+        const standardOut = await this._execAsyncIfRunning(CMD_FETCH_SETTINGS, running);
+        if (!standardOut) return;
         for (const line of standardOut.split(`\n`)) {
             let parts = line.split(`:`);
             const settingName = this._vpnUtils.resolveSettingsKey(parts[0]);
@@ -166,11 +173,21 @@ export default class Vpn {
         return {emailAddress, vpnService};
     }
 
-    checkLogin() {
-        const [ok, standardOut, err, exitStatus] = this._procCom.execCommunicateSync(CMD_VPNACCOUNT);
-        const loggedIn = exitStatus === 0;
-        _log.debug('checkLogin', {loggedIn});
-        return loggedIn;
+    async checkLogin() {
+        try {
+            await this._procCom.execCommunicateAsync(CMD_VPNACCOUNT);
+            _log.debug('checkLogin', {loggedIn: true});
+            return true;
+        } catch (e) {
+            // execCommunicateAsync throws new Error(stderr) when nordvpn exits non-zero
+            // (not logged in). GIO spawn failures throw a GLib.Error with a numeric .code
+            // property — re-throw those so callers can surface real infrastructure errors.
+            if (e instanceof Error && e.code === undefined) {
+                _log.debug('checkLogin', {loggedIn: false});
+                return false;
+            }
+            throw e;
+        }
     }
 
     async getStatus() {
