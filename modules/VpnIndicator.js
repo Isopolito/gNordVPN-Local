@@ -29,6 +29,7 @@ export default GObject.registerClass(
         _lastMenuBuild = null;
         _refreshTimeoutInSec;
         _refreshBackoffSec = 0;
+        _lastKnownRunning = false;
 
         constructor(extension) {
             super();
@@ -73,11 +74,11 @@ export default GObject.registerClass(
                         break;
                     case `number-cities-per-countries`:
                     case `countries-selected-for-cities`:
-                        this._cityMenu.rebuild();
+                        this._cityMenu.rebuild(this._lastKnownRunning);
                         break;
                     case `number-servers-per-countries`:
                     case `countries-selected-for-servers`:
-                        this._serverMenu.rebuild();
+                        this._serverMenu.rebuild(this._lastKnownRunning);
                         break;
                     case `commonfavorite`: {
                         this._commonFavorite.showHide(settings.get_boolean(`commonfavorite`));
@@ -116,6 +117,7 @@ export default GObject.registerClass(
                     ? this._stateManager.resolveState(status)
                     : this._stateManager.resolveState(null);
 
+                this._lastKnownRunning = status.running;
                 this._throttledMenuBuild(status);
 
                 // Update the menu and panel based on the current state
@@ -153,20 +155,17 @@ export default GObject.registerClass(
         }
 
         _throttledMenuBuild(status) {
-            // Don't build more frequently than once every 30 seconds
-            if ((Date.now() - this._lastMenuBuild) > 30_000) {
-                this._lastMenuBuild = Date.now();
-                // Ensure that menus are populated. Since the menu may be created before the VPN is running and able
-                // to provide available cities, countries, etc
-                if (status.currentState.stateName !== Constants.states[`ERROR`]) {
-                    _log.debug('throttledMenuBuild triggered');
-                    this._countryMenu.tryBuild();
-                    this._cityMenu.tryBuild();
-                    this._serverMenu.tryBuild();
-                }
-            } else {
+            if ((Date.now() - this._lastMenuBuild) <= 30_000) {
                 _log.debug('throttledMenuBuild skipped (within 30s window)');
+                return;
             }
+            if (status.currentState.stateName === Constants.states[`ERROR`]) return;
+            if (!status.running) return;
+            this._lastMenuBuild = Date.now();
+            _log.debug('throttledMenuBuild triggered');
+            this._countryMenu.tryBuild(true).catch(e => log(e, 'gNordVpn: countryMenu build failed'));
+            this._cityMenu.tryBuild(true).catch(e => log(e, 'gNordVpn: cityMenu build failed'));
+            this._serverMenu.tryBuild(true).catch(e => log(e, 'gNordVpn: serverMenu build failed'));
         }
 
         _updateMenu(status) {
@@ -311,13 +310,14 @@ export default GObject.registerClass(
                 if (this._extSettings.get_boolean(`commonfavorite`)) this._commonFavorite.menu.show();
                 else this._commonFavorite.menu.hide();
 
-                this._countryMenu.tryBuild();
+                // running=false: nordvpnd state not yet known; menus populate on first _throttledMenuBuild.
+                this._countryMenu.tryBuild(false).catch(e => log(e, 'gNordVpn: countryMenu build failed'));
                 this.menu.addMenuItem(this._countryMenu.menu);
 
-                this._cityMenu.tryBuild();
+                this._cityMenu.tryBuild(false).catch(e => log(e, 'gNordVpn: cityMenu build failed'));
                 this.menu.addMenuItem(this._cityMenu.menu);
 
-                this._serverMenu.tryBuild();
+                this._serverMenu.tryBuild(false).catch(e => log(e, 'gNordVpn: serverMenu build failed'));
                 this.menu.addMenuItem(this._serverMenu.menu);
 
                 this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -427,6 +427,8 @@ export default GObject.registerClass(
         disable() {
             this._isDestroyed = true;
             this._clearTimeout();
+            // Reset so the next enable() gets an immediate throttledMenuBuild on first refresh
+            this._lastMenuBuild = null;
 
             this._commonFavorite.disable();
             this._commonFavorite.isAdded = false;
