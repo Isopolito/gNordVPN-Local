@@ -1,6 +1,9 @@
+import Logger from './Logger.js';
+
 export default class Signals {
     constructor() {
         this._ids = {};
+        this._log = new Logger('Signals');
     }
     
     register(id, callback) {
@@ -8,7 +11,7 @@ export default class Signals {
             try {
                 this._ids[id]();
             } catch (e) {
-                log(`gNordVpn: failure unregistering existing callback for ${id} - ${e}`);
+                this._log.error(`failure unregistering existing callback for ${id}`, e);
             }
         }
         
@@ -22,7 +25,7 @@ export default class Signals {
                     this._ids[id]();
                     this._ids[id] = null;
                 } catch (e) {
-                    log(`gNordVpn: failure unregistering callback for ${id} - ${e}`);
+                    this._log.error(`failure unregistering callback for ${id}`, e);
                 }
             }
         }
@@ -33,7 +36,7 @@ export default class Signals {
             try {
                 typeof callback === 'function' && callback();
             } catch (e) {
-                log(`gNordVpn: disconnectAll failed executing callback - ${e}`);
+                this._log.error('disconnectAll failed executing callback', e);
             }
         }
         

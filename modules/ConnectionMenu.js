@@ -9,11 +9,10 @@ import * as Common from './common.js';
 import * as Constants from './constants.js';
 import Logger from './Logger.js';
 
-const _log = new Logger('ConnectionMenu');
-
 export default class ConnectionMenu extends MenuBase {
     constructor(connectionLabel, connectionType, favoritesKey, connectionCallback, settings) {
         super();
+        this._log = new Logger('ConnectionMenu');
         this._connectionCallback = connectionCallback;
         this._connectionMenu = null;
         this._connectionMenuItems = [];
@@ -65,7 +64,7 @@ export default class ConnectionMenu extends MenuBase {
         // the in-flight fetch will see a gen mismatch, and _throttledMenuBuild retries later.
         const id = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._pendingIdleIds = this._pendingIdleIds.filter(i => i !== id);
-            if (!this._isDisposed) this.tryBuild(running).catch(e => log(e, `gNordVpn: tryBuild after rebuild failed`));
+            if (!this._isDisposed) this.tryBuild(running).catch(e => this._log.error('tryBuild after rebuild failed', e));
             return GLib.SOURCE_REMOVE;
         });
         this._pendingIdleIds.push(id);
@@ -78,8 +77,11 @@ export default class ConnectionMenu extends MenuBase {
     _buildConnectionMenuItem(connection, isFavorite) {
         const menuItem = new PopupMenu.PopupMenuItem(connection);
         const menuItemClickId = menuItem.connect(`activate`, (actor, event) => {
-            this._vpn.connectVpn(this._connections[connection]);
-            this._connectionCallback(Constants.status.reconnecting, [this._connectionType, this._connections[connection]]);
+            const target = this._connections[connection];
+            const connType = this._connectionType;
+            if (!target || this._isDisposed || this._vpn.isConnectThrottled()) return;
+            this._vpn.connectVpn(target).catch(e => this._log.error('connectVpn failed', e));
+            this._connectionCallback(Constants.status.reconnecting, [connType, target]);
         });
 
         this._signals.register(menuItemClickId, () => menuItem.disconnect(menuItemClickId));
@@ -181,12 +183,12 @@ export default class ConnectionMenu extends MenuBase {
         const gen = ++this._buildGen;
         this._buildInFlight = true;
 
-        const t = _log.startTimer();
+        const t = this._log.startTimer();
         let connections;
         try {
             connections = await this._vpn.getConnectionList(this._connectionType, running);
         } catch (e) {
-            _log.warn('tryBuild fetch failed', {type: this._connectionType, error: e?.message});
+            this._log.warn('tryBuild fetch failed', {type: this._connectionType, error: e?.message});
             return;
         } finally {
             this._buildInFlight = false;
@@ -195,10 +197,12 @@ export default class ConnectionMenu extends MenuBase {
             // If gen still matches, the fetch completed legitimately (no-data / error / success);
             // normal refresh cycles handle the next attempt, so no retry is needed here.
             if (gen !== this._buildGen && !this._isDisposed) {
-                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                    if (!this._isDisposed) this.tryBuild(running).catch(e => log(e, `gNordVpn: tryBuild retry failed`));
+                const retryId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    this._pendingIdleIds = this._pendingIdleIds.filter(i => i !== retryId);
+                    if (!this._isDisposed) this.tryBuild(running).catch(e => this._log.error('tryBuild retry failed', e));
                     return GLib.SOURCE_REMOVE;
                 });
+                this._pendingIdleIds.push(retryId);
             }
         }
 
@@ -207,7 +211,7 @@ export default class ConnectionMenu extends MenuBase {
         if (!connections || Object.keys(connections).length === 0) {
             if (this._connectionMenu.menu.numMenuItems === 0)
                 this._connectionMenu.menu.addMenuItem(this._buildPlaceHolderMenuItem());
-            _log.endTimer(t, 'SPAN', {operation: `tryBuild:${this._connectionType}`, result: 'no-data'});
+            this._log.endTimer(t, 'SPAN', {operation: `tryBuild:${this._connectionType}`, result: 'no-data'});
             return;
         }
 
@@ -235,7 +239,7 @@ export default class ConnectionMenu extends MenuBase {
         }
 
         const itemCount = Common.safeObjectKeys(this._connections).length;
-        _log.endTimer(t, 'SPAN', {operation: `tryBuild:${this._connectionType}`, itemCount});
+        this._log.endTimer(t, 'SPAN', {operation: `tryBuild:${this._connectionType}`, itemCount});
 
         if (itemCount < 1) {
             this._connectionMenu.hide();

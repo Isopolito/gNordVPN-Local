@@ -16,20 +16,36 @@ import PanelIcon from './PanelIcon.js';
 import * as Constants from './constants.js';
 import Logger from './Logger.js';
 
-const _log = new Logger('VpnIndicator');
-
 export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
+        _log = new Logger('VpnIndicator');
         _isLoggedIn = false;
         _isRefreshing = false;
         _isDestroyed = false;
         _pendingLoginCheck = false;
+        _pendingLoginRefresh = false;
         _indicatorName = `VPN Indicator`;
-        _stateManager = new StateManager();
+        _stateManager = null;
         _lastMenuBuild = null;
         _refreshTimeoutInSec;
         _refreshBackoffSec = 0;
         _lastKnownRunning = false;
+        _timeout = null;
+        _statusPopup = null;
+        _statusLabel = null;
+        _updateMenuLabel = null;
+        _connectMenuItem = null;
+        _disconnectMenuItem = null;
+        _loginMenuItem = null;
+        _logoutMenuItem = null;
+        _vpn = null;
+        _signals = null;
+        _settingsChangedId = null;
+        _commonFavorite = null;
+        _countryMenu = null;
+        _cityMenu = null;
+        _serverMenu = null;
+        _panelIcon = null;
 
         constructor(extension) {
             super();
@@ -43,7 +59,7 @@ export default GObject.registerClass(
         }
 
         _connectChanged() {
-            this._extSettings.connect(`changed`, (settings, key) => {
+            this._settingsChangedId = this._extSettings.connect(`changed`, (settings, key) => {
                 switch (key) {
                     case 'refresh-timeout':
                         this._refreshTimeoutInSec = settings.get_value(`refresh-timeout`).unpack();
@@ -107,7 +123,7 @@ export default GObject.registerClass(
                 // Stop the refreshes
                 this._clearTimeout();
 
-                const t = _log.startTimer();
+                const t = this._log.startTimer();
                 const status = await this._vpn.getStatus();
                 if (this._isDestroyed) return;
                 status.loggedin = this._isLoggedIn;
@@ -127,9 +143,9 @@ export default GObject.registerClass(
                 const prevBackoff = this._refreshBackoffSec;
                 this._refreshBackoffSec = 0;
                 if (prevBackoff !== 0)
-                    _log.debug('backoff cleared', {prev: prevBackoff});
+                    this._log.debug('backoff cleared', {prev: prevBackoff});
 
-                _log.endTimer(t, 'SPAN', {
+                this._log.endTimer(t, 'SPAN', {
                     operation: '_refresh',
                     state: status.currentState?.stateName,
                     nextDelay: this._refreshTimeoutInSec
@@ -137,8 +153,8 @@ export default GObject.registerClass(
             } catch (e) {
                 const prev = this._refreshBackoffSec;
                 this._refreshBackoffSec = Math.min(this._refreshBackoffSec ? this._refreshBackoffSec * 2 : 5, 60);
-                _log.warn('refresh failed, backoff increased', {prev, next: this._refreshBackoffSec, error: e?.message});
-                log(e, `gNordVpn: Unable to refresh`);
+                this._log.warn('refresh failed, backoff increased', {prev, next: this._refreshBackoffSec, error: e?.message});
+                this._log.error('Unable to refresh', e);
             } finally {
                 this._isRefreshing = false;
                 if (!this._isDestroyed) {
@@ -156,16 +172,16 @@ export default GObject.registerClass(
 
         _throttledMenuBuild(status) {
             if ((Date.now() - this._lastMenuBuild) <= 30_000) {
-                _log.debug('throttledMenuBuild skipped (within 30s window)');
+                this._log.debug('throttledMenuBuild skipped (within 30s window)');
                 return;
             }
             if (status.currentState.stateName === Constants.states[`ERROR`]) return;
             if (!status.running) return;
             this._lastMenuBuild = Date.now();
-            _log.debug('throttledMenuBuild triggered');
-            this._countryMenu.tryBuild(true).catch(e => log(e, 'gNordVpn: countryMenu build failed'));
-            this._cityMenu.tryBuild(true).catch(e => log(e, 'gNordVpn: cityMenu build failed'));
-            this._serverMenu.tryBuild(true).catch(e => log(e, 'gNordVpn: serverMenu build failed'));
+            this._log.debug('throttledMenuBuild triggered');
+            this._countryMenu.tryBuild(true).catch(e => this._log.error('countryMenu build failed', e));
+            this._cityMenu.tryBuild(true).catch(e => this._log.error('cityMenu build failed', e));
+            this._serverMenu.tryBuild(true).catch(e => this._log.error('serverMenu build failed', e));
         }
 
         _updateMenu(status) {
@@ -234,30 +250,33 @@ export default GObject.registerClass(
         }
 
         async _connect() {
-            this._vpn.connectVpn().then(() => {
-                // Set an override on the status as the command line status takes a while to catch up
-                this._overrideRefresh(Constants.status.connecting)
-            }).catch(e => log(e, `gNordVpn: unable to connect to vpn`));
+            this._vpn.connectVpn().then(result => {
+                // null means throttled — no connection attempt was made, so don't show connecting state
+                if (result === null || this._isDestroyed) return;
+                this._overrideRefresh(Constants.status.connecting);
+            }).catch(e => this._log.error('unable to connect to vpn', e));
         }
 
         async _disconnect() {
             // Run the disconnect command
             this._vpn.disconnectVpn().then(() => {
                 // Set an override on the status as the command line status takes a while to catch up
-                this._overrideRefresh(Constants.status.disconnecting)
-            }).catch(e => log(e, `gNordVpn: unable to disconnect`));
+                if (!this._isDestroyed) this._overrideRefresh(Constants.status.disconnecting);
+            }).catch(e => this._log.error('unable to disconnect', e));
         }
 
         async _login() {
-            this._vpn.loginVpn()
-            this._overrideRefresh(Constants.status.login);
+            if (!this._isDestroyed) this._overrideRefresh(Constants.status.login);
+            await this._vpn.loginVpn().catch(e => {
+                this._log.error('loginVpn failed', e);
+                // Clear the optimistic login override since no browser flow was launched
+                if (!this._isDestroyed) this._refresh();
+            });
         }
 
         async _logout() {
-            this._vpn.logoutVpn().then(() => {
-                // Set an override on the status as the command line status takes a while to catch up
-                this._overrideRefresh(Constants.status.logout)
-            });
+            await this._vpn.logoutVpn();
+            if (!this._isDestroyed) this._overrideRefresh(Constants.status.logout);
         }
 
         _clearTimeout() {
@@ -272,12 +291,12 @@ export default GObject.registerClass(
             try {
                 this._extension.openPreferences();
             } catch (e) {
-                log(e, `gNordVpn: error opening preferences`);
+                this._log.error('error opening preferences', e);
             }
         }
 
         async _buildIndicatorMenu() {
-            const t = _log.startTimer();
+            const t = this._log.startTimer();
             try {
                 this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
                 this._statusPopup.menu.connect(`open-state-changed`, (actor, event) => this._setQuickRefresh(event));
@@ -294,13 +313,13 @@ export default GObject.registerClass(
 
                 // Add `Connect` menu item
                 this._connectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.connect);
-                const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, () => this._connect().catch(e => log(e, `gNordVpn: unable to connect`)));
+                const connectMenuItemClickId = this._connectMenuItem.connect(`activate`, () => this._connect().catch(e => this._log.error('unable to connect', e)));
                 this._signals.register(connectMenuItemClickId, () => this._connectMenuItem.disconnect(connectMenuItemClickId));
                 this.menu.addMenuItem(this._connectMenuItem);
 
                 // Add `Disconnect` menu item
                 this._disconnectMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.disconnect);
-                const disconnectMenuItemClickId = this._disconnectMenuItem.connect(`activate`, () => this._disconnect().catch(e => log(e, `gNordVpn: unable to disconnect`)));
+                const disconnectMenuItemClickId = this._disconnectMenuItem.connect(`activate`, () => this._disconnect().catch(e => this._log.error('unable to disconnect', e)));
                 this._signals.register(disconnectMenuItemClickId, () => this._disconnectMenuItem.disconnect(disconnectMenuItemClickId));
                 this.menu.addMenuItem(this._disconnectMenuItem);
 
@@ -311,13 +330,13 @@ export default GObject.registerClass(
                 else this._commonFavorite.menu.hide();
 
                 // running=false: nordvpnd state not yet known; menus populate on first _throttledMenuBuild.
-                this._countryMenu.tryBuild(false).catch(e => log(e, 'gNordVpn: countryMenu build failed'));
+                this._countryMenu.tryBuild(false).catch(e => this._log.error('countryMenu build failed', e));
                 this.menu.addMenuItem(this._countryMenu.menu);
 
-                this._cityMenu.tryBuild(false).catch(e => log(e, 'gNordVpn: cityMenu build failed'));
+                this._cityMenu.tryBuild(false).catch(e => this._log.error('cityMenu build failed', e));
                 this.menu.addMenuItem(this._cityMenu.menu);
 
-                this._serverMenu.tryBuild(false).catch(e => log(e, 'gNordVpn: serverMenu build failed'));
+                this._serverMenu.tryBuild(false).catch(e => this._log.error('serverMenu build failed', e));
                 this.menu.addMenuItem(this._serverMenu.menu);
 
                 this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -329,13 +348,13 @@ export default GObject.registerClass(
 
                 // Add `Login` menu item
                 this._loginMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.login);
-                const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, () => this._login().catch(e => log(e, `gNordVpn: unable to login`)));
+                const loginMenuItemClickId = this._loginMenuItem.connect(`activate`, () => this._login().catch(e => this._log.error('unable to login', e)));
                 this._signals.register(loginMenuItemClickId, () => this._loginMenuItem.disconnect(loginMenuItemClickId));
                 this.menu.addMenuItem(this._loginMenuItem);
 
                 // Add `Logout` menu item
                 this._logoutMenuItem = new PopupMenu.PopupMenuItem(Constants.menus.logout);
-                const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, () => this._logout().catch(e => log(e, `gNordVpn: unable to logout`)));
+                const logoutMenuItemClickId = this._logoutMenuItem.connect(`activate`, () => this._logout().catch(e => this._log.error('unable to logout', e)));
                 this._signals.register(logoutMenuItemClickId, () => this._logoutMenuItem.disconnect(logoutMenuItemClickId));
                 this.menu.addMenuItem(this._logoutMenuItem);
 
@@ -359,7 +378,7 @@ export default GObject.registerClass(
                             else this._refresh();
                         }).catch(e => {
                             this._pendingLoginCheck = false;
-                            log(e, 'gNordVpn: checkLogin failed');
+                            this._log.error('checkLogin failed', e);
                         });
                     }
                 });
@@ -374,30 +393,31 @@ export default GObject.registerClass(
                         if (this._isRefreshing) this._pendingLoginRefresh = true;
                         else this._refresh();
                     }
-                }).catch(e => log(e, 'gNordVpn: initial checkLogin failed'));
-                _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu'});
+                }).catch(e => this._log.error('initial checkLogin failed', e));
+                this._log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu'});
             } catch (e) {
-                _log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu', error: e?.message});
-                log(e, `gNordVpn: unable to build indicator menu`);
+                this._log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu', error: e?.message});
+                this._log.error('unable to build indicator menu', e);
             }
         }
 
         _setTimeout(timeoutDuration) {
             if (this._isDestroyed) return;
             const delay = Math.max(1, timeoutDuration + this._refreshBackoffSec);
-            _log.debug('next refresh scheduled', {delaySec: delay});
+            this._log.debug('next refresh scheduled', {delaySec: delay});
             // Refresh after an interval
             this._timeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delay, () => {
                 if (this._isDestroyed) return GLib.SOURCE_REMOVE;
-                this._refresh().catch(e => log(e, `gNordVpn: unable to refresh`));
+                this._refresh().catch(e => this._log.error('unable to refresh', e));
                 return GLib.SOURCE_REMOVE; // Ensure the timeout is only run once
             });
         }
 
         enable() {
-            const t = _log.startTimer();
-            _log.debug('enable() called');
+            const t = this._log.startTimer();
+            this._log.debug('enable() called');
             try {
+                this._stateManager = new StateManager();
                 this._moveIndicator();
                 this._connectChanged();
                 this._vpn = new Vpn(this._extSettings);
@@ -409,20 +429,20 @@ export default GObject.registerClass(
                 this._panelIcon = new PanelIcon(this._extSettings);
 
                 this._buildIndicatorMenu().then(async () => {
+                    if (this._isDestroyed) return;
                     // Startup is read-only: build UI, fetch status, schedule refresh.
                     // applySettingsToNord() is intentionally omitted here to avoid
                     // blocking writes during login/unlock (see issue #102).
                     // Settings are applied only from the prefs Apply button.
-                    _log.debug('enable() startup: read-only path, skipping applySettingsToNord');
+                    this._log.debug('enable() startup: read-only path, skipping applySettingsToNord');
                     // Sync GSettings from NordVPN so the prefs UI reflects actual settings.
-                    this._vpn.setSettingsFromNord().catch(e => log(e, 'gNordVpn: setSettingsFromNord failed'));
+                    this._vpn.setSettingsFromNord().catch(e => this._log.error('setSettingsFromNord failed', e));
                     this._refresh().then(() => {
-                        _log.endTimer(t, 'SPAN', {operation: 'enable'});
-                    }).catch(e => log(e, `gNordVpn: unable to refresh`));
-                }).catch(e => log(e, `gNordVpn: unable to build indicator menu`));
+                        this._log.endTimer(t, 'SPAN', {operation: 'enable'});
+                    }).catch(e => this._log.error('unable to refresh', e));
+                }).catch(e => this._log.error('unable to build indicator menu', e));
             } catch (e) {
-                _log.error('enable() failed', e);
-                log(e, `gNordVpn: unable to build indicator menu and refresh`);
+                this._log.error('enable() failed', e);
             }
         }
 
@@ -441,6 +461,20 @@ export default GObject.registerClass(
             this._serverMenu.disable();
             this._serverMenu.isAdded = false;
             this._signals.disconnectAll();
+
+            if (this._settingsChangedId) {
+                this._extSettings.disconnect(this._settingsChangedId);
+                this._settingsChangedId = null;
+            }
+
+            this._commonFavorite = null;
+            this._countryMenu = null;
+            this._cityMenu = null;
+            this._serverMenu = null;
+            this._vpn = null;
+            this._signals = null;
+            this._panelIcon = null;
+            this._stateManager = null;
         }
 
         getPanelPosition() {

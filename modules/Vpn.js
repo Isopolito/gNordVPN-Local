@@ -19,10 +19,12 @@ const CMD_DISCONNECT = `nordvpn d`;
 const CMD_LOGIN = `nordvpn login`;
 const CMD_LOGOUT = `nordvpn logout`;
 
-const _log = new Logger('Vpn');
+// Shared across all Vpn instances (panel + prefs) to prevent concurrent login subprocesses
+let _loginInFlight = false;
 
 export default class Vpn {
     constructor(settings) {
+        this._log = new Logger('Vpn');
         this._settings = settings
         this._procCom = new ProcCom();
         this._vpnUtils = new VpnUtils();
@@ -40,7 +42,7 @@ export default class Vpn {
 
     async _httpGet(url) {
         const domain = url.replace(/^https?:\/\//, '').split('/')[0];
-        const t = _log.startTimer();
+        const t = this._log.startTimer();
         try {
             const msg = Soup.Message.new(`GET`, url);
             let result;
@@ -48,7 +50,7 @@ export default class Vpn {
                 // Soup < 2: keep sync
                 this._session.send(msg, null);
                 result = JSON.parse(this._vpnUtils.getString(msg.response_body.data));
-                _log.endTimer(t, 'CALL', {cmd: domain, blocking: true, success: true});
+                this._log.endTimer(t, 'CALL', {cmd: domain, blocking: true, success: true});
             } else if (this._soupVersion >= 2 && this._soupVersion < 3) {
                 const inputStream = await this._session.send_async(msg, GLib.PRIORITY_DEFAULT, null);
                 const chunks = [];
@@ -58,21 +60,21 @@ export default class Vpn {
                     chunks.push(chunk);
                 }
                 result = JSON.parse(new TextDecoder('utf-8').decode(this._concatBytes(chunks)));
-                _log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: true});
+                this._log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: true});
             } else {
                 const bytes = await this._session.send_and_read_async(msg, GLib.PRIORITY_DEFAULT, null);
                 if (msg.get_status() === Soup.Status.OK) {
                     result = JSON.parse(new TextDecoder('utf-8').decode(bytes.get_data()));
-                    _log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: true});
+                    this._log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: true});
                 } else {
-                    _log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: false});
-                    log(`gNordVpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
+                    this._log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: false});
+                    this._log.error(`gNordVpn: error (${msg.get_reason_phrase()}) calling URL ${url}`);
                     return null;
                 }
             }
             return result;
         } catch (e) {
-            _log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: false});
+            this._log.endTimer(t, 'CALL', {cmd: domain, blocking: false, success: false});
             throw e;
         }
     }
@@ -88,28 +90,9 @@ export default class Vpn {
         return buf;
     }
 
-    _execSyncIfVpnOn(command) {
-        if (!this.isNordVpnRunning()) return ``;
-
-        const [ok, standardOut, standardError, exitStatus] = this._procCom.execCommunicateSync(command);
-        return this._vpnUtils.getString(standardOut);
-    }
-
     async _execAsyncIfRunning(command, running) {
         if (!running) return ``;
         return this._procCom.execCommunicateAsync(command);
-    }
-
-    isNordVpnRunning() {
-        try {
-            const [ok, standardOut, standardError, exitStatus] = this._procCom.execCommunicateSync(CMD_VPNSTATUS);
-            const running = exitStatus === 0;
-            _log.debug('isNordVpnRunning', {running});
-            return running;
-        } catch {
-            _log.debug('isNordVpnRunning', {running: false, error: true});
-            return false;
-        }
     }
 
     async setSettingsFromNord() {
@@ -118,7 +101,7 @@ export default class Vpn {
         try {
             await this._procCom.execCommunicateAsync(CMD_VPNSTATUS);
             running = true;
-        } catch { /* nordvpnd not running */ }
+        } catch (e) { this._log.debug('setSettingsFromNord: nordvpnd not running', {error: String(e)}); }
         const standardOut = await this._execAsyncIfRunning(CMD_FETCH_SETTINGS, running);
         if (!standardOut) return;
         for (const line of standardOut.split(`\n`)) {
@@ -135,32 +118,61 @@ export default class Vpn {
         }
     }
 
-    applySettingsToNord() {
-        if (!this.isNordVpnRunning()) return;
+    async applySettingsToNord() {
+        // Snapshot all settings synchronously before the first await so that
+        // switch changes made while the daemon check is in-flight don't corrupt writes.
+        const firewall = this._settings.get_boolean(`firewall`);
+        const analytics = this._settings.get_boolean(`analytics`);
+        const autoconnect = this._settings.get_boolean(`autoconnect`);
+        const cybersec = this._settings.get_boolean(`cybersec`);
+        const killswitch = this._settings.get_boolean(`killswitch`);
+        const obfuscate = this._settings.get_boolean(`obfuscate`);
+        const ipv6 = this._settings.get_boolean(`ipv6`);
+        const notify = this._settings.get_boolean(`notify`);
+        const protocol = this._settings.get_string(`protocol`);
+        const technology = this._settings.get_string(`technology`);
 
-        const t = _log.startTimer();
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} firewall ${this._settings.get_boolean(`firewall`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} analytics ${this._settings.get_boolean(`analytics`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} autoconnect ${this._settings.get_boolean(`autoconnect`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} cybersec ${this._settings.get_boolean(`cybersec`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} killswitch ${this._settings.get_boolean(`killswitch`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} obfuscate ${this._settings.get_boolean(`obfuscate`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} ipv6 ${this._settings.get_boolean(`ipv6`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} notify ${this._settings.get_boolean(`notify`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} protocol ${this._settings.get_string(`protocol`)}`);
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} technology ${this._settings.get_string(`technology`)}`);
+        let running = false;
+        try { await this._procCom.execCommunicateAsync(CMD_VPNSTATUS); running = true; } catch {}
+        if (!running) return;
+
+        // Apply each setting independently — some may be rejected when conditionally
+        // invalid (e.g., obfuscate is unsupported with NordLynx). Best-effort matches
+        // the original sync behavior where non-zero exits were silently ignored.
+        const applySetting = async (cmd) => {
+            try { await this._procCom.execCommunicateAsync(cmd); }
+            catch (e) { this._log.debug('applySettingsToNord: setting rejected', {cmd, error: String(e)}); }
+        };
+
+        const t = this._log.startTimer();
+        await applySetting(`${CMD_SETTINGS} firewall ${firewall}`);
+        await applySetting(`${CMD_SETTINGS} analytics ${analytics}`);
+        await applySetting(`${CMD_SETTINGS} autoconnect ${autoconnect}`);
+        await applySetting(`${CMD_SETTINGS} cybersec ${cybersec}`);
+        await applySetting(`${CMD_SETTINGS} killswitch ${killswitch}`);
+        await applySetting(`${CMD_SETTINGS} obfuscate ${obfuscate}`);
+        await applySetting(`${CMD_SETTINGS} ipv6 ${ipv6}`);
+        await applySetting(`${CMD_SETTINGS} notify ${notify}`);
+        await applySetting(`${CMD_SETTINGS} protocol ${protocol}`);
+        await applySetting(`${CMD_SETTINGS} technology ${technology}`);
 
         // TODO: Why is this 2nd call to firewall needed to make things work?
-        this._procCom.execCommunicateSync(`${CMD_SETTINGS} firewall ${this._settings.get_boolean(`firewall`)}`);
-        _log.endTimer(t, 'SPAN', {operation: 'applySettingsToNord', subCalls: 11});
+        await applySetting(`${CMD_SETTINGS} firewall ${firewall}`);
+        this._log.endTimer(t, 'SPAN', {operation: 'applySettingsToNord', subCalls: 11});
     }
 
     async setToDefaults() {
-        return this._execAsync(`${CMD_SETTINGS} defaults`);
+        return this._procCom.execCommunicateAsync(`${CMD_SETTINGS} defaults`);
     }
 
-    getAccount() {
-        const standardOut = this._execSyncIfVpnOn(CMD_VPNACCOUNT);
+    async getAccount() {
+        let standardOut;
+        try {
+            standardOut = await this._procCom.execCommunicateAsync(CMD_VPNACCOUNT);
+        } catch (e) {
+            // Non-zero exit or spawn failure — degrade gracefully with empty account info
+            return {emailAddress: undefined, vpnService: undefined};
+        }
         const allAccountMessages = standardOut.split(`\n`);
 
         let emailAddress;
@@ -176,14 +188,14 @@ export default class Vpn {
     async checkLogin() {
         try {
             await this._procCom.execCommunicateAsync(CMD_VPNACCOUNT);
-            _log.debug('checkLogin', {loggedIn: true});
+            this._log.debug('checkLogin', {loggedIn: true});
             return true;
         } catch (e) {
             // execCommunicateAsync throws new Error(stderr) when nordvpn exits non-zero
             // (not logged in). GIO spawn failures throw a GLib.Error with a numeric .code
             // property — re-throw those so callers can surface real infrastructure errors.
             if (e instanceof Error && e.code === undefined) {
-                _log.debug('checkLogin', {loggedIn: false});
+                this._log.debug('checkLogin', {loggedIn: false});
                 return false;
             }
             throw e;
@@ -191,7 +203,7 @@ export default class Vpn {
     }
 
     async getStatus() {
-        const t = _log.startTimer();
+        const t = this._log.startTimer();
         let connectStatus, updateMessage, country, serverNumber, city, serverIp,
             currentTech, currentProtocol, transfer, uptime, currentServer;
         let running = false;
@@ -230,11 +242,11 @@ export default class Vpn {
             // a spawn failure) means something is genuinely broken — re-throw so _refresh()
             // can engage its exponential backoff instead of hammering a failing subprocess.
             if (!(e instanceof Error)) throw e;
-            _log.warn('getStatus: nordvpnd not running or exited non-zero', {error: String(e)});
+            this._log.warn('getStatus: nordvpnd not running or exited non-zero', {error: String(e)});
         }
 
         const resolved = connectStatus || 'N/A';
-        _log.endTimer(t, 'SPAN', {operation: 'getStatus', connectStatus: resolved, running});
+        this._log.endTimer(t, 'SPAN', {operation: 'getStatus', connectStatus: resolved, running});
 
         return {
             running,
@@ -252,14 +264,21 @@ export default class Vpn {
         }
     }
 
-    connectVpn(query) {
-        // Throttle connection attempts to prevent freezes
-        if ((Date.now() - this._lastConnectedAt) < 9000) return;
+    isConnectThrottled() {
+        return (Date.now() - this._lastConnectedAt) < 9000;
+    }
+
+    async connectVpn(query) {
+        // Throttle connection attempts to prevent freezes; return null so callers
+        // can distinguish a throttled no-op from an actual connection attempt.
+        if (this.isConnectThrottled()) return null;
         this._lastConnectedAt = Date.now();
 
         if (query) {
-            this._procCom.execCommunicateSync(CMD_AUTOCONNECT_OFF);
-            this._procCom.execCommunicateSync(`${CMD_AUTOCONNECT_ON} ${query}`);
+            // Best-effort: autoconnect updates may fail for some query types but
+            // nordvpn c <query> can still succeed, so don't abort on these errors.
+            try { await this._procCom.execCommunicateAsync(CMD_AUTOCONNECT_OFF); } catch (e) { this._log.debug('autoconnect off failed', {error: String(e)}); }
+            try { await this._procCom.execCommunicateAsync(`${CMD_AUTOCONNECT_ON} ${query}`); } catch (e) { this._log.debug('autoconnect on failed', {error: String(e)}); }
             return this._procCom.execCommunicateAsync(`${CMD_CONNECT} ${query}`);
         } else {
             return this._procCom.execCommunicateAsync(CMD_CONNECT);
@@ -270,18 +289,22 @@ export default class Vpn {
         return this._procCom.execCommunicateAsync(CMD_DISCONNECT);
     }
 
-    loginVpn() {
-        const standardOut = this._execSyncIfVpnOn(CMD_LOGIN);
-
-        const ref = `Continue in the browser: `;
-        let url = standardOut.replace(/\s+/g, ` `);
-        url = url.substring(url.indexOf(ref) + ref.length).trim();
-
-        Gio.app_info_launch_default_for_uri(url, null);
+    async loginVpn() {
+        if (_loginInFlight) return;
+        _loginInFlight = true;
+        try {
+            const standardOut = await this._procCom.execCommunicateAsync(CMD_LOGIN);
+            const ref = `Continue in the browser: `;
+            let url = standardOut.replace(/\s+/g, ` `);
+            url = url.substring(url.indexOf(ref) + ref.length).trim();
+            Gio.app_info_launch_default_for_uri(url, null);
+        } finally {
+            _loginInFlight = false;
+        }
     }
 
     logoutVpn() {
-        return this._execAsync(CMD_LOGOUT);
+        return this._procCom.execCommunicateAsync(CMD_LOGOUT);
     }
 
     async getConnectionList(connectionType, running = true) {
@@ -383,7 +406,7 @@ export default class Vpn {
                 }
             }
         } catch (e) {
-            log(e, `gNordVpn: error getting servers`);
+            this._log.error('error getting servers', e);
             return null;
         }
 

@@ -6,6 +6,7 @@ import Signals from './Signals.js';
 import Favorites from './Favorites.js';
 import MenuBase from './MenuBase.js';
 import * as Constants from './constants.js';
+import Logger from './Logger.js';
 
 export default class CommonFavorite extends MenuBase {
     constructor(connectionCallback, settings) {
@@ -17,13 +18,16 @@ export default class CommonFavorite extends MenuBase {
         this._destroyMap = {};
         this.prevShowHide = true;
 
+        this._log = new Logger('CommonFavorite');
         this._favorites = new Favorites(settings);
         this._vpn = new Vpn(settings);
         this._signals = new Signals();
         this._pendingIdleIds = [];
+        this._isDisposed = false;
     }
 
     disable() {
+        this._isDisposed = true;
         this._pendingIdleIds.forEach(id => GLib.Source.remove(id));
         this._pendingIdleIds = [];
         this._isBuilt = false;
@@ -67,9 +71,12 @@ export default class CommonFavorite extends MenuBase {
     _buildFavoriteMenuItem(favorite) {
         const menuItem = new PopupMenu.PopupMenuItem(favorite);
         const menuItemClickId = menuItem.connect(`activate`, (actor, event) => {
-                this._vpn.connectVpn(this.favList[favorite].item);
-                let type = this.favList[favorite].type.substring(this.favList[favorite].type.lastIndexOf('-') + 1)
-                this._connectionCallback(Constants.status.reconnecting, [type, this.favList[favorite].item]);
+                const item = this.favList[favorite]?.item;
+                const rawType = this.favList[favorite]?.type;
+                if (!item || !rawType || this._isDisposed || this._vpn.isConnectThrottled()) return;
+                this._vpn.connectVpn(item).catch(e => this._log.error('connectVpn failed', e));
+                const type = rawType.substring(rawType.lastIndexOf('-') + 1);
+                this._connectionCallback(Constants.status.reconnecting, [type, item]);
             });
 
         this._signals.register(menuItemClickId, () => menuItem.disconnect(menuItemClickId));

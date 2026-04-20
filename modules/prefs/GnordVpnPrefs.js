@@ -9,12 +9,14 @@ import Vpn from '../Vpn.js';
 import StylesManager from './StylesManager.js';
 import ResetManager from './ResetManager.js';
 import * as Common from '../common.js';
+import Logger from '../Logger.js';
 
 export default class GnordVpnPrefs {
     constructor(settings, metadata = {}) {
         this._settings = settings;
         this._metadata = metadata;
         this._vpn = new Vpn(this._settings);
+        this._log = new Logger('GnordVpnPrefs');
         this._techCbox = null;
         this._protoCbox = null;
         this._countryMapWithID = null;
@@ -184,29 +186,34 @@ export default class GnordVpnPrefs {
         accountsGrid.attach(accountStatus, 1, 4, 1, 1);
 
         const loginButton = new Gtk.Button({label: "Login"});
-        loginButton.connect('clicked', () => this._vpn.loginVpn());
+        loginButton.connect('clicked', () => this._vpn.loginVpn().catch(e => this._log.error('loginVpn failed', e)));
         loginButton.set_sensitive(false);
         accountsGrid.attach(loginButton, 0, 5, 1, 1);
 
         const logoutButton = new Gtk.Button({label: "Logout"});
-        logoutButton.connect('clicked', () => this._vpn.logoutVpn());
+        logoutButton.connect('clicked', () => this._vpn.logoutVpn().catch(e => this._log.error('logoutVpn failed', e)));
         logoutButton.set_sensitive(false);
         accountsGrid.attach(logoutButton, 1, 5, 1, 1);
 
+        let accountPageDestroyed = false;
+        accountsGrid.connect('destroy', () => { accountPageDestroyed = true; });
+
         const refreshAccountButton = new Gtk.Button({label: "Refresh"});
-        const refreshAccount = () => {
-            let account = this._vpn.getAccount();
+        const refreshAccount = async () => {
+            let account = await this._vpn.getAccount();
+            // Guard: prefs window may have closed while the async call was in flight
+            if (accountPageDestroyed) return;
             let loggedIn = !!account.emailAddress;
             accountEmail.set_text(account.emailAddress || "");
             accountStatus.set_text(account.vpnService || "");
             loginButton.set_sensitive(!loggedIn);
             logoutButton.set_sensitive(loggedIn);
         };
-        refreshAccountButton.connect('clicked', refreshAccount);
+        refreshAccountButton.connect('clicked', () => refreshAccount().catch(e => this._log.error('getAccount failed', e)));
         accountsGrid.attach(refreshAccountButton, 0, 6, 1, 1);
 
         // Initialize account information
-        refreshAccount();
+        refreshAccount().catch(e => this._log.error('getAccount failed', e));
         return accountsGrid;
     }
 
@@ -423,7 +430,12 @@ export default class GnordVpnPrefs {
         // Add some margin to the button for spacing
         button.margin_top = 20;
 
-        button.connect('clicked', () => this._vpn.applySettingsToNord());
+        button.connect('clicked', () => {
+            button.set_sensitive(false);
+            this._vpn.applySettingsToNord()
+                .catch(e => this._log.error('applySettingsToNord failed', e))
+                .finally(() => { try { button.set_sensitive(true); } catch {} });
+        });
 
         box.append(button);  // Use append() in GTK 4
 
@@ -615,7 +627,7 @@ export default class GnordVpnPrefs {
                 const proto = this._settings.get_string('protocol');
                 this._protoCbox.set_active(proto === 'UDP' ? 0 : 1);
             }
-        }).catch(e => log(e, 'gNordVpn: setSettingsFromNord failed'));
+        }).catch(e => this._log.error('setSettingsFromNord failed', e));
 
         // *** GENERAL
         const generalPage = new Adw.PreferencesPage();
@@ -687,8 +699,8 @@ export default class GnordVpnPrefs {
         // Both stores need country names, so fetch both maps in parallel then populate.
 
         Promise.all([
-            this._vpn.getCountries(false, true).catch(e => { log(e, 'gNordVpn: prefs country load failed'); return null; }),
-            this._vpn.getCountries(true, true).catch(e => { log(e, 'gNordVpn: prefs country ID load failed'); return null; }),
+            this._vpn.getCountries(false, true).catch(e => { this._log.error('prefs country load failed', e); return null; }),
+            this._vpn.getCountries(true, true).catch(e => { this._log.error('prefs country ID load failed', e); return null; }),
         ]).then(([countryMap, countryMapWithID]) => {
             if (windowDestroyed) return;
             this._countryMap = countryMap || {};
