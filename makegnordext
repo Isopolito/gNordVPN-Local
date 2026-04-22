@@ -35,10 +35,12 @@ delete_random_files_and_directories() {
         -name "*.orig" \
         -o -name "*.spec.js" \
         -o -name "package.json" \
+        -o -name "*.sh" \
         -o -name "package-lock.json" \
         -o -name "makegnordext" \
         -o -name ".*.swp" \
         -o -name "*.swp" \
+        -o -name "gschemas.compiled" \
     \) -delete
 
     find . -type d \( \

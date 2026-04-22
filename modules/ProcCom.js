@@ -1,5 +1,4 @@
 import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
 
 import Logger from './Logger.js';
 
@@ -32,10 +31,4 @@ export default class ProcCom {
         return stdout;
     }
 
-    execCommunicateSync(command) {
-        const t = this._log.startTimer();
-        const result = GLib.spawn_command_line_sync(command);
-        this._log.endTimer(t, 'CALL', {cmd: _cmdName(command), blocking: true, success: result[0]});
-        return result;
-    }
 }

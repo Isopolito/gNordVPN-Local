@@ -7,7 +7,7 @@
 #   ./debug-logs.sh -f / --follow          # live tail (explicit)
 #   ./debug-logs.sh --dump                 # all lines since last boot
 #   ./debug-logs.sh --since "10 min ago"   # time-windowed dump
-#   ./debug-logs.sh --errors               # WRN/ERR/CALL/SPAN only (no DBG)
+#   ./debug-logs.sh --errors               # WRN/ERR only
 #   ./debug-logs.sh --slow [N]             # CALL/SPAN lines with durationMs > N (default 100)
 #   ./debug-logs.sh --capture [FILE]       # tee to file
 #   ./debug-logs.sh --summary FILE         # analyze a captured log file
@@ -31,6 +31,7 @@ SLOW_FILTER=false
 CAPTURE=false
 CAPTURE_FILE=""
 SUMMARY_FILE=""
+JOURNAL_OUTPUT_MODE="short-iso-precise"
 EXTENSION_PATTERN='gNordVpn|gnordvpn-local@isopolito|/gnome-shell/extensions/gnordvpn-local@isopolito/|gNordVPN-Local'
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
@@ -150,7 +151,7 @@ colorize() {
         fi
 
         if $ERRORS_ONLY; then
-            if ! echo "$line" | grep -qiE '\[(WRN|ERR|CALL|SPAN)\]'; then
+            if ! echo "$line" | grep -qiE '\[(WRN|ERR)\]'; then
                 continue
             fi
         fi
@@ -181,29 +182,66 @@ colorize() {
     done
 }
 
+SPINNER_PID=""
+
+start_spinner() {
+    if [[ "$MODE" != "dump" || ! -t 2 ]]; then
+        return
+    fi
+
+    (
+        local frames='|/-\'
+        local i=0
+        while true; do
+            local frame="${frames:i%4:1}"
+            printf '\r[gNordVpn debug-logs] scanning journal %s' "$frame" >&2
+            i=$((i + 1))
+            sleep 0.1
+        done
+    ) &
+    SPINNER_PID=$!
+}
+
+stop_spinner() {
+    if [[ -n "$SPINNER_PID" ]]; then
+        kill "$SPINNER_PID" 2>/dev/null || true
+        wait "$SPINNER_PID" 2>/dev/null || true
+        SPINNER_PID=""
+        if [[ -t 2 ]]; then
+            printf '\r%*s\r' 60 '' >&2
+        fi
+    fi
+}
+
 filter_extension_logs() {
     awk -v pattern="$EXTENSION_PATTERN" '
         BEGIN {
             in_block = 0;
         }
         {
+            line = $0;
+            ts = "";
+            if (match($0, /^[0-9T:+.-]+ /))
+                ts = substr($0, RSTART, RLENGTH - 1);
+            sub(/^[0-9T:+.-]+ [^:]+: /, "", line);
+
             if (in_block) {
                 # Blank line ends the error block
-                if ($0 == "") {
+                if (line == "") {
                     print $0; fflush();
                     in_block = 0;
                     next;
                 }
 
                 # Continuation lines belonging to a JS stack trace or error block
-                if ($0 ~ /^[[:space:]]/ ||
-                    $0 ~ /^@/ ||
-                    $0 ~ /^[[:alnum:]_.:$-]+@/ ||
-                    $0 ~ /^file:\/\// ||
-                    $0 ~ /^Stack trace:/ ||
-                    $0 ~ /^Caused by:/ ||
-                    $0 ~ /^(TypeError|Error|ReferenceError|SyntaxError):/ ||
-                    $0 ~ /^\.\.\//) {
+                if (line ~ /^[[:space:]]/ ||
+                    line ~ /^@/ ||
+                    line ~ /^[[:alnum:]_.:$-]+@/ ||
+                    line ~ /^file:\/\// ||
+                    line ~ /^Stack trace:/ ||
+                    line ~ /^Caused by:/ ||
+                    line ~ /^(TypeError|Error|ReferenceError|SyntaxError):/ ||
+                    line ~ /^\.\.\//) {
                     print $0; fflush();
                     next;
                 }
@@ -212,8 +250,12 @@ filter_extension_logs() {
                 in_block = 0;
             }
 
-            if ($0 ~ pattern) {
-                print $0; fflush();
+            if (line ~ pattern) {
+                if (ts != "")
+                    print ts " " line;
+                else
+                    print $0;
+                fflush();
                 in_block = 1;
                 next;
             }
@@ -231,7 +273,7 @@ if $CAPTURE; then
 fi
 
 # ── Build journalctl args ─────────────────────────────────────────────────────
-jctl_args=("-o" "cat" "_COMM=gnome-shell")
+jctl_args=("-o" "$JOURNAL_OUTPUT_MODE" "--no-hostname" "--no-pager" "_COMM=gnome-shell")
 
 if [[ "$MODE" == "follow" ]]; then
     jctl_args+=("-f")
@@ -244,9 +286,14 @@ elif [[ "$MODE" == "dump" ]]; then
 fi
 
 echo "${BOLD}[gNordVpn debug-logs]${RESET} mode=${MODE} errors_only=${ERRORS_ONLY} slow_threshold=${SLOW_THRESHOLD}ms" >&2
+if [[ "$MODE" == "dump" ]]; then
+    echo "Scanning journal entries for gNordVpn logs. Large --since windows can take a while." >&2
+fi
 echo "" >&2
 
 # ── Run ───────────────────────────────────────────────────────────────────────
+trap stop_spinner EXIT
+start_spinner
 if $CAPTURE; then
     journalctl "${jctl_args[@]}" \
         | filter_extension_logs \
@@ -257,3 +304,4 @@ else
         | filter_extension_logs \
         | colorize
 fi
+stop_spinner
