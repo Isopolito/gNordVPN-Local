@@ -1,12 +1,8 @@
 # gNordVPN-Local: GNOME Interface for NordVPN
 
 <p align="center">
-  <img src="img/gnordvpn-extension-icon.png" alt="gNordVPN-Local logo" width="220">
+  <img src="img/gnordvpn-extension-icon.png" alt="gNordVPN-Local logo" width="150">
 </p>
-
-## Help wanted
-Over time gnome extension api's and related libraries, plus the nordvpn CLI itself have changed. As a result this extension is a bit unstable. I have been swamped on other projects and haven't been able to give it the love it deserves. If you're interested in becoming a co maintainer, please contact me here or simply make an issue and I'll see it. 🙏
-
 
 ## Overview
 
