@@ -1,7 +1,9 @@
 import * as Constants from './constants.js';
+import Logger from './Logger.js';
 
 export default class StateManager {
     constructor() {
+        this._log = new Logger('StateManager');
         this.STATE_OVERRIDE_UNSET = -1;
         this.stateOverride = undefined;
         this.stateOverrideCounter = 0;
@@ -109,6 +111,7 @@ export default class StateManager {
     }
 
     refreshOverride(state, overrideKeys) {
+        this._log.debug('state override set', {state, overrideKeys});
         this.stateOverride = this.states[state];
         this.stateOverride.overrideKeys = overrideKeys;
         this.stateOverrideCounter = 0;
@@ -129,7 +132,7 @@ export default class StateManager {
 
             if (this.stateOverrideCounter > this.STATE_OVERRIDE_DURATION ||
                 (vpnState.clearsOverrideId === this.stateOverride.overrideId) || overrideFromKey) {
-                // State override expired or cleared by current state, remove it
+                this._log.debug('state override cleared', {reason: this.stateOverrideCounter > this.STATE_OVERRIDE_DURATION ? 'expired' : 'matched'});
                 this.stateOverride = undefined;
                 this.stateOverrideCounter = 0;
             } else {
@@ -138,10 +141,17 @@ export default class StateManager {
             }
         }
 
-        return {
+        const resolved = {
             ...vpnState,
             'refreshTimeout': this.quickRefresh ? this.QUICK_REFRESH_TIMEOUT : vpnState['refreshTimeout']
         };
+
+        this._log.debug('resolveState', {
+            input: status?.connectStatus ?? 'null',
+            resolved: resolved.stateName,
+            quickRefresh: this.quickRefresh
+        });
+
+        return resolved;
     }
 }
-

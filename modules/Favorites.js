@@ -1,6 +1,9 @@
+import Logger from './Logger.js';
+
 export default class Favorites {
     constructor(settings) {
         this._settings = settings;
+        this._log = new Logger('Favorites');
     }
 
     _getData(a) { return this._settings.get_string(a); }
@@ -36,7 +39,7 @@ export default class Favorites {
             this._setData(favoriteType, JSON.stringify(favorites));
 
         } catch(e) {
-            log('gnordvpn: ', e);
+            this._log.error('failed removing favorite', e);
         }
     }
 
@@ -54,7 +57,7 @@ export default class Favorites {
             favorites[item] = item2;
             this._setData(favoriteType, JSON.stringify(favorites));
         } catch(e) { 
-            log('gnordvpn: ', e);
+            this._log.error('failed adding favorite', e);
         }
     }
 }

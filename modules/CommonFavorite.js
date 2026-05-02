@@ -1,3 +1,4 @@
+import GLib from 'gi://GLib';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import Vpn from './Vpn.js';
@@ -5,6 +6,7 @@ import Signals from './Signals.js';
 import Favorites from './Favorites.js';
 import MenuBase from './MenuBase.js';
 import * as Constants from './constants.js';
+import Logger from './Logger.js';
 
 export default class CommonFavorite extends MenuBase {
     constructor(connectionCallback, settings) {
@@ -16,12 +18,18 @@ export default class CommonFavorite extends MenuBase {
         this._destroyMap = {};
         this.prevShowHide = true;
 
+        this._log = new Logger('CommonFavorite');
         this._favorites = new Favorites(settings);
         this._vpn = new Vpn(settings);
         this._signals = new Signals();
+        this._pendingIdleIds = [];
+        this._isDisposed = false;
     }
 
     disable() {
+        this._isDisposed = true;
+        this._pendingIdleIds.forEach(id => GLib.Source.remove(id));
+        this._pendingIdleIds = [];
         this._isBuilt = false;
         this._destroyMap = {};
         this.favList = {};
@@ -54,15 +62,21 @@ export default class CommonFavorite extends MenuBase {
 
     rebuild() {
         this._isBuilt = false;
+        this._destroyMap = {};
+        this.favList = {};
+        this.itemList = {};
         this.build();
     }
 
     _buildFavoriteMenuItem(favorite) {
         const menuItem = new PopupMenu.PopupMenuItem(favorite);
         const menuItemClickId = menuItem.connect(`activate`, (actor, event) => {
-                this._vpn.connectVpn(this.favList[favorite].item);
-                let type = this.favList[favorite].type.substring(this.favList[favorite].type.lastIndexOf('-') + 1)
-                this._connectionCallback(Constants.status.reconnecting, [type, this.favList[favorite].item]);
+                const item = this.favList[favorite]?.item;
+                const rawType = this.favList[favorite]?.type;
+                if (!item || !rawType || this._isDisposed || this._vpn.isConnectThrottled()) return;
+                this._vpn.connectVpn(item).catch(e => this._log.error('connectVpn failed', e));
+                const type = rawType.substring(rawType.lastIndexOf('-') + 1);
+                this._connectionCallback(Constants.status.reconnecting, [type, item]);
             });
 
         this._signals.register(menuItemClickId, () => menuItem.disconnect(menuItemClickId));
@@ -72,12 +86,27 @@ export default class CommonFavorite extends MenuBase {
         menuItem.icofavBtn = icofavBtn;
         this._destroyMap[favorite] = {menuItemClickId, menuItem, icofavBtn};
         menuItem.favoritePressId = icofavBtn.connect(`button-press-event`, () => {
-                this._favorites.remove(this.favList[favorite].type, favorite); 
-                this._toggleFavoriteMenuItem(favorite, false); 
+                // Defer both the GSettings write and widget mutation to idle so this
+                // callback doesn't destroy the menu item currently dispatching the event.
+                this._scheduleToggle(favorite, false);
             });
 
         this._signals.register(menuItem.favoritePressId, () => icofavBtn.disconnect(menuItem.favoritePressId));
         return menuItem;
+    }
+
+    _scheduleToggle(favorite, toAdd) {
+        // Capture the type now (before idle) since favList may change by the time idle fires.
+        const favoriteType = this.favList[favorite]?.type;
+        // Each click gets its own idle so rapid clicks all land. Writing GSettings on
+        // idle (not in the button-press handler) prevents destroying the menu item
+        // that is currently dispatching the event.
+        const id = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._pendingIdleIds = this._pendingIdleIds.filter(i => i !== id);
+            if (favoriteType) this._favorites.remove(favoriteType, favorite);
+            return GLib.SOURCE_REMOVE;
+        });
+        this._pendingIdleIds.push(id);
     }
 
     _toggleFavoriteMenuItem(favorite, toAdd) {

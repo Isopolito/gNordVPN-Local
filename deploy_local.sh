@@ -29,6 +29,7 @@ rm -rf "$DEST_DIR/.git"
 rm -rf "$DEST_DIR/.idea"
 rm -f "$DEST_DIR/deploy_local.sh"
 rm -f "$DEST_DIR/makegnordext"
+rm -f "$DEST_DIR/debug-logs.sh"
 rm -f "$DEST_DIR/gsettings_fix_worklog.md"
 
 # 4. Compile GSettings schema

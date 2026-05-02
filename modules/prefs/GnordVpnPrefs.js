@@ -9,16 +9,64 @@ import Vpn from '../Vpn.js';
 import StylesManager from './StylesManager.js';
 import ResetManager from './ResetManager.js';
 import * as Common from '../common.js';
+import Logger from '../Logger.js';
 
 export default class GnordVpnPrefs {
-    constructor(settings) {
+    constructor(settings, metadata = {}) {
         this._settings = settings;
+        this._metadata = metadata;
         this._vpn = new Vpn(this._settings);
+        this._log = new Logger('GnordVpnPrefs');
         this._techCbox = null;
         this._protoCbox = null;
         this._countryMapWithID = null;
         this._countryNames = null;
         this._countryMap = null;
+    }
+
+    _createVersionRow() {
+        const name = this._metadata.name ?? 'gNordVpn-Local';
+        const version = this._metadata.version ?? 'unknown';
+        const url = this._metadata.url ?? '';
+
+        const frame = new Gtk.Frame({
+            margin_top: 10,
+            margin_bottom: 10,
+            margin_start: 10,
+            margin_end: 10,
+        });
+
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 6,
+            margin_top: 10,
+            margin_bottom: 10,
+            margin_start: 12,
+            margin_end: 12,
+        });
+
+        const title = new Gtk.Label({
+            label: `${name}, v${version}`,
+            halign: Gtk.Align.START,
+            xalign: 0,
+        });
+        box.append(title);
+
+        if (url) {
+            const escapedUrl = GLib.markup_escape_text(url, -1);
+            const link = new Gtk.Label({
+                use_markup: true,
+                selectable: false,
+                wrap: true,
+                halign: Gtk.Align.START,
+                xalign: 0,
+                label: `<a href="${escapedUrl}">${escapedUrl}</a>`,
+            });
+            box.append(link);
+        }
+
+        frame.set_child(box);
+        return frame;
     }
 
     _createGeneralPage() {
@@ -138,29 +186,34 @@ export default class GnordVpnPrefs {
         accountsGrid.attach(accountStatus, 1, 4, 1, 1);
 
         const loginButton = new Gtk.Button({label: "Login"});
-        loginButton.connect('clicked', () => this._vpn.loginVpn());
+        loginButton.connect('clicked', () => this._vpn.loginVpn().catch(e => this._log.error('loginVpn failed', e)));
         loginButton.set_sensitive(false);
         accountsGrid.attach(loginButton, 0, 5, 1, 1);
 
         const logoutButton = new Gtk.Button({label: "Logout"});
-        logoutButton.connect('clicked', () => this._vpn.logoutVpn());
+        logoutButton.connect('clicked', () => this._vpn.logoutVpn().catch(e => this._log.error('logoutVpn failed', e)));
         logoutButton.set_sensitive(false);
         accountsGrid.attach(logoutButton, 1, 5, 1, 1);
 
+        let accountPageDestroyed = false;
+        accountsGrid.connect('destroy', () => { accountPageDestroyed = true; });
+
         const refreshAccountButton = new Gtk.Button({label: "Refresh"});
-        const refreshAccount = () => {
-            let account = this._vpn.getAccount();
+        const refreshAccount = async () => {
+            let account = await this._vpn.getAccount();
+            // Guard: prefs window may have closed while the async call was in flight
+            if (accountPageDestroyed) return;
             let loggedIn = !!account.emailAddress;
             accountEmail.set_text(account.emailAddress || "");
             accountStatus.set_text(account.vpnService || "");
             loginButton.set_sensitive(!loggedIn);
             logoutButton.set_sensitive(loggedIn);
         };
-        refreshAccountButton.connect('clicked', refreshAccount);
+        refreshAccountButton.connect('clicked', () => refreshAccount().catch(e => this._log.error('getAccount failed', e)));
         accountsGrid.attach(refreshAccountButton, 0, 6, 1, 1);
 
         // Initialize account information
-        refreshAccount();
+        refreshAccount().catch(e => this._log.error('getAccount failed', e));
         return accountsGrid;
     }
 
@@ -377,7 +430,12 @@ export default class GnordVpnPrefs {
         // Add some margin to the button for spacing
         button.margin_top = 20;
 
-        button.connect('clicked', () => this._vpn.applySettingsToNord());
+        button.connect('clicked', () => {
+            button.set_sensitive(false);
+            this._vpn.applySettingsToNord()
+                .catch(e => this._log.error('applySettingsToNord failed', e))
+                .finally(() => { try { button.set_sensitive(true); } catch {} });
+        });
 
         box.append(button);  // Use append() in GTK 4
 
@@ -432,20 +490,10 @@ export default class GnordVpnPrefs {
         cityTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
         let cityTreeIterMap = {};
-        let cityCountries = this._settings.get_value('countries-selected-for-cities').deep_unpack();
-        if (this._countryNames) {
-            this._countryNames.forEach(country => {
-                let iter = cityStore.append(null);
-                cityStore.set(iter, [0], [country]);
-                cityTreeIterMap[country] = iter;
-
-                if (cityCountries.includes(this._countryMap[country])) {
-                    cityTreeView.get_selection().select_iter(iter);
-                }
-            });
-        }
+        this._cityPopulating = false;
 
         cityTreeView.get_selection().connect('changed', (w) => {
+            if (this._cityPopulating) return;
             let [cityPathList, cityStore] = cityTreeView.get_selection().get_selected_rows();
 
             let selected = [];
@@ -466,7 +514,7 @@ export default class GnordVpnPrefs {
 
         cityGrid.attach(cityScroll, 1, 1, 1, 1);
 
-        return {cityGrid, cityTreeView, cityTreeIterMap};
+        return {cityGrid, cityTreeView, cityTreeIterMap, cityStore};
     }
 
     _createServersPage() {
@@ -516,21 +564,11 @@ export default class GnordVpnPrefs {
         serverTreeView.insert_column(serverColumn, 0);
         serverTreeView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE);
 
-        let serverTreeIterMap = {}
-        let serverCountries = this._settings.get_value('countries-selected-for-servers').deep_unpack();
-        if (this._countryNames) {
-            this._countryNames.forEach(country => {
-                let iter = serverStore.append(null);
-                serverStore.set(iter, [0], [country]);
-                serverTreeIterMap[country] = iter;
-
-                if (serverCountries.includes(this._countryMapWithID[country])) {
-                    serverTreeView.get_selection().select_iter(iter);
-                }
-            });
-        }
+        let serverTreeIterMap = {};
+        this._serverPopulating = false;
 
         serverTreeView.get_selection().connect('changed', (w) => {
+            if (this._serverPopulating) return;
             let [serverPathList, serverStore] = serverTreeView.get_selection().get_selected_rows();
 
             let selected = [];
@@ -551,7 +589,7 @@ export default class GnordVpnPrefs {
 
         serverGrid.attach(this._serverScroll, 1, 1, 1, 1);
 
-        return {serverGrid, serverTreeView, serverTreeIterMap};
+        return {serverGrid, serverTreeView, serverTreeIterMap, serverStore};
     }
 
     _setWindowSize(window) {
@@ -574,12 +612,30 @@ export default class GnordVpnPrefs {
     }
 
     fillPreferencesWindow(window) {
-        this._vpn.setSettingsFromNord();
+        let windowDestroyed = false;
+        window.connect('destroy', () => { windowDestroyed = true; });
+
+        // Sync GSettings from NordVPN then refresh combo boxes — they use one-time reads
+        // at construction so we must update them after the async fetch resolves.
+        this._vpn.setSettingsFromNord().then(() => {
+            if (windowDestroyed) return;
+            if (this._techCbox) {
+                const tech = this._settings.get_string('technology');
+                this._techCbox.set_active(tech === 'OPENVPN' ? 0 : 1);
+            }
+            if (this._protoCbox) {
+                const proto = this._settings.get_string('protocol');
+                this._protoCbox.set_active(proto === 'UDP' ? 0 : 1);
+            }
+        }).catch(e => this._log.error('setSettingsFromNord failed', e));
 
         // *** GENERAL
         const generalPage = new Adw.PreferencesPage();
         generalPage.set_title("General");
         generalPage.set_icon_name("emblem-system-symbolic");
+        const versionGroup = new Adw.PreferencesGroup();
+        versionGroup.add(this._createVersionRow());
+        generalPage.add(versionGroup);
         const generalGroup = new Adw.PreferencesGroup();
         const {generalGrid, resetAll} = this._createGeneralPage();
         generalGroup.add(generalGrid);
@@ -615,16 +671,16 @@ export default class GnordVpnPrefs {
         connectionsPage.add(connectionsGroup);
         window.add(connectionsPage);
 
-        this._countryMap = this._vpn.getCountries();
-        this._countryMapWithID = this._vpn.getCountries(true);
-        this._countryNames = Common.safeObjectKeys(this._countryMap);
+        this._countryMap = {};
+        this._countryMapWithID = {};
+        this._countryNames = [];
 
         // *** CITIES
         const cityPage = new Adw.PreferencesPage();
         cityPage.set_title("Cities");
         cityPage.set_icon_name("document-open-symbolic");
         const cityGroup = new Adw.PreferencesGroup();
-        const {cityGrid, cityTreeView, cityTreeIterMap} = this._createCitiesPage();
+        const {cityGrid, cityTreeView, cityTreeIterMap, cityStore} = this._createCitiesPage();
         cityGroup.add(cityGrid);
         cityPage.add(cityGroup);
         window.add(cityPage);
@@ -634,10 +690,53 @@ export default class GnordVpnPrefs {
         serverPage.set_title("Servers");
         serverPage.set_icon_name("network-workgroup-symbolic");
         const serverGroup = new Adw.PreferencesGroup();
-        const {serverGrid, serverTreeView, serverTreeIterMap} = this._createServersPage();
+        const {serverGrid, serverTreeView, serverTreeIterMap, serverStore} = this._createServersPage();
         serverGroup.add(serverGrid);
         serverPage.add(serverGroup);
         window.add(serverPage);
+
+        // Populate tree stores after async fetch — the pages exist but start empty.
+        // Both stores need country names, so fetch both maps in parallel then populate.
+
+        Promise.all([
+            this._vpn.getCountries(false, true).catch(e => { this._log.error('prefs country load failed', e); return null; }),
+            this._vpn.getCountries(true, true).catch(e => { this._log.error('prefs country ID load failed', e); return null; }),
+        ]).then(([countryMap, countryMapWithID]) => {
+            if (windowDestroyed) return;
+            this._countryMap = countryMap || {};
+            this._countryMapWithID = countryMapWithID || {};
+            this._countryNames = Common.safeObjectKeys(this._countryMap);
+
+            const cityCountries = this._settings.get_value('countries-selected-for-cities').deep_unpack();
+            cityStore.clear();
+            this._cityPopulating = true;
+            try {
+                this._countryNames.forEach(country => {
+                    let iter = cityStore.append(null);
+                    cityStore.set(iter, [0], [country]);
+                    cityTreeIterMap[country] = iter;
+                    if (cityCountries.includes(this._countryMap[country]))
+                        cityTreeView.get_selection().select_iter(iter);
+                });
+            } finally {
+                this._cityPopulating = false;
+            }
+
+            const serverCountries = this._settings.get_value('countries-selected-for-servers').deep_unpack();
+            serverStore.clear();
+            this._serverPopulating = true;
+            try {
+                this._countryNames.forEach(country => {
+                    let iter = serverStore.append(null);
+                    serverStore.set(iter, [0], [country]);
+                    serverTreeIterMap[country] = iter;
+                    if (serverCountries.includes(this._countryMapWithID[country]))
+                        serverTreeView.get_selection().select_iter(iter);
+                });
+            } finally {
+                this._serverPopulating = false;
+            }
+        });
 
         const resetManager = new ResetManager();
         resetAll.connect('clicked', () => {

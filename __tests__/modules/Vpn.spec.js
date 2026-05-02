@@ -6,50 +6,56 @@ import VpnUtils from '../../modules/VpnUtils.js';
 function createVpnCheckLogin(procCom) {
     return {
         _procCom: procCom,
-        checkLogin() {
-            const [ok, standardOut, err, exitStatus] = this._procCom.execCommunicateSync('nordvpn account');
-            return exitStatus === 0;
+        async checkLogin() {
+            try {
+                await this._procCom.execCommunicateAsync('nordvpn account');
+                return true;
+            } catch (e) {
+                if (e instanceof Error && e.code === undefined) return false;
+                throw e;
+            }
         }
     };
 }
 
-function createTrackedProcCom(returnValue) {
+function createTrackedProcCom({ resolves, rejects } = {}) {
     const calls = [];
     return {
-        execCommunicateSync(cmd) { calls.push(cmd); return returnValue; },
+        async execCommunicateAsync(cmd) {
+            calls.push(cmd);
+            if (rejects) throw rejects;
+        },
         calls
     };
 }
 
 describe('checkLogin', () => {
-    it('should return true when nordvpn account exits with 0 (logged in)', () => {
-        const mockProcCom = createTrackedProcCom([
-            true,
-            'Account Information:\nEmail Address: user@example.com\nVPN Service: Active\n',
-            '',
-            0
-        ]);
+    it('should return true when nordvpn account succeeds (logged in)', async () => {
+        const mockProcCom = createTrackedProcCom({ resolves: true });
         const vpn = createVpnCheckLogin(mockProcCom);
-        expect(vpn.checkLogin()).toBe(true);
+        expect(await vpn.checkLogin()).toBe(true);
         expect(mockProcCom.calls).toContain('nordvpn account');
     });
 
-    it('should return false when nordvpn account exits with 1 (logged out)', () => {
-        const mockProcCom = createTrackedProcCom([
-            false,
-            "You're not logged in.\n",
-            '',
-            1
-        ]);
+    it('should return false when nordvpn account throws a plain Error (logged out)', async () => {
+        const mockProcCom = createTrackedProcCom({ rejects: new Error("You're not logged in.") });
         const vpn = createVpnCheckLogin(mockProcCom);
-        expect(vpn.checkLogin()).toBe(false);
+        expect(await vpn.checkLogin()).toBe(false);
         expect(mockProcCom.calls).toContain('nordvpn account');
     });
 
-    it('should use nordvpn account command, not nordvpn login', () => {
-        const mockProcCom = createTrackedProcCom([true, '', '', 0]);
+    it('should re-throw GLib errors (infrastructure failures)', async () => {
+        const glibErr = new Error('spawn failed');
+        glibErr.code = 2;
+        const mockProcCom = createTrackedProcCom({ rejects: glibErr });
         const vpn = createVpnCheckLogin(mockProcCom);
-        vpn.checkLogin();
+        await expect(vpn.checkLogin()).rejects.toBe(glibErr);
+    });
+
+    it('should use nordvpn account command, not nordvpn login', async () => {
+        const mockProcCom = createTrackedProcCom({ resolves: true });
+        const vpn = createVpnCheckLogin(mockProcCom);
+        await vpn.checkLogin();
         expect(mockProcCom.calls).not.toContain('nordvpn login');
         expect(mockProcCom.calls).toContain('nordvpn account');
     });
