@@ -5,20 +5,23 @@
 
 ## Overview
 
-**gNordVPN-Local** is a GNOME Shell extension designed to provide seamless integration with NordVPN. Manage VPN connections directly from the GNOME top bar with intuitive menus and status indicators.
+**gNordVPN-Local** puts NordVPN controls directly in the GNOME top bar. It uses the NordVPN CLI under the hood to show live connection state, surface quick actions, and expose the most useful NordVPN settings without leaving the desktop shell.
 
 ## Prerequisites
 
-- NordVPN account and the NordVPN CLI tool installed
-- GNOME Shell (version 42 and above)
+- A NordVPN account
+- The NordVPN Linux CLI installed and working
+- GNOME Shell 42 or newer
 
 ## Features
 
-- 🌐 **Quick Connect/Disconnect**: Toggle your VPN connection with a single click.
-- 🌍 **VPN Server Status**: View your current connection status and server details.
-- ⭐ **Favorites**: Easy access to your favorite servers.
-- 🛠️ **Custom Panel Positioning**: Adjust the extension's panel position to left, center, or right.
-- 🎨 **CSS Restyling**: Completely restyle the extension to your liking via CSS settings
+- 🖥️ **Top-bar control**: Connect, disconnect, and inspect NordVPN status from the GNOME panel.
+- 📡 **Live status display**: See connection state, country, and server details at a glance.
+- 🌍 **Fast server selection**: Browse and connect by country, city, or server.
+- ⭐ **Favorites**: Pin commonly used countries, cities, and servers for quicker access.
+- ⚙️ **Connection preferences**: Configure options such as auto-connect, protocol, and technology from the extension settings.
+- 🧭 **Panel customization**: Move the indicator to the left, center, or right side of the top bar.
+- 🎨 **Style overrides**: Complete customization using CSS for the different VPN states.
 
 ## Installation
 This extension uses the NordVPN command line client, which can be set up as follows.
