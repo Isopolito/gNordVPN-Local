@@ -35,6 +35,7 @@ delete_random_files_and_directories() {
         -name "*.orig" \
         -o -name "*.spec.js" \
         -o -name "package.json" \
+        -o -name "*.png" \
         -o -name "*.sh" \
         -o -name "package-lock.json" \
         -o -name "makegnordext" \
