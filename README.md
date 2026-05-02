@@ -1,8 +1,9 @@
 # gNordVPN-Local: GNOME Interface for NordVPN
 
-## Overview
-
 <img align="right" src="img/screenshot1.png">
+
+
+## Overview
 
 **gNordVPN-Local** is a GNOME Shell extension designed to provide seamless integration with NordVPN. Manage VPN connections directly from the GNOME top bar with intuitive menus and status indicators.
 
