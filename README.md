@@ -1,11 +1,11 @@
-# gNordVPN-Local: GNOME Interface for NordVPN
+# gNordVPN: GNOME Interface for NordVPN
 
 <img align="right" src="img/screenshot1.png">
 
 
 ## Overview
 
-**gNordVPN-Local** puts NordVPN controls directly in the GNOME top bar. It uses the NordVPN CLI under the hood to show live connection state, surface quick actions, and expose the most useful NordVPN settings without leaving the desktop shell.
+**gNordVPN** puts NordVPN controls directly in the GNOME top bar. It uses the NordVPN CLI under the hood to show live connection state, surface quick actions, and expose the most useful NordVPN settings without leaving the desktop shell.
 
 ## Prerequisites
 
