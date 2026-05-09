@@ -21,7 +21,7 @@
 - ⭐ **Favorites**: Pin commonly used countries, cities, and servers for quicker access.
 - ⚙️ **Connection preferences**: Configure options such as auto-connect, protocol, and technology from the extension settings.
 - 🧭 **Panel customization**: Move the indicator to the left, center, or right side of the top bar.
-- 🎨 **Style overrides**: Complete customization using CSS for the different VPN states.
+- 🎨 **Style overrides**: Complete customization of appearance using CSS for the different VPN states. Control colors, what's displayed, etc.
 
 ## Installation
 This extension uses the NordVPN command line client, which can be set up as follows.
