@@ -1,301 +1,369 @@
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
+import Adw from 'gi://Adw';
+import Gdk from 'gi://Gdk';
 
-import * as Common from '../common.js';
-import * as Constants from '../constants.js';
+import {CORNERS, GROUPS, GROUP_OF, SPACING_PRESETS, STATE_KEYS, clone, serialize} from '../style/AppearanceModel.js';
+import {compile} from '../style/StyleCompiler.js';
+import {loadModel} from '../style/ModelLoader.js';
+import {SIZE_PRESETS, THEME_PRESETS, applySize, applyTheme} from '../style/Presets.js';
+
+// Tokens that render in the CONNECTED panel text.
+export const TOKENS = [
+    'country', 'COUNTRY', 'ctry', 'city', 'CITY', 'number', 'server', 'ip', 'tech', 'protocol',
+    'transfer', 'transferUp', 'transferDown', 'uptime', 'uptimeHr', 'uptimeMin', 'uptimeSec',
+];
+
+const GROUP_TITLES = {
+    connected: 'Connected',
+    transitioning: 'Transitioning',
+    disconnected: 'Disconnected',
+    error: 'Error',
+    loggedOut: 'Logged out',
+};
+
+const CORNER_ITEMS = [['pill', 'Pill'], ['rounded', 'Rounded'], ['square', 'Square']];
+const SPACING_ITEMS = [['compact', 'Compact'], ['normal', 'Normal'], ['roomy', 'Roomy'], ['custom', 'Custom']];
+const SIZE_KEYS = Object.keys(SIZE_PRESETS);
+const THEME_KEYS = Object.keys(THEME_PRESETS);
+
+const stateTitle = (key) => key.charAt(0) + key.slice(1).toLowerCase().replace(/_(.)/g, (_, ch) => ` ${ch}`);
+const pxOf = (value) => parseFloat(value) || 0;
 
 export default class StylesManager {
     constructor(settings) {
         this._settings = settings;
+        this._model = null;
+        this._syncing = 0;
+        this._sync = [];
     }
 
-    createStylesPage() {
-        let {
-            stylePage,
-            monoToggle,
-            altToggle,
-            styleSmall,
-            styleMedium,
-            styleLarge,
-            styleExtraLarge
-        } = this._createStylesBuildSection();
+    // Adds the Styles groups to an Adw.PreferencesPage. Opening only reads settings; edits write.
+    fillStylesPage(page) {
+        this._model = loadModel({
+            appearanceJson: this._settings.get_string('panel-appearance'),
+            panelStyles: this._settings.get_value('panel-styles').deep_unpack(),
+            commonCss: this._settings.get_string('common-panel-style'),
+        }).model;
 
-        let {row, styleItems, commonCss} = this._createStyleEditSection(stylePage);
-        this._connectStylesButtons(styleExtraLarge, monoToggle, altToggle, commonCss, styleItems, styleLarge, styleMedium, styleSmall);
-
-        return stylePage;
+        page.add(this._createPresetsGroup());
+        page.add(this._createShapeGroup());
+        page.add(this._createColorsGroup());
+        this._syncUi();
     }
 
-    _connectStylesButtons(styleExtraLarge, monoToggle, altToggle, commonCss, styleItems, styleLarge, styleMedium, styleSmall) {
-        styleExtraLarge.connect(`clicked`, () => {
-            let panelTexts = {
-                'CONNECTED': '{city}, {country}  -  {uptimeHr}:{uptimeMin}:{uptimeSec}  -  ↑{transferUp} ↓{transferDown}',
-                'CONNECTING': 'VPN CONNECTING',
-                'DISCONNECTED': 'VPN DISCONNECTED',
-                'DISCONNECTING': 'VPN DISCONNECTING ',
-                'RECONNECTING': 'VPN RECONNECTING',
-                'RESTARTING': 'VPN RESTARTING',
-                'ERROR': 'VPN ERROR',
-                'LOGGED_OUT': 'VPN LOGGED OUT',
-                'LOGGING_IN': 'VPN LOGGING IN',
-                'LOGGING_OUT': 'VPN LOGGING OUT',
-            }
+    // ---- model plumbing ---------------------------------------------------------------------
 
-            this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
-        });
-
-        styleLarge.connect(`clicked`, () => {
-            let panelTexts = {
-                'CONNECTED': '{country} #{number}',
-                'CONNECTING': 'CONNECTING',
-                'DISCONNECTED': 'DISCONNECTED',
-                'DISCONNECTING': 'DISCONNECTING',
-                'RECONNECTING': 'RECONNECTING',
-                'RESTARTING': 'RESTARTING',
-                'ERROR': 'ERROR',
-                'LOGGED_OUT': 'LOGGED OUT',
-                'LOGGING_IN': 'LOGGING IN',
-                'LOGGING_OUT': 'LOGGING OUT',
-            }
-
-            this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
-        });
-
-        styleMedium.connect(`clicked`, () => {
-            let panelTexts = {
-                'CONNECTED': '{ctry}#{number}',
-                'CONNECTING': '...',
-                'DISCONNECTED': 'OFF',
-                'DISCONNECTING': '...',
-                'RECONNECTING': '...',
-                'RESTARTING': '...',
-                'ERROR': 'ERR',
-                'LOGGED_OUT': 'OUT',
-                'LOGGING_IN': '...',
-                'LOGGING_OUT': '...',
-
-            }
-
-            this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
-        });
-
-        styleSmall.connect(`clicked`, () => {
-            let panelTexts = {
-                'CONNECTED': '{ctry}',
-                'CONNECTING': '.',
-                'DISCONNECTED': '∅',
-                'DISCONNECTING': '.',
-                'RECONNECTING': '.',
-                'RESTARTING': '.',
-                'ERROR': '⚠',
-                'LOGGED_OUT': '?',
-                'LOGGING_IN': '.',
-                'LOGGING_OUT': '.',
-            }
-
-            this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
-        });
-
-        styleItems.forEach(item => {
-            item.format.connect(`changed`, () => {
-                this._saveStyle(styleItems);
-            });
-            item.css.connect(`changed`, () => {
-                this._saveStyle(styleItems);
-            });
-        });
+    // Runs a model edit, then writes the model and what it compiles to.
+    _edit(change) {
+        if (this._syncing) return;
+        change(this._model);
+        this._commit();
+        this._syncUi();
     }
 
-    _createStylesBuildSection() {
-        const stylePage = new Gtk.Grid({
-            margin_start: 18,
-            margin_top: 10,
-            column_spacing: 12,
-            row_spacing: 12,
-            visible: true
-        });
-
-        const monoLabel = new Gtk.Label({label: `Build as monochrome:`, halign: Gtk.Align.START, visible: true});
-        stylePage.attach(monoLabel, 0, 0, 1, 1);
-
-        const monoToggle = new Gtk.Switch({active: false, halign: Gtk.Align.START, visible: true});
-        stylePage.attach(monoToggle, 1, 0, 1, 1);
-
-        const altLabel = new Gtk.Label({label: `Build with alt style:`, halign: Gtk.Align.START, visible: true});
-        stylePage.attach(altLabel, 0, 1, 1, 1);
-
-        const altToggle = new Gtk.Switch({active: false, halign: Gtk.Align.START, visible: true});
-        stylePage.attach(altToggle, 1, 1, 1, 1);
-
-        const loadDefault = new Gtk.Label({
-            label: '<b>Build default: </b>',
-            halign: Gtk.Align.START,
-            use_markup: true,
-            visible: true
-        });
-
-        stylePage.attach(loadDefault, 0, 2, 1, 1);
-
-        const styleSmall = new Gtk.Button({label: `Small default`, visible: true});
-        stylePage.attach(styleSmall, 1, 2, 1, 1);
-
-        const styleMedium = new Gtk.Button({label: `Medium default`, visible: true});
-        stylePage.attach(styleMedium, 2, 2, 1, 1);
-
-        const styleLarge = new Gtk.Button({label: `Large default`, visible: true});
-        stylePage.attach(styleLarge, 3, 2, 1, 1);
-
-        const styleExtraLarge = new Gtk.Button({label: `Extra Large default`, visible: true});
-        styleExtraLarge.set_tooltip_text('Uptime updates every second; other values update at the refresh interval');
-        stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
-
-        return {stylePage, monoToggle, altToggle, styleSmall, styleMedium, styleLarge, styleExtraLarge};
+    _replaceModel(model) {
+        this._model = model;
+        this._commit();
+        this._syncUi();
     }
 
-    _createStyleEditSection(stylePage) {
-        const customStyle = new Gtk.Label({
-            label: '<b>Edit style</b>',
-            halign: Gtk.Align.START,
-            use_markup: true,
-            visible: true
-        });
-        stylePage.attach(customStyle, 0, 3, 1, 1);
-
-        const displayMsg = new Gtk.Label({
-            label: '<b>Display Msg</b>',
-            halign: Gtk.Align.START,
-            use_markup: true,
-            visible: true
-        });
-        stylePage.attach(displayMsg, 1, 4, 1, 1);
-
-        const textColor = new Gtk.Label({
-            label: '<b>CSS Style</b>',
-            halign: Gtk.Align.START,
-            use_markup: true,
-            visible: true
-        });
-        stylePage.attach(textColor, 2, 4, 1, 1);
-
-        let row = 5;
-        let styleItems = [];
-        Common.safeObjectKeys(Constants.states).forEach(state => {
-            const label = new Gtk.Label({
-                label: state,
-                halign: Gtk.Align.START,
-                visible: true
-            });
-            stylePage.attach(label, 0, row, 1, 1);
-
-            const format = new Gtk.Entry();
-            stylePage.attach(format, 1, row, 1, 1);
-
-            const css = new Gtk.Entry();
-            stylePage.attach(css, 2, row++, 3, 1);
-
-            styleItems.push({state, format, css});
-        });
-
-        const commonCsslabel = new Gtk.Label({
-            label: "Common CSS",
-            halign: Gtk.Align.START,
-            visible: true
-        });
-        stylePage.attach(commonCsslabel, 0, row, 1, 1);
-
-        const commonCss = new Gtk.Entry();
-        let cps = this._settings.get_string(`common-panel-style`);
-        commonCss.get_buffer().set_text(cps, cps.length);
-        commonCss.connect(`changed`, () => {
-            let gv = new GLib.Variant("s", commonCss.get_buffer().get_text());
-            this._settings.set_value(`common-panel-style`, gv);
-        });
-
-        stylePage.attach(commonCss, 1, row++, 4, 1);
-
-        let savedStyle = this._settings.get_value('panel-styles').deep_unpack();
-        this._loadStyle(savedStyle, styleItems);
-
-        const connectedKeyLabel = new Gtk.Label({
-            label: `<b>* Available keys for CONNECTED:</b> {country},{COUNTRY},{ctry},{city},{CITY},{number},{server},{ip},{tech},{protocol},\n{transfer},{transferUp},{transferDown},{uptime},{uptimeHr},{uptimeMin},{uptimeSec}`,
-            halign: Gtk.Align.START,
-            use_markup: true,
-            visible: true,
-        });
-        connectedKeyLabel.set_selectable(true);
-        stylePage.attach(connectedKeyLabel, 0, row++, 5, 1);
-
-        return {row, styleItems, commonCss};
+    _commit() {
+        const {panelStyles, commonCss} = compile(this._model);
+        this._settings.set_string('panel-appearance', serialize(this._model));
+        this._settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', panelStyles));
+        this._settings.set_string('common-panel-style', commonCss);
     }
 
-    _saveStyle(styleItems) {
+    // Pushes the model into every widget without triggering writes.
+    _syncUi() {
+        this._syncing++;
+        try {
+            this._sync.forEach(fn => fn(this._model));
+        } finally {
+            this._syncing--;
+        }
+    }
 
-        let data = {};
-        styleItems.every(item => {
-            data[item.state] = {};
-            data[item.state].panelText = item.format.get_buffer().get_text();
-            data[item.state].css = item.css.get_buffer().get_text();
+    // ---- small widget builders --------------------------------------------------------------
 
-            return true;
+    _createColorButton(read, write) {
+        const button = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog({with_alpha: true}),
+            valign: Gtk.Align.CENTER,
+        });
+        button.connect('notify::rgba', () => {
+            if (this._syncing) return;
+            const color = button.rgba.to_string();
+            this._edit(model => write(model, color));
+        });
+        this._sync.push(model => {
+            const next = this._parseColor(read(model));
+            if (button.rgba?.to_string() !== next.to_string()) button.rgba = next;
+        });
+        return button;
+    }
+
+    _parseColor(css) {
+        const rgba = new Gdk.RGBA();
+        if (!rgba.parse(css)) rgba.parse('rgba(0,0,0,0)');
+        return rgba;
+    }
+
+    _createColorRow(title, read, write) {
+        const row = new Adw.ActionRow({title});
+        row.add_suffix(this._createColorButton(read, write));
+        return row;
+    }
+
+    _createEntryRow(title, read, write) {
+        const row = new Adw.EntryRow({title});
+        row.connect('changed', () => {
+            if (this._syncing) return;
+            const text = row.get_text();
+            this._edit(model => write(model, text));
+        });
+        this._sync.push(model => {
+            const next = read(model);
+            if (row.get_text() !== next) row.set_text(next);
+        });
+        return row;
+    }
+
+    _createComboRow(title, items, read, write) {
+        const row = new Adw.ComboRow({
+            title,
+            model: new Gtk.StringList({strings: items.map(([, label]) => label)}),
+        });
+        row.connect('notify::selected', () => {
+            if (this._syncing) return;
+            const key = items[row.selected]?.[0];
+            if (key !== undefined) this._edit(model => write(model, key));
+        });
+        this._sync.push(model => {
+            const index = items.findIndex(([key]) => key === read(model));
+            if (index >= 0 && row.selected !== index) row.selected = index;
+        });
+        return row;
+    }
+
+    _createSwitchRow(title, read, write) {
+        const row = new Adw.SwitchRow({title});
+        row.connect('notify::active', () => {
+            if (this._syncing) return;
+            const active = row.active;
+            this._edit(model => write(model, active));
+        });
+        this._sync.push(model => {
+            if (row.active !== read(model)) row.active = read(model);
+        });
+        return row;
+    }
+
+    _createSpinRow(title, read, write) {
+        const row = new Adw.SpinRow({
+            title,
+            adjustment: new Gtk.Adjustment({lower: 0, upper: 100, step_increment: 1, page_increment: 5, value: 0}),
+        });
+        row.connect('notify::value', () => {
+            if (this._syncing) return;
+            const value = Math.round(row.value);
+            this._edit(model => write(model, `${value}px`));
+        });
+        this._sync.push(model => {
+            const next = pxOf(read(model));
+            if (row.value !== next) row.value = next;
+        });
+        return row;
+    }
+
+    // ---- presets ----------------------------------------------------------------------------
+
+    _createPresetsGroup() {
+        const group = new Adw.PreferencesGroup({
+            title: 'Presets',
+            description: 'Size sets the panel text. Theme sets the colors and shape. Each only changes its own settings.',
         });
 
-        this._settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', data));
+        const size = new Adw.ComboRow({
+            title: 'Size',
+            model: new Gtk.StringList({strings: SIZE_KEYS.map(key => SIZE_PRESETS[key].label)}),
+        });
+        size.selected = SIZE_KEYS.indexOf('large');
+        const applySizeButton = new Gtk.Button({label: 'Apply size', valign: Gtk.Align.CENTER});
+        applySizeButton.connect('clicked', () => this._replaceModel(applySize(this._model, SIZE_KEYS[size.selected])));
+        size.add_suffix(applySizeButton);
+        group.add(size);
+
+        const theme = new Adw.ComboRow({
+            title: 'Theme',
+            model: new Gtk.StringList({strings: THEME_KEYS.map(key => THEME_PRESETS[key].label)}),
+        });
+        const applyThemeButton = new Gtk.Button({label: 'Apply theme', valign: Gtk.Align.CENTER});
+        applyThemeButton.connect('clicked', () => this._replaceModel(applyTheme(this._model, THEME_KEYS[theme.selected])));
+        theme.add_suffix(applyThemeButton);
+        group.add(theme);
+
+        return group;
     }
 
-    _loadStyle(data, styleItems) {
-        styleItems.forEach(item => {
-            let panelText = data[item.state].panelText;
-            item.format.get_buffer().set_text(panelText, panelText.length);
+    // ---- shape ------------------------------------------------------------------------------
 
-            let css = data[item.state].css;
-            item.css.get_buffer().set_text(css, css.length);
-        })
+    _createShapeGroup() {
+        const group = new Adw.PreferencesGroup({title: 'Shape'});
+
+        group.add(this._createComboRow('Corners', CORNER_ITEMS,
+            model => model.shape.corner,
+            (model, key) => { model.shape.corner = Object.hasOwn(CORNERS, key) ? key : model.shape.corner; }));
+
+        group.add(this._createSwitchRow('Bold text',
+            model => model.shape.bold,
+            (model, active) => { model.shape.bold = active; }));
+
+        group.add(this._createSwitchRow('Border',
+            model => model.shape.border.enabled,
+            (model, active) => { model.shape.border.enabled = active; }));
+
+        const borderColor = this._createColorRow('Border color',
+            model => model.shape.border.color,
+            (model, color) => { model.shape.border.color = color; });
+        this._sync.push(model => { borderColor.visible = model.shape.border.enabled; });
+        group.add(borderColor);
+
+        group.add(this._createComboRow('Spacing', SPACING_ITEMS,
+            model => model.shape.spacing,
+            (model, key) => {
+                model.shape.spacing = key;
+                if (key !== 'custom') {
+                    model.shape.padding = clone(SPACING_PRESETS[key].padding);
+                    model.shape.margin = clone(SPACING_PRESETS[key].margin);
+                }
+            }));
+
+        const sides = (field, title, sidesOf) => {
+            const row = this._createSpinRow(title,
+                model => model.shape[field][sidesOf[0]],
+                (model, value) => {
+                    sidesOf.forEach(side => { model.shape[field][side] = value; });
+                    model.shape.spacing = 'custom';
+                });
+            this._sync.push(model => { row.visible = model.shape.spacing === 'custom'; });
+            group.add(row);
+        };
+        sides('padding', 'Padding top (px)', ['top']);
+        sides('padding', 'Padding bottom (px)', ['bottom']);
+        sides('padding', 'Padding horizontal (px)', ['left', 'right']);
+        sides('margin', 'Margin top (px)', ['top']);
+        sides('margin', 'Margin bottom (px)', ['bottom']);
+        sides('margin', 'Margin horizontal (px)', ['left', 'right']);
+
+        return group;
     }
 
-    _loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems) {
-        let styleCss = {
-            'CONNECTED': {css: 'background-color: rgba(0,255,0,0.7); color: rgba(255,255,255,1);'},
-            'CONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'DISCONNECTED': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
-            'DISCONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'RECONNECTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'RESTARTING': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'ERROR': {css: 'background-color: rgba(255,0,0,0.7); color: rgba(255,255,255,1);'},
-            'LOGGED_OUT': {css: 'background-color: rgba(48,26,208,0.7); color: rgba(255,255,255,1);'},
-            'LOGGING_IN': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
-            'LOGGING_OUT': {css: 'background-color: rgba(255,191,0,0.7); color: rgba(255,255,255,1);'},
+    // ---- state colors -----------------------------------------------------------------------
+
+    _createColorsGroup() {
+        const group = new Adw.PreferencesGroup({
+            title: 'State colors',
+            description: 'Colors and text for each connection state.',
+        });
+        GROUPS.forEach(name => group.add(this._createStateGroupRow(name)));
+        return group;
+    }
+
+    _createStateGroupRow(name) {
+        const members = STATE_KEYS.filter(key => GROUP_OF[key] === name);
+        const row = new Adw.ExpanderRow({title: GROUP_TITLES[name], subtitle: members.map(stateTitle).join(', ')});
+
+        const textRow = this._createEntryRow('Panel text',
+            model => model.groups[name].text,
+            (model, text) => { model.groups[name].text = text; });
+        if (name === 'connected') textRow.add_suffix(this._createTokenButton(textRow));
+        row.add_row(textRow);
+
+        row.add_row(this._createColorRow('Background color',
+            model => model.groups[name].bg,
+            (model, color) => { model.groups[name].bg = color; }));
+        row.add_row(this._createColorRow('Text color',
+            model => model.groups[name].fg,
+            (model, color) => { model.groups[name].fg = color; }));
+
+        if (members.length > 1) row.add_row(this._createOverridesRow(members));
+        return row;
+    }
+
+    _createOverridesRow(members) {
+        const section = new Adw.ExpanderRow({title: 'Customize individual states'});
+        members.forEach(key => section.add_row(this._createOverrideRow(key)));
+        return section;
+    }
+
+    _createOverrideRow(key) {
+        const row = new Adw.ExpanderRow({title: stateTitle(key)});
+        const setOverride = (model, field, value) => {
+            const entry = {...(model.overrides[key] ?? {})};
+            if (value === '') delete entry[field];
+            else entry[field] = value;
+            if (Object.keys(entry).length) model.overrides[key] = entry;
+            else delete model.overrides[key];
         };
 
-        let styleAltCss = {
-            'CONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(0,255,0,0.7);'},
-            'CONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'DISCONNECTED': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
-            'DISCONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'RECONNECTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'RESTARTING': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'ERROR': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,0,0,0.7);'},
-            'LOGGED_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(48,26,208,0.7);'},
-            'LOGGING_IN': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-            'LOGGING_OUT': {css: 'background-color: rgba(0,0,0,0.7); color: rgba(255,191,0,0.7);'},
-        }
+        const reset = new Gtk.Button({icon_name: 'edit-clear-symbolic', tooltip_text: 'Use the group settings', valign: Gtk.Align.CENTER});
+        reset.add_css_class('flat');
+        reset.connect('clicked', () => this._edit(model => { delete model.overrides[key]; }));
+        row.add_suffix(reset);
+        this._sync.push(model => { reset.sensitive = key in model.overrides; });
 
-        let monoCss = "background-color: rgba(255,255,255,0.7); color: rgba(0,0,0,1);";
-        let altMonoCss = "background-color: rgba(0,0,0,0.7); color: rgba(255,255,255,1);";
-
-        let ccss = "font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;";
-        let altCcss = "font-weight: bold; border-radius: 5px; padding: 3px 10px 0; margin: 3px 0px 3px 0px; border: 1px solid white;";
-
-        let isMono = monoToggle.get_active();
-        let isAlt = altToggle.get_active();
-        let style = isAlt ? styleAltCss : styleCss;
-        Common.safeObjectKeys(style).forEach(key => {
-            if (isMono) style[key].css = isAlt ? altMonoCss : monoCss;
-            style[key].panelText = panelTexts[key];
-        });
-
-        let _ccss = altToggle.get_active() ? altCcss : ccss;
-        commonCss.get_buffer().set_text(_ccss, _ccss.length);
-
-        this._loadStyle(style, styleItems);
+        // Blank text means "inherit the group's text".
+        row.add_row(this._createEntryRow('Panel text',
+            model => model.overrides[key]?.text ?? '',
+            (model, text) => setOverride(model, 'text', text)));
+        row.add_row(this._createColorRow('Background color',
+            model => model.overrides[key]?.bg ?? model.groups[GROUP_OF[key]].bg,
+            (model, color) => setOverride(model, 'bg', color)));
+        row.add_row(this._createColorRow('Text color',
+            model => model.overrides[key]?.fg ?? model.groups[GROUP_OF[key]].fg,
+            (model, color) => setOverride(model, 'fg', color)));
+        return row;
     }
-};
+
+    // ---- tokens -----------------------------------------------------------------------------
+
+    _createTokenButton(entry) {
+        const list = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, spacing: 2});
+        const scroller = new Gtk.ScrolledWindow({
+            hscrollbar_policy: Gtk.PolicyType.NEVER,
+            min_content_height: 240,
+            min_content_width: 160,
+        });
+        const popover = new Gtk.Popover();
+
+        TOKENS.forEach(token => {
+            const item = new Gtk.Button({label: `{${token}}`});
+            item.add_css_class('flat');
+            item.connect('clicked', () => {
+                this.insertToken(entry, `{${token}}`);
+                popover.popdown();
+            });
+            list.append(item);
+        });
+        scroller.set_child(list);
+        popover.set_child(scroller);
+
+        return new Gtk.MenuButton({
+            icon_name: 'insert-text-symbolic',
+            tooltip_text: 'Insert a token',
+            valign: Gtk.Align.CENTER,
+            popover,
+        });
+    }
+
+    // Inserts `text` into an editable at the cursor and moves the cursor past it.
+    insertToken(entry, text) {
+        // GTK positions count characters (code points), not UTF-16 units.
+        const chars = Array.from(entry.get_text());
+        const position = Math.min(Math.max(entry.get_position(), 0), chars.length);
+        entry.set_text(chars.slice(0, position).join('') + text + chars.slice(position).join(''));
+        entry.set_position(position + Array.from(text).length);
+    }
+}

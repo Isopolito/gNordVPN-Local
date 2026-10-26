@@ -655,9 +655,7 @@ export default class GnordVpnPrefs {
         const stylesPage = new Adw.PreferencesPage();
         stylesPage.set_title("Styles");
         stylesPage.set_icon_name("edit-select-all-symbolic");
-        const stylesGroup = new Adw.PreferencesGroup();
-        stylesGroup.add(new StylesManager(this._settings).createStylesPage());
-        stylesPage.add(stylesGroup);
+        new StylesManager(this._settings).fillStylesPage(stylesPage);
         window.add(stylesPage);
 
         // *** CONNECTIONS

@@ -69,6 +69,9 @@ class Widget {
     set_child(c) { this.child = c; }
     append(c) { this.children.push(c); }
     add(c) { this.children.push(c); }
+    add_row(c) { this.children.push(c); }
+    add_suffix(c) { this.children.push(c); }
+    add_css_class() {}
 }
 
 class Label extends Widget {
@@ -192,16 +195,73 @@ class Entry extends Widget {
     }
 }
 
+// ---- Adwaita rows and color widgets used by the Styles page ----
+
+class StringList extends Widget {
+    constructor(props) { super(props); this.strings = props?.strings ?? []; }
+}
+
+class ComboRow extends Widget {
+    constructor(props) { super(props); if (this.selected === undefined) this.selected = 0; }
+}
+
+class SwitchRow extends Widget {
+    constructor(props) { super(props); if (this.active === undefined) this.active = false; }
+}
+
+class SpinRow extends Widget {
+    constructor(props) { super(props); if (this.value === undefined) this.value = this.adjustment?.value ?? 0; }
+}
+
+// Like Gtk.Editable: set_text emits 'changed' only when the text differs.
+class EntryRow extends Widget {
+    constructor(props) { super(props); this._text = ''; this._pos = 0; }
+    get_text() { return this._text; }
+    set_text(t) {
+        if (this._text === t) return;
+        this._text = t;
+        this.emit('changed');
+    }
+    get_position() { return this._pos; }
+    set_position(p) { this._pos = p; }
+}
+
+class ExpanderRow extends Widget {}
+
+// Gdk.RGBA: parse() understands rgb()/rgba() and a few names; to_string() matches GTK's format.
+class RGBA {
+    constructor() { this.red = 0; this.green = 0; this.blue = 0; this.alpha = 1; }
+    parse(str) {
+        const named = {white: [255, 255, 255, 1], black: [0, 0, 0, 1], red: [255, 0, 0, 1]};
+        const m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(String(str).trim());
+        const v = m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]] : named[String(str).trim()];
+        if (!v) return false;
+        [this.red, this.green, this.blue] = [v[0] / 255, v[1] / 255, v[2] / 255];
+        this.alpha = v[3];
+        return true;
+    }
+    to_string() {
+        const [r, g, b] = [this.red, this.green, this.blue].map(c => Math.round(c * 255));
+        return this.alpha === 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${+this.alpha.toFixed(2)})`;
+    }
+}
+
+class ColorDialogButton extends Widget {
+    constructor(props) { super(props); if (!this.rgba) this.rgba = new RGBA(); }
+}
+
 class Window extends Widget {
     set_default_size() {}
 }
 
 const simple = (name) => ({[name]: class extends Widget {}})[name];
 
-export const fakes = {Label, Grid, Button, Switch, Adjustment, SpinButton, ComboBoxText, ComboBox, ListStore, TreeStore, TreeSelection, TreeView, Entry, Window};
+export const fakes = {StringList, ComboRow, SwitchRow, SpinRow, EntryRow, ExpanderRow, ColorDialogButton, RGBA, Label, Grid, Button, Switch, Adjustment, SpinButton, ComboBoxText, ComboBox, ListStore, TreeStore, TreeSelection, TreeView, Entry, Window};
 
 Object.assign(Gtk, {
     Frame: simple('Frame'), Box: simple('Box'), ScrolledWindow: simple('ScrolledWindow'),
+    ColorDialog: simple('ColorDialog'), Popover: class Popover extends Widget { popdown() { this.popped = false; } }, MenuButton: simple('MenuButton'),
+    StringList, ColorDialogButton,
     CellRendererText: simple('CellRendererText'), TreeViewColumn: simple('TreeViewColumn'),
     Label, Grid, Button, Switch, Adjustment, SpinButton, ComboBoxText, ComboBox, ListStore, TreeStore,
     TreeView, Entry,
@@ -210,7 +270,11 @@ Object.assign(Gtk, {
     SelectionMode: {MULTIPLE: 3},
     PolicyType: {NEVER: 2, AUTOMATIC: 1},
 });
-Object.assign(Adw, {PreferencesPage: simple('PreferencesPage'), PreferencesGroup: simple('PreferencesGroup')});
+Object.assign(Adw, {
+    PreferencesPage: simple('PreferencesPage'), PreferencesGroup: simple('PreferencesGroup'),
+    ComboRow, SwitchRow, SpinRow, EntryRow, ExpanderRow, ActionRow: simple('ActionRow'),
+});
+Gdk.RGBA = RGBA;
 Gdk.Display = {get_default: () => ({get_monitors: () => ({get_item: () => null})})};
 GObject.TYPE_STRING = 'gchararray';
 GLib.markup_escape_text = (s) => s;

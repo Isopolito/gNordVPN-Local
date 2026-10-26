@@ -11,6 +11,11 @@
         <key name="common-panel-style" type="s">
             <default>"font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;"</default>
         </key>
+        <key name="panel-appearance" type="s">
+            <default>""</default>
+            <summary>Styles page model (JSON)</summary>
+            <description>JSON source of truth for the Styles page in preferences. Preferences compiles it into panel-styles and common-panel-style, which are what the panel renders. If those keys disagree with it, they win.</description>
+        </key>
         <key name="favorite-countries" type="s">
             <default>""</default>
         </key>
