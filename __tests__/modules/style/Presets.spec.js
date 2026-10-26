@@ -1,4 +1,4 @@
-import {SIZE_PRESETS, THEME_PRESETS, applySize, applyTheme, buildPreset} from '../../../modules/style/Presets.js';
+import {SIZE_PRESETS, THEME_PRESETS, applySize, applyTheme, buildPreset, detectTheme} from '../../../modules/style/Presets.js';
 import {compile, normalizeDeclarations} from '../../../modules/style/StyleCompiler.js';
 import {STATE_KEYS, defaultModel, normalize, resolveState} from '../../../modules/style/AppearanceModel.js';
 import {LEGACY_SIZES, LEGACY_THEMES, LEGACY_PANEL_TEXTS, legacyGenerate} from '../../helpers/legacyStyles.js';
@@ -95,7 +95,35 @@ describe('applyTheme', () => {
         const after = applyTheme(before, 'outline');
         after.shape.padding.top = 'changed';
         expect(THEME_PRESETS.outline.shape.padding.top).toBe('3px');
-        expect(before.shape.padding.top).toBe('4px');
+        expect(before.shape.padding.top).toBe('0px');
         expect(() => applyTheme(before, 'neon')).toThrow();
+    });
+});
+
+describe('detectTheme color comparison', () => {
+    const spaced = (css) => css.replace(/rgba\(([^)]*)\)/g, (_, inner) => `rgba(${inner.split(',').map(s => s.trim()).join(', ')})`);
+    const respace = (model, fn) => {
+        Object.values(model.groups).forEach(g => { g.bg = fn(g.bg); g.fg = fn(g.fg); });
+        model.shape.border.color = fn(model.shape.border.color);
+        return model;
+    };
+
+    it('treats comma whitespace differences as equal', () => {
+        Object.keys(THEME_PRESETS).forEach(name => {
+            expect(detectTheme(respace(applyTheme(defaultModel(), name), spaced))).toBe(name);
+        });
+    });
+
+    it('treats opaque rgb() and rgba(...,1) as equal, and case/space-insensitive text', () => {
+        const model = applyTheme(defaultModel(), 'trafficLight');
+        respace(model, c => c.replace(/rgba\((\d+),(\d+),(\d+),1\)/, 'RGB( $1 , $2 , $3 )'));
+        expect(model.groups.connected.fg).toMatch(/^RGB\(/);
+        expect(detectTheme(model)).toBe('trafficLight');
+    });
+
+    it('still reports custom when a color really differs', () => {
+        const model = applyTheme(defaultModel(), 'trafficLight');
+        model.groups.connected.bg = 'rgba(0, 255, 1, 0.7)';
+        expect(detectTheme(model)).toBe('custom');
     });
 });

@@ -53,7 +53,7 @@ describe('loadModel', () => {
     it('ignores formatting-only differences between stored and legacy CSS', () => {
         const stored = buildPreset('large', 'trafficLight');
         const compiled = compile(stored);
-        compiled.commonCss = 'font-weight:bold;border-radius:100px;padding:4px 10px 0 10px;margin:3px 0px;';
+        compiled.commonCss = 'font-weight:bold;border-radius:100px;padding:0px 10px 0 10px;margin:3px 0px;';
         const {source} = loadModel({appearanceJson: serialize(stored), ...compiled});
         expect(source).toBe('appearance');
     });

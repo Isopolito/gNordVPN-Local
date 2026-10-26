@@ -24,15 +24,15 @@ export const FIELDS = ['text', 'bg', 'fg'];
 
 export const SPACING_PRESETS = {
     compact: {
-        padding: {top: '2px', right: '8px', bottom: '0', left: '8px'},
+        padding: {top: '0px', right: '6px', bottom: '0', left: '6px'},
         margin: {top: '2px', right: '0px', bottom: '2px', left: '0px'},
     },
     normal: {
-        padding: {top: '4px', right: '10px', bottom: '0', left: '10px'},
+        padding: {top: '0px', right: '10px', bottom: '0', left: '10px'},
         margin: {top: '3px', right: '0px', bottom: '3px', left: '0px'},
     },
     roomy: {
-        padding: {top: '6px', right: '14px', bottom: '2px', left: '14px'},
+        padding: {top: '0px', right: '14px', bottom: '0', left: '14px'},
         margin: {top: '4px', right: '0px', bottom: '4px', left: '0px'},
     },
 };

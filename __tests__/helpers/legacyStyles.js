@@ -82,7 +82,7 @@ const styleAltCss = {
 const monoCss = "background-color: rgba(255,255,255,0.7); color: rgba(0,0,0,1);";
 const altMonoCss = "background-color: rgba(0,0,0,0.7); color: rgba(255,255,255,1);";
 
-const ccss = "font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;";
+const ccss = "font-weight: bold; border-radius: 100px; padding: 0px 10px 0; margin: 3px 0px 3px 0px;";
 const altCcss = "font-weight: bold; border-radius: 5px; padding: 3px 10px 0; margin: 3px 0px 3px 0px; border: 1px solid white;";
 
 export const LEGACY_SIZES = Object.keys(LEGACY_PANEL_TEXTS);

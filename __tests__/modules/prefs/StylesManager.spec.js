@@ -6,12 +6,19 @@ import {fakes, resetRegistry, findAll, createWindow, installedProviders} from '.
 import GnordVpnPrefs from '../../../modules/prefs/GnordVpnPrefs.js';
 import StylesManager, {TOKENS, SAMPLE_STATUS} from '../../../modules/prefs/StylesManager.js';
 import {STATE_KEYS, parseStored, resolveState, serialize} from '../../../modules/style/AppearanceModel.js';
+import {normalize} from '../../../modules/style/AppearanceModel.js';
 import {loadModel} from '../../../modules/style/ModelLoader.js';
 import {render} from '../../../modules/PanelText.js';
 import {compile, sameStyles} from '../../../modules/style/StyleCompiler.js';
 import {parse} from '../../../modules/style/LegacyStyleParser.js';
 import {SIZE_PRESETS, buildPreset} from '../../../modules/style/Presets.js';
 import {legacyGenerate} from '../../helpers/legacyStyles.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+const liveFixture = JSON.parse(fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '../../fixtures/panel-live.json'), 'utf8'));
 
 const {RGBA} = fakes;
 
@@ -58,7 +65,7 @@ describe('StylesManager', () => {
         it('adds the preview, presets, shape, state color and advanced groups', () => {
             const {page} = openPage();
             const titles = page.children.map(g => g.title);
-            expect(titles).toEqual(['Preview', 'Presets', 'Shape', 'State colors', undefined]);
+            expect(titles).toEqual(['Preview', 'Presets', 'Original look', 'Profiles', 'Shape', 'State colors', undefined]);
         });
 
         it('performs zero settings writes when panel-appearance is empty', () => {
@@ -128,7 +135,7 @@ describe('StylesManager', () => {
             const {colorButton, settings, stored, compiled} = openPage();
             colorButton('Connected', 'Background color').rgba = colorOf('rgba(1,2,3,0.5)');
 
-            expect(settings.writes.map(([k]) => k).sort()).toEqual(['common-panel-style', 'panel-appearance', 'panel-styles']);
+            expect(settings.writes.map(([k]) => k).sort()).toEqual(['common-panel-style', 'panel-appearance', 'panel-original-look', 'panel-styles']);
             const model = stored();
             expect(model.groups.connected.bg).toBe('rgba(1,2,3,0.5)');
             expect(sameStyles(compiled(), compile(model))).toBe(true);
@@ -233,9 +240,118 @@ describe('StylesManager', () => {
             const {byTitle, settings} = openPage();
             byTitle(Adw.ComboRow, 'Theme').selected = 1;
             click(applyButton(byTitle(Adw.ComboRow, 'Theme')));
-            expect(settings.writes.map(([k]) => k)).toEqual(['panel-appearance', 'panel-styles', 'common-panel-style']);
+            expect(settings.writes.map(([k]) => k)).toEqual(['panel-original-look', 'panel-appearance', 'panel-styles', 'common-panel-style']);
             expect(byTitle(Adw.ComboRow, 'Corners').selected).toBe(1);
             expect(byTitle(Adw.SwitchRow, 'Border').active).toBe(true);
+        });
+    });
+
+    describe('Size and Theme combos reflect the current settings', () => {
+        const SIZES = Object.keys(SIZE_PRESETS);
+        const THEMES = ['trafficLight', 'outline', 'mono', 'monoOutline'];
+        const live = () => ({'panel-styles': liveFixture.panelStyles, 'common-panel-style': liveFixture.commonCss});
+
+        it.each(SIZES.map((s, i) => [s, i]))('shows %s when the texts match that preset', (size, index) => {
+            const model = buildPreset(size, 'trafficLight');
+            const {byTitle, settings} = openPage({'panel-appearance': serialize(model), ...legacyArgs(compile(model))});
+            expect(byTitle(Adw.ComboRow, 'Size').selected).toBe(index);
+            expect(applyButton(byTitle(Adw.ComboRow, 'Size')).sensitive).toBe(true);
+            expect(settings.writes).toEqual([]);
+        });
+
+        it.each(THEMES.map((t, i) => [t, i]))('shows %s when colors and shape match that preset', (theme, index) => {
+            const model = buildPreset('large', theme);
+            const {byTitle, settings} = openPage({'panel-appearance': serialize(model), ...legacyArgs(compile(model))});
+            expect(byTitle(Adw.ComboRow, 'Theme').selected).toBe(index);
+            expect(settings.writes).toEqual([]);
+        });
+
+        it('shows Custom for both and disables Apply on the live blue/white theme, with zero writes', () => {
+            const {byTitle, settings} = openPage(live());
+            // openPage clears writes after filling, so check through a fresh manager too.
+            resetRegistry();
+            const fresh = new FakeSettings(live());
+            new StylesManager(fresh).fillStylesPage(new Adw.PreferencesPage());
+            expect(fresh.writes).toEqual([]);
+
+            const size = byTitle(Adw.ComboRow, 'Size');
+            const theme = byTitle(Adw.ComboRow, 'Theme');
+            expect(size.model.strings.at(-1)).toBe('Custom');
+            expect(theme.model.strings.at(-1)).toBe('Custom');
+            expect(theme.selected).toBe(THEMES.length);
+            expect(applyButton(theme).sensitive).toBe(false);
+            expect(applyButton(size).sensitive).toBe(size.selected < SIZES.length);
+            expect(settings.writes).toEqual([]);
+        });
+
+        it('Apply on Custom does nothing', () => {
+            const {byTitle, settings} = openPage(live());
+            const theme = byTitle(Adw.ComboRow, 'Theme');
+            expect(theme.selected).toBe(THEMES.length);
+            click(applyButton(theme));
+            expect(settings.writes).toEqual([]);
+        });
+
+        it('follows edits: a color edit moves Theme to Custom and a text edit moves Size to Custom', () => {
+            const {byTitle, colorButton, settings} = openPage();
+            expect(byTitle(Adw.ComboRow, 'Size').selected).toBe(SIZES.indexOf('large'));
+            expect(byTitle(Adw.ComboRow, 'Theme').selected).toBe(0);
+
+            colorButton('Connected', 'Background color').rgba = colorOf('rgba(1,2,3,0.5)');
+            expect(byTitle(Adw.ComboRow, 'Theme').selected).toBe(THEMES.length);
+            byTitle(Adw.ExpanderRow, 'Connected').children[0].set_text('hello');
+            expect(byTitle(Adw.ComboRow, 'Size').selected).toBe(SIZES.length);
+            expect(applyButton(byTitle(Adw.ComboRow, 'Size')).sensitive).toBe(false);
+            expect(settings.writes.length).toBeGreaterThan(0);
+        });
+
+        it('moving the combo without Apply writes nothing', () => {
+            const {byTitle, settings} = openPage();
+            byTitle(Adw.ComboRow, 'Size').selected = 0;
+            byTitle(Adw.ComboRow, 'Theme').selected = 2;
+            expect(settings.writes).toEqual([]);
+        });
+
+        it('changing corner, bold or border never alters colors, texts or padding/margin', () => {
+            const {byTitle, manager} = openPage(live());
+            const snap = () => {
+                const m = manager._model;
+                return JSON.parse(JSON.stringify({groups: m.groups, overrides: m.overrides, spacing: m.shape.spacing, padding: m.shape.padding, margin: m.shape.margin}));
+            };
+            const start = snap();
+            byTitle(Adw.ComboRow, 'Corners').selected = 2;
+            byTitle(Adw.SwitchRow, 'Bold text').active = false;
+            byTitle(Adw.SwitchRow, 'Border').active = !manager._model.shape.border.enabled;
+            expect(snap()).toEqual(start);
+        });
+    });
+
+    describe('spacing keeps custom values', () => {
+        const live = () => ({'panel-styles': liveFixture.panelStyles, 'common-panel-style': liveFixture.commonCss});
+
+        it('restores the previous custom padding and margin after a round trip through a preset', () => {
+            const {byTitle, manager, stored} = openPage(live());
+            const spacing = byTitle(Adw.ComboRow, 'Spacing');
+            expect(spacing.selected).toBe(3);
+            const custom = JSON.parse(JSON.stringify({padding: manager._model.shape.padding, margin: manager._model.shape.margin}));
+            expect(custom.padding).toEqual({top: '0px', right: '13px', bottom: '0', left: '13px'});
+
+            spacing.selected = 1;   // Normal
+            expect(stored().shape.spacing).toBe('normal');
+            expect(stored().shape.padding.right).toBe('10px');
+            spacing.selected = 3;   // back to Custom
+            expect(stored().shape.spacing).toBe('custom');
+            expect(stored().shape.padding).toEqual(custom.padding);
+            expect(stored().shape.margin).toEqual(custom.margin);
+            expect(byTitle(Adw.SpinRow, 'Padding horizontal (px)').value).toBe(13);
+        });
+
+        it('the presets have zero top padding', () => {
+            const {byTitle, stored} = openPage();
+            byTitle(Adw.ComboRow, 'Spacing').selected = 0;
+            expect(stored().shape.padding.top).toBe('0px');
+            byTitle(Adw.ComboRow, 'Spacing').selected = 2;
+            expect(stored().shape.padding.top).toBe('0px');
         });
     });
 
@@ -369,6 +485,156 @@ describe('StylesManager', () => {
             const {byTitle} = openPage();
             commonView().get_buffer().set_text('opacity: 0.9', -1);
             expect(findAll(Gtk.CssProvider)[0].css).toContain('opacity: 0.9;');
+        });
+    });
+    describe('original look', () => {
+        const live = () => ({'panel-styles': liveFixture.panelStyles, 'common-panel-style': liveFixture.commonCss});
+        const restoreButton = (byTitle) => byTitle(Adw.ActionRow, 'Restore original look').children.find(c => c instanceof Gtk.Button);
+        const snapshotOf = (settings) => JSON.parse(settings.get_string('panel-original-look'));
+
+        it('takes no snapshot and writes nothing on open; button is insensitive', () => {
+            resetRegistry();
+            const settings = new FakeSettings(live());
+            const page = new Adw.PreferencesPage();
+            new StylesManager(settings).fillStylesPage(page);
+            expect(settings.writes).toEqual([]);
+            expect(settings.get_string('panel-original-look')).toBe('');
+            expect(findAll(Adw.ActionRow).find(r => r.title === 'Restore original look').children.find(c => c instanceof Gtk.Button).sensitive).toBe(false);
+        });
+
+        it('snapshots the legacy keys once, before the first write, and never overwrites', () => {
+            const {byTitle, settings} = openPage(live());
+            byTitle(Adw.ComboRow, 'Size').selected = 0;
+            click(applyButton(byTitle(Adw.ComboRow, 'Size')));
+            const first = settings.writes.findIndex(w => w[0] === 'panel-original-look');
+            expect(first).toBe(0);
+            expect(snapshotOf(settings)).toEqual({panelStyles: liveFixture.panelStyles, commonCss: liveFixture.commonCss});
+            const raw = settings.get_string('panel-original-look');
+            click(applyButton(byTitle(Adw.ComboRow, 'Theme')));
+            byTitle(Adw.ComboRow, 'Spacing').selected = 1;
+            expect(settings.get_string('panel-original-look')).toBe(raw);
+            expect(settings.writes.filter(w => w[0] === 'panel-original-look')).toHaveLength(1);
+        });
+
+        it('restores the legacy keys exactly and the controls follow, repeatably', () => {
+            const {byTitle, settings, compiled, manager} = openPage(live());
+            const before = ['Size', 'Theme', 'Spacing'].map(t => byTitle(Adw.ComboRow, t).selected);
+            expect(before[1]).toBe(4);   // live fixture: Theme Custom
+            expect(before[2]).toBe(3);   // Spacing Custom
+            byTitle(Adw.ComboRow, 'Spacing').selected = 1;
+            byTitle(Adw.ComboRow, 'Size').selected = before[0] === 0 ? 1 : 0;
+            click(applyButton(byTitle(Adw.ComboRow, 'Size')));
+            const button = restoreButton(byTitle);
+            expect(button.sensitive).toBe(true);
+            click(button);
+            expect(compiled()).toEqual({panelStyles: liveFixture.panelStyles, commonCss: liveFixture.commonCss});
+            expect(settings.get_string('panel-appearance')).toBe('');
+            expect(['Size', 'Theme', 'Spacing'].map(t => byTitle(Adw.ComboRow, t).selected)).toEqual(before);
+            expect(button.sensitive).toBe(false);
+            expect(settings.get_string('panel-original-look')).not.toBe('');
+            byTitle(Adw.ComboRow, 'Spacing').selected = 0;   // change again, restore again
+            expect(button.sensitive).toBe(true);
+            click(button);
+            expect(compiled()).toEqual({panelStyles: liveFixture.panelStyles, commonCss: liveFixture.commonCss});
+            void manager;
+        });
+    });
+
+    describe('profiles', () => {
+        const live = () => ({'panel-styles': liveFixture.panelStyles, 'common-panel-style': liveFixture.commonCss});
+        const nameRow = (byTitle) => byTitle(Adw.EntryRow, 'Profile name');
+        const saveButton = (byTitle) => nameRow(byTitle).children.find(c => c instanceof Gtk.Button);
+        const profileRows = () => findAll(Adw.PreferencesGroup).find(g => g.title === 'Profiles').children.filter(c => c instanceof Adw.ActionRow);
+        const buttonOf = (row, label) => row.children.find(c => c.label === label);
+        const profileKeys = (settings) => settings.writes.map(([k]) => k);
+        const typeName = (byTitle, text) => nameRow(byTitle).set_text(text);
+
+        it('opening the page writes nothing, even with malformed stored profiles', () => {
+            const {settings, byTitle} = openPage({...live(), 'panel-profiles': '{broken'});
+            expect(settings.writes).toEqual([]);
+            expect(profileRows()).toHaveLength(0);
+            expect(saveButton(byTitle).sensitive).toBe(false);
+        });
+
+        it('name validation: blank is insensitive, trimmed and capped on save', () => {
+            const {byTitle, settings} = openPage(live());
+            typeName(byTitle, '   ');
+            expect(saveButton(byTitle).sensitive).toBe(false);
+            typeName(byTitle, `  ${'n'.repeat(60)}  `);
+            expect(saveButton(byTitle).sensitive).toBe(true);
+            click(saveButton(byTitle));
+            expect(profileRows()[0].title).toBe('n'.repeat(40));
+            expect(Object.keys(JSON.parse(settings.get_string('panel-profiles')))).toEqual(['n'.repeat(40)]);
+        });
+
+        it('shows profile names as plain text, not Pango markup', () => {
+            const {byTitle} = openPage(live());
+            typeName(byTitle, 'Work & Travel <home>');
+            click(saveButton(byTitle));
+            expect(profileRows()[0].title).toBe('Work & Travel <home>');
+            expect(profileRows()[0].use_markup).toBe(false);
+        });
+
+        it('save writes only panel-profiles; overwrite replaces; delete removes', () => {
+            const {byTitle, settings, manager} = openPage(live());
+            typeName(byTitle, 'Mine');
+            click(saveButton(byTitle));
+            expect(profileKeys(settings)).toEqual(['panel-profiles']);
+            const saved = JSON.parse(settings.get_string('panel-profiles')).Mine;
+            expect(saved).toEqual(manager._model);
+
+            byTitle(Adw.ComboRow, 'Spacing').selected = 1;
+            settings.writes.length = 0;
+            click(saveButton(byTitle));
+            expect(profileKeys(settings)).toEqual(['panel-profiles']);
+            expect(profileRows()).toHaveLength(1);
+            expect(JSON.parse(settings.get_string('panel-profiles')).Mine.shape.spacing).toBe('normal');
+
+            typeName(byTitle, 'Other');
+            click(saveButton(byTitle));
+            expect(profileRows().map(r => r.title)).toEqual(['Mine', 'Other']);
+            settings.writes.length = 0;
+            click(buttonOf(profileRows()[0], 'Delete'));
+            expect(profileKeys(settings)).toEqual(['panel-profiles']);
+            expect(profileRows().map(r => r.title)).toEqual(['Other']);
+            expect(buttonOf(profileRows()[0], 'Delete').cssClasses).toContain('destructive-action');
+        });
+
+        it('load takes the original snapshot first, writes the model and compiled keys, and refreshes controls', () => {
+            const model = buildPreset('small', 'mono');
+            model.advanced.common = 'opacity: 0.9;';
+            resetRegistry();
+            const settings = new FakeSettings({...live(), 'panel-profiles': JSON.stringify({Saved: model})});
+            const page = new Adw.PreferencesPage();
+            const manager = new StylesManager(settings);
+            manager.fillStylesPage(page);
+            const row = profileRows()[0];
+            const before = settings.get_string('panel-profiles');
+            click(buttonOf(row, 'Load'));
+
+            expect(settings.writes.map(([k]) => k)).toEqual(['panel-original-look', 'panel-appearance', 'panel-styles', 'common-panel-style']);
+            expect(JSON.parse(settings.get_string('panel-original-look'))).toEqual({panelStyles: liveFixture.panelStyles, commonCss: liveFixture.commonCss});
+            expect(parseStored(settings.get_string('panel-appearance'))).toEqual(manager._model);
+            expect(manager._model).toEqual(normalize(model));
+            expect(sameStyles({
+                panelStyles: settings.get_value('panel-styles').deep_unpack(),
+                commonCss: settings.get_string('common-panel-style'),
+            }, compile(manager._model))).toBe(true);
+            expect(settings.get_string('panel-profiles')).toBe(before);
+            const sizeCombo = findAll(Adw.ComboRow).find(r => r.title === 'Size');
+            expect(sizeCombo.selected).toBe(Object.keys(SIZE_PRESETS).indexOf('small'));
+        });
+
+        it('load of a live-fixture profile reproduces that model', () => {
+            const liveModel = parse(liveFixture.panelStyles, liveFixture.commonCss);
+            const {byTitle, settings, manager} = openPage(live());
+            typeName(byTitle, 'Live');
+            click(saveButton(byTitle));
+            byTitle(Adw.ComboRow, 'Spacing').selected = 1;
+            expect(manager._model).not.toEqual(normalize(liveModel));
+            click(buttonOf(profileRows()[0], 'Load'));
+            expect(manager._model).toEqual(normalize(liveModel));
+            expect(parseStored(settings.get_string('panel-appearance'))).toEqual(normalize(liveModel));
         });
     });
 });

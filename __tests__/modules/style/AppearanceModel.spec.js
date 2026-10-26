@@ -84,7 +84,7 @@ describe('detectSpacing', () => {
 
     it('has distinct presets and normal matches the old default CSS', () => {
         expect(new Set(Object.values(SPACING_PRESETS).map(p => JSON.stringify(p))).size).toBe(3);
-        expect(SPACING_PRESETS.normal.padding).toEqual({top: '4px', right: '10px', bottom: '0', left: '10px'});
+        expect(SPACING_PRESETS.normal.padding).toEqual({top: '0px', right: '10px', bottom: '0', left: '10px'});
         expect(SPACING_PRESETS.normal.margin).toEqual({top: '3px', right: '0px', bottom: '3px', left: '0px'});
     });
 });

@@ -70,6 +70,7 @@ class Widget {
     append(c) { this.children.push(c); }
     add(c) { this.children.push(c); }
     add_row(c) { this.children.push(c); }
+    remove(c) { const i = this.children.indexOf(c); if (i >= 0) this.children.splice(i, 1); }
     add_suffix(c) { this.children.push(c); }
     add_css_class(name) { (this.cssClasses ??= []).push(name); }
 }

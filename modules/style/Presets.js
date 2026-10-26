@@ -1,6 +1,7 @@
 import {
-    GROUPS, MODEL_VERSION, SPACING_PRESETS, STATE_KEYS, buildGroups, clone, defaultModel, detectSpacing,
+    GROUPS, GROUP_OF, MODEL_VERSION, SPACING_PRESETS, STATE_KEYS, buildGroups, clone, defaultModel, detectSpacing, resolveState,
 } from './AppearanceModel.js';
+import {colorsEqual} from './Color.js';
 
 // Panel texts for each size. Copied from the old StylesManager._connectStylesButtons.
 export const SIZE_PRESETS = {
@@ -164,6 +165,31 @@ export function applyTheme(model, themeKey) {
         if (!Object.keys(entry).length) delete result.overrides[key];
     });
     return result;
+}
+
+// The size preset whose texts match every state's resolved text, else 'custom'.
+export function detectSize(model) {
+    const hit = Object.keys(SIZE_PRESETS).find(name =>
+        STATE_KEYS.every(key => resolveState(model, key).text === SIZE_PRESETS[name].panelTexts[key]));
+    return hit ?? 'custom';
+}
+
+// The theme preset whose colors (for every state) and corner, bold and border match the model, else 'custom'.
+// Padding and margin are not compared: they have their own Spacing control.
+export function detectTheme(model) {
+    const {shape} = model;
+    const hit = Object.keys(THEME_PRESETS).find(name => {
+        const preset = THEME_PRESETS[name];
+        if (shape.corner !== preset.shape.corner || shape.bold !== preset.shape.bold) return false;
+        if (shape.border.enabled !== preset.shape.border.enabled) return false;
+        if (shape.border.enabled && !colorsEqual(shape.border.color, preset.shape.border.color)) return false;
+        return STATE_KEYS.every(key => {
+            const {bg, fg} = resolveState(model, key);
+            const want = preset.colors[GROUP_OF[key]];
+            return colorsEqual(bg, want.bg) && colorsEqual(fg, want.fg);
+        });
+    });
+    return hit ?? 'custom';
 }
 
 // A fresh model for a size and theme: what the old size button produced with the old switches set.

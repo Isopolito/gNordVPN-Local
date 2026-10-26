@@ -70,19 +70,37 @@ export function parse(panelStyles, commonCss) {
     const common = parseCommonCss(typeof commonCss === 'string' ? commonCss : '');
     const stateValues = {};
     const advancedStates = {};
+    // compile() appends advanced.common after each state's generated colours, but legacy had state CSS win
+    // over common. So common colour declarations move to the states that do not define that property.
+    const isColor = (piece) => {
+        const parsed = splitDeclaration(piece);
+        return !!parsed && (parsed.prop === 'color' || parsed.prop === 'background-color') && !/!important/i.test(parsed.value);
+    };
+    // Css that already carries the common declarations at its head is in compiled form; leave it all alone.
+    const compiledForm = common.extra.length > 0 && STATE_KEYS.some(key => {
+        const entry = source[key];
+        return entry && typeof entry === 'object' && startsWithAll(parseStateCss(entry.css ?? '').extra, common.extra);
+    });
+    const commonColors = compiledForm ? [] : common.extra.filter(isColor);
+    const commonKept = compiledForm ? common.extra : common.extra.filter(piece => !isColor(piece));
     STATE_KEYS.forEach(key => {
         const entry = source[key];
-        if (!entry || typeof entry !== 'object') return;
-        const {found, extra} = parseStateCss(entry.css ?? '');
+        const hasEntry = entry && typeof entry === 'object';
+        const {found, extra} = hasEntry ? parseStateCss(entry.css ?? '') : {found: {}, extra: []};
+        const own = hasEntry && startsWithAll(extra, common.extra) ? extra.slice(common.extra.length) : extra;
+        const inherited = commonColors.filter(piece => {
+            const prop = splitDeclaration(piece).prop;
+            const field = prop === 'color' ? 'fg' : 'bg';
+            return found[field] === undefined && !own.some(o => splitDeclaration(o)?.prop === prop);
+        });
+        if (inherited.length || own.length) advancedStates[key] = asCss([...inherited, ...own]);
+        if (!hasEntry) return;
         stateValues[key] = {
             text: typeof entry.panelText === 'string' ? entry.panelText : undefined,
             // A state that has CSS but no background or color has none, rather than inheriting its group's.
             bg: typeof entry.css === 'string' ? (found.bg ?? '') : undefined,
             fg: typeof entry.css === 'string' ? (found.fg ?? '') : undefined,
         };
-        // compile() repeats advanced.common at the head of each state's advanced tail; drop that copy.
-        const own = startsWithAll(extra, common.extra) ? extra.slice(common.extra.length) : extra;
-        if (own.length) advancedStates[key] = asCss(own);
     });
     const {groups, overrides} = buildGroups(stateValues, base.groups);
 
@@ -101,6 +119,6 @@ export function parse(panelStyles, commonCss) {
         },
         groups,
         overrides,
-        advanced: {common: asCss(common.extra), states: advancedStates},
+        advanced: {common: asCss(commonKept), states: advancedStates},
     };
 }

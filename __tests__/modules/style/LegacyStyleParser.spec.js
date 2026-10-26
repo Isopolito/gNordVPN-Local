@@ -25,8 +25,20 @@ describe('LegacyStyleParser.parse', () => {
         expect(css.endsWith('border-radius: 12px; border-radius: 5px;')).toBe(true);
     });
 
+    it('keeps the legacy cascade for common colour: state colour wins, others inherit common', () => {
+        const styles = uniformStyles('');
+        styles.CONNECTED = {panelText: 't', css: 'color: white;'};
+        const model = parse(styles, 'color: red; opacity: 0.9;');
+        expect(model.advanced.common).toBe('opacity: 0.9;');
+        const {panelStyles} = compile(model);
+        const colorOf = (css) => [...css.matchAll(/(?<![-\w])color:\s*([^;]+);/g)].pop()?.[1];
+        expect(colorOf(panelStyles.CONNECTED.css)).toBe('white');
+        STATE_KEYS.filter(k => k !== 'CONNECTED').forEach(k => expect(colorOf(panelStyles[k].css)).toBe('red'));
+    });
+
     it('detects a spacing preset only on an exact match', () => {
-        expect(parse(uniformStyles(''), 'padding: 4px 10px 0; margin: 3px 0px 3px 0px;').shape.spacing).toBe('normal');
+        expect(parse(uniformStyles(''), 'padding: 0px 10px 0; margin: 3px 0px 3px 0px;').shape.spacing).toBe('normal');
+        expect(parse(uniformStyles(''), 'padding: 4px 10px 0; margin: 3px 0px 3px 0px;').shape.spacing).toBe('custom');   // legacy default
         expect(parse(uniformStyles(''), 'padding: 4px 10px 1px; margin: 3px 0px 3px 0px;').shape.spacing).toBe('custom');
     });
 

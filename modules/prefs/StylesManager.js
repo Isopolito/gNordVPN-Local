@@ -4,9 +4,10 @@ import Adw from 'gi://Adw';
 import Gdk from 'gi://Gdk';
 
 import {CORNERS, GROUPS, GROUP_OF, SPACING_PRESETS, STATE_KEYS, clone, serialize} from '../style/AppearanceModel.js';
-import {compile} from '../style/StyleCompiler.js';
+import {compile, sameStyles} from '../style/StyleCompiler.js';
 import {loadModel} from '../style/ModelLoader.js';
-import {SIZE_PRESETS, THEME_PRESETS, applySize, applyTheme} from '../style/Presets.js';
+import {SIZE_PRESETS, THEME_PRESETS, applySize, applyTheme, detectSize, detectTheme} from '../style/Presets.js';
+import {deleteProfile, isValidName, parseProfiles, saveProfile, serializeProfiles} from '../style/Profiles.js';
 import {render} from '../PanelText.js';
 
 // Tokens that render in the CONNECTED panel text.
@@ -27,6 +28,7 @@ const CORNER_ITEMS = [['pill', 'Pill'], ['rounded', 'Rounded'], ['square', 'Squa
 const SPACING_ITEMS = [['compact', 'Compact'], ['normal', 'Normal'], ['roomy', 'Roomy'], ['custom', 'Custom']];
 const SIZE_KEYS = Object.keys(SIZE_PRESETS);
 const THEME_KEYS = Object.keys(THEME_PRESETS);
+const CUSTOM_LABEL = 'Custom';
 
 // Fixed values the preview renders tokens with, shaped like the Vpn status the panel gets.
 export const SAMPLE_STATUS = {
@@ -58,6 +60,7 @@ export default class StylesManager {
         this._previewLabel = null;
         this._provider = null;
         this._providerDisplay = null;
+        this._savedCustom = null;   // last custom padding/margin, restored when Spacing returns to Custom
     }
 
     // Adds the Styles groups to an Adw.PreferencesPage. Opening only reads settings; edits write.
@@ -70,6 +73,8 @@ export default class StylesManager {
 
         page.add(this._createPreviewGroup(page));
         page.add(this._createPresetsGroup());
+        page.add(this._createOriginalLookGroup());
+        page.add(this._createProfilesGroup());
         page.add(this._createShapeGroup());
         page.add(this._createColorsGroup());
         page.add(this._createAdvancedGroup());
@@ -93,10 +98,122 @@ export default class StylesManager {
     }
 
     _commit() {
+        this._snapshotOriginalLook();
         const {panelStyles, commonCss} = compile(this._model);
         this._settings.set_string('panel-appearance', serialize(this._model));
         this._settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', panelStyles));
         this._settings.set_string('common-panel-style', commonCss);
+    }
+
+    // Saves the user's look once, before the first write this page makes. Never overwrites.
+    _snapshotOriginalLook() {
+        if (this._settings.get_string('panel-original-look') !== '') return;
+        this._settings.set_string('panel-original-look', JSON.stringify({
+            panelStyles: this._settings.get_value('panel-styles').deep_unpack(),
+            commonCss: this._settings.get_string('common-panel-style'),
+        }));
+    }
+
+    // The saved original look as {panelStyles, commonCss}, or null if none (or unreadable).
+    _readOriginalLook() {
+        try {
+            const raw = this._settings.get_string('panel-original-look');
+            if (raw === '') return null;
+            const snap = JSON.parse(raw);
+            if (!snap || typeof snap.panelStyles !== 'object' || snap.panelStyles === null ||
+                typeof snap.commonCss !== 'string') return null;
+            return snap;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    _restoreOriginalLook() {
+        const snap = this._readOriginalLook();
+        if (!snap) return;
+        this._settings.set_value('panel-styles', new GLib.Variant('a{sa{ss}}', snap.panelStyles));
+        this._settings.set_string('common-panel-style', snap.commonCss);
+        this._settings.set_string('panel-appearance', '');
+        this._model = loadModel({
+            appearanceJson: '',
+            panelStyles: snap.panelStyles,
+            commonCss: snap.commonCss,
+        }).model;
+        this._syncUi();
+    }
+
+    _createOriginalLookGroup() {
+        const group = new Adw.PreferencesGroup({title: 'Original look'});
+        const row = new Adw.ActionRow({
+            title: 'Restore original look',
+            subtitle: 'Returns to the look you had before you first changed anything on this page.',
+        });
+        const button = new Gtk.Button({label: 'Restore', valign: Gtk.Align.CENTER});
+        button.connect('clicked', () => this._restoreOriginalLook());
+        row.add_suffix(button);
+        group.add(row);
+        this._sync.push(model => {
+            const snap = this._readOriginalLook();
+            button.sensitive = !!snap && !sameStyles(compile(model), snap);
+        });
+        return group;
+    }
+
+    // ---- profiles ---------------------------------------------------------------------------
+
+    _readProfiles() {
+        return parseProfiles(this._settings.get_string('panel-profiles'));
+    }
+
+    _writeProfiles(list) {
+        this._settings.set_string('panel-profiles', serializeProfiles(list));
+    }
+
+    // Applies a saved model through the normal commit path. The stored profile is never touched.
+    _loadProfile(name) {
+        const entry = this._readProfiles().find(p => p.name === name);
+        if (entry) this._replaceModel(clone(entry.model));
+    }
+
+    _createProfilesGroup() {
+        const group = new Adw.PreferencesGroup({
+            title: 'Profiles',
+            description: 'Save the current look under a name, then load it later.',
+        });
+        const nameRow = new Adw.EntryRow({title: 'Profile name'});
+        const save = new Gtk.Button({label: 'Save', valign: Gtk.Align.CENTER});
+        save.sensitive = false;
+        nameRow.add_suffix(save);
+        nameRow.connect('changed', () => { save.sensitive = isValidName(nameRow.get_text()); });
+        save.connect('clicked', () => {
+            const list = saveProfile(this._readProfiles(), nameRow.get_text(), this._model);
+            if (!list) return;
+            this._writeProfiles(list);
+            rebuild();
+        });
+        group.add(nameRow);
+
+        let rows = [];
+        const rebuild = () => {
+            rows.forEach(row => group.remove(row));
+            rows = this._readProfiles().map(({name}) => {
+                const row = new Adw.ActionRow({title: name, use_markup: false});
+                const load = new Gtk.Button({label: 'Load', valign: Gtk.Align.CENTER});
+                load.connect('clicked', () => this._loadProfile(name));
+                const del = new Gtk.Button({label: 'Delete', valign: Gtk.Align.CENTER});
+                del.add_css_class('destructive-action');
+                del.connect('clicked', () => {
+                    this._writeProfiles(deleteProfile(this._readProfiles(), name));
+                    rebuild();
+                });
+                row.add_suffix(load);
+                row.add_suffix(del);
+                group.add(row);
+                return row;
+            });
+        };
+        rebuild();
+        return group;
     }
 
     // Pushes the model into every widget without triggering writes.
@@ -332,26 +449,36 @@ export default class StylesManager {
             description: 'Size sets the panel text. Theme sets the colors and shape. Each only changes its own settings.',
         });
 
-        const size = new Adw.ComboRow({
-            title: 'Size',
-            model: new Gtk.StringList({strings: SIZE_KEYS.map(key => SIZE_PRESETS[key].label)}),
-        });
-        size.selected = SIZE_KEYS.indexOf('large');
-        const applySizeButton = new Gtk.Button({label: 'Apply size', valign: Gtk.Align.CENTER});
-        applySizeButton.connect('clicked', () => this._replaceModel(applySize(this._model, SIZE_KEYS[size.selected])));
-        size.add_suffix(applySizeButton);
-        group.add(size);
-
-        const theme = new Adw.ComboRow({
-            title: 'Theme',
-            model: new Gtk.StringList({strings: THEME_KEYS.map(key => THEME_PRESETS[key].label)}),
-        });
-        const applyThemeButton = new Gtk.Button({label: 'Apply theme', valign: Gtk.Align.CENTER});
-        applyThemeButton.connect('clicked', () => this._replaceModel(applyTheme(this._model, THEME_KEYS[theme.selected])));
-        theme.add_suffix(applyThemeButton);
-        group.add(theme);
+        group.add(this._createPresetRow('Size', 'Apply size', SIZE_KEYS, key => SIZE_PRESETS[key].label,
+            detectSize, (model, key) => applySize(model, key)));
+        group.add(this._createPresetRow('Theme', 'Apply theme', THEME_KEYS, key => THEME_PRESETS[key].label,
+            detectTheme, (model, key) => applyTheme(model, key)));
 
         return group;
+    }
+
+    // A combo of presets plus a last "Custom" entry that follows the model and an Apply button.
+    // Selecting a preset only moves the combo; Apply writes. Apply is insensitive on Custom.
+    _createPresetRow(title, applyLabel, keys, labelOf, detect, apply) {
+        const row = new Adw.ComboRow({
+            title,
+            model: new Gtk.StringList({strings: [...keys.map(labelOf), CUSTOM_LABEL]}),
+        });
+        const button = new Gtk.Button({label: applyLabel, valign: Gtk.Align.CENTER});
+        const refresh = () => { button.sensitive = row.selected < keys.length; };
+        button.connect('clicked', () => {
+            const key = keys[row.selected];
+            if (key !== undefined) this._replaceModel(apply(this._model, key));
+        });
+        row.connect('notify::selected', refresh);
+        row.add_suffix(button);
+        this._sync.push(model => {
+            const index = keys.indexOf(detect(model));
+            const next = index >= 0 ? index : keys.length;
+            if (row.selected !== next) row.selected = next;
+            refresh();
+        });
+        return row;
     }
 
     // ---- shape ------------------------------------------------------------------------------
@@ -380,10 +507,16 @@ export default class StylesManager {
         group.add(this._createComboRow('Spacing', SPACING_ITEMS,
             model => model.shape.spacing,
             (model, key) => {
+                if (model.shape.spacing === 'custom' && key !== 'custom') {
+                    this._savedCustom = {padding: clone(model.shape.padding), margin: clone(model.shape.margin)};
+                }
                 model.shape.spacing = key;
                 if (key !== 'custom') {
                     model.shape.padding = clone(SPACING_PRESETS[key].padding);
                     model.shape.margin = clone(SPACING_PRESETS[key].margin);
+                } else if (this._savedCustom) {
+                    model.shape.padding = clone(this._savedCustom.padding);
+                    model.shape.margin = clone(this._savedCustom.margin);
                 }
             }));
 
