@@ -60,7 +60,8 @@ export default class StylesManager {
         this._previewLabel = null;
         this._provider = null;
         this._providerDisplay = null;
-        this._savedCustom = null;   // last custom padding/margin, restored when Spacing returns to Custom
+        this._activeProfile = null; // profile being edited; set by Load
+        this._savedCustom = null;  // last custom padding/margin, restored when Spacing returns to Custom
     }
 
     // Adds the Styles groups to an Adw.PreferencesPage. Opening only reads settings; edits write.
@@ -172,7 +173,21 @@ export default class StylesManager {
     // Applies a saved model through the normal commit path. The stored profile is never touched.
     _loadProfile(name) {
         const entry = this._readProfiles().find(p => p.name === name);
-        if (entry) this._replaceModel(clone(entry.model));
+        if (!entry) return;
+        this._activeProfile = name;
+        this._replaceModel(clone(entry.model));
+    }
+
+    // Overwrites the active profile with the current look.
+    _updateActiveProfile() {
+        const list = saveProfile(this._readProfiles(), this._activeProfile ?? '', this._model);
+        if (list) this._writeProfiles(list);
+    }
+
+    _profileHasChanges() {
+        const list = this._readProfiles();
+        const next = saveProfile(list, this._activeProfile ?? '', this._model);
+        return !!next && serializeProfiles(next) !== serializeProfiles(list);
     }
 
     _createProfilesGroup() {
@@ -193,26 +208,45 @@ export default class StylesManager {
         });
         group.add(nameRow);
 
+        // Load selects a profile for editing; Update writes the current look back to it.
         let rows = [];
+        let refresh = () => {};
         const rebuild = () => {
             rows.forEach(row => group.remove(row));
+            const refreshers = [];
             rows = this._readProfiles().map(({name}) => {
                 const row = new Adw.ActionRow({title: name, use_markup: false});
                 const load = new Gtk.Button({label: 'Load', valign: Gtk.Align.CENTER});
                 load.connect('clicked', () => this._loadProfile(name));
+                const update = new Gtk.Button({label: 'Update', valign: Gtk.Align.CENTER, tooltip_text: 'Save the current look into this profile'});
+                update.connect('clicked', () => {
+                    this._updateActiveProfile();
+                    this._syncUi();
+                });
                 const del = new Gtk.Button({label: 'Delete', valign: Gtk.Align.CENTER});
                 del.add_css_class('destructive-action');
                 del.connect('clicked', () => {
+                    if (this._activeProfile === name) this._activeProfile = null;
                     this._writeProfiles(deleteProfile(this._readProfiles(), name));
                     rebuild();
                 });
+                row.add_suffix(update);
                 row.add_suffix(load);
                 row.add_suffix(del);
                 group.add(row);
+                refreshers.push(() => {
+                    const active = this._activeProfile === name;
+                    update.visible = active;
+                    update.sensitive = active && this._profileHasChanges();
+                    row.subtitle = active ? (update.sensitive ? 'Editing (unsaved changes)' : 'Editing') : '';
+                });
                 return row;
             });
+            refresh = () => refreshers.forEach(fn => fn());
+            refresh();
         };
         rebuild();
+        this._sync.push(() => refresh());
         return group;
     }
 
