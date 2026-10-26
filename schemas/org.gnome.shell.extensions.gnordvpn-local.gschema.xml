@@ -69,7 +69,7 @@
             <default>"UDP"</default>
         </key>
         <key name="technology" type="s">
-            <default>"OpenVPN"</default>
+            <default>"OPENVPN"</default>
         </key>
         <key name="showlogin" type="b">
             <default>true</default>

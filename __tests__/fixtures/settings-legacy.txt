@@ -1,0 +1,11 @@
+Technology: OPENVPN
+Protocol: UDP
+Firewall: disabled
+Kill Switch: enabled
+Threat Protection Lite: disabled
+Obfuscate: disabled
+Notify: disabled
+Auto-connect: disabled
+IPv6: disabled
+Analytics: enabled
+DNS: disabled
