@@ -31,6 +31,10 @@ rm -f "$DEST_DIR/deploy_local.sh"
 rm -f "$DEST_DIR/makegnordext"
 rm -f "$DEST_DIR/debug-logs.sh"
 rm -f "$DEST_DIR/gsettings_fix_worklog.md"
+rm -rf "$DEST_DIR/claude_docs"
+rm -rf "$DEST_DIR/__tests__"
+rm -rf "$DEST_DIR/__mocks__"
+rm -rf "$DEST_DIR/node_modules"
 
 # 4. Compile GSettings schema
 SCHEMA_DIR="$DEST_DIR/schemas"

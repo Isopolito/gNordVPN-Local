@@ -47,6 +47,7 @@ delete_random_files_and_directories() {
     find . -type d \( \
         -name "__tests__" \
         -o -name "__mocks__" \
+        -o -name "claude_docs" \
         -o -name "node_modules" \
         -o -name ".serena" \
         -o -name ".codex" \
