@@ -9,10 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Keys that are in the schema but that nothing reads. Each entry is a known bug waiting for a
 // later phase; the test fails if an entry leaves the schema (or starts being read) so the list
 // can't go stale.
-const KNOWN_DEAD_KEYS = new Set([
-    // StylesManager writes it, nothing reads it. Phase 1b deletes the key and empties this list.
-    'extra-large-button',
-]);
+const KNOWN_DEAD_KEYS = new Set([]);
 
 function listJs(dir) {
     return fs.readdirSync(path.join(root, dir), {withFileTypes: true}).flatMap(entry => {
@@ -67,7 +64,6 @@ describe('schema contract', () => {
         expect(reads.has('number-cities-per-countries')).toBe(true); // bind only in prefs
         expect(reads.has('favorite-cities')).toBe(true);          // via constants
         expect(writes.has('panel-position')).toBe(true);
-        expect(writes.has('extra-large-button')).toBe(true);
         expect(other.has('protocol')).toBe(true);                 // ResetManager list
         expect(reads.size).toBeGreaterThan(20);
     });

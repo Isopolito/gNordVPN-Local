@@ -2,6 +2,7 @@ import St from 'gi://St';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Constants from './constants.js';
+import * as PanelText from './PanelText.js';
 
 export default class PanelIcon {
     constructor(settings) {
@@ -23,29 +24,18 @@ export default class PanelIcon {
         this.commonStyle = this._settings.get_string(`common-panel-style`);
     }
 
-    update(status) {
+    // Panel text template for a state name, or undefined if the state has no style.
+    getTemplate(stateName) {
+        return this.uiMap[stateName]?.panelText;
+    }
+
+    update(status, uptimeSec) {
         if (!status || this._label.isDisposed) return;
 
         let config = this.uiMap[status.currentState.stateName];
         let msg = config.panelText
-        if (status.currentState.stateName === 'Status: Connected')
-            msg = msg.replaceAll('{country}',      status.country)
-                     .replaceAll('{COUNTRY}',      status.country.toUpperCase())
-                     .replaceAll('{ctry}',         status.currentServer.replace(/(\d|.nordvpn.com)/g, '').toUpperCase())
-                     .replaceAll('{city}',         status.city)
-                     .replaceAll('{CITY}',         status.city.toUpperCase())
-                     .replaceAll('{number}',       status.serverNumber)
-                     .replaceAll('{server}',       status.currentServer)
-                     .replaceAll('{ip}',           status.serverIP)
-                     .replaceAll('{tech}',         status.currentTechnology)
-                     .replaceAll('{protocol}',     status.currentProtocol)
-                     .replaceAll('{transfer}',     status.transfer)
-                     .replaceAll('{transferUp}',   (status.transfer?.match(/\d+.\d+ [a-zA-z]+ sent/g)     || ['0 B'])[0]?.replace(' sent', '') )
-                     .replaceAll('{transferDown}', (status.transfer?.match(/\d+.\d+ [a-zA-z]+ received/g) || ['0 B'])[0]?.replace(' received', '') )
-                     .replaceAll('{uptime}',       status.uptime)
-                     .replaceAll('{uptimeHr}',     (status.uptime?.match(/\d+ hours/g)   || ['00'])[0]?.replace(' hours',   '')?.padStart(2, '0') )
-                     .replaceAll('{uptimeMin}',    (status.uptime?.match(/\d+ minutes/g) || ['00'])[0]?.replace(' minutes', '')?.padStart(2, '0') )
-                     .replaceAll('{uptimeSec}',    (status.uptime?.match(/\d+ seconds/g) || ['00'])[0]?.replace(' seconds', '')?.padStart(2, '0') );
+        if (status.currentState.stateName === Constants.states.CONNECTED)
+            msg = PanelText.render(msg, status, {uptimeSec});
 
         this._label.text = msg || "Style Missing MSG";
         let style = this.commonStyle;

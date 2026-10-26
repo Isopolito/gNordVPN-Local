@@ -16,6 +16,7 @@ import PanelIcon from './PanelIcon.js';
 import * as Constants from './constants.js';
 import Logger from './Logger.js';
 import * as RefreshPolicy from './RefreshPolicy.js';
+import * as PanelText from './PanelText.js';
 
 export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
@@ -29,6 +30,9 @@ export default GObject.registerClass(
         _menuOpenChangedId = null;
         _transitionalSince = null;
         _lastStatus = null;
+        _uptimeSyncSec = null;
+        _uptimeSyncAtUs = 0;
+        _uptimeTimer = null;
         _indicatorName = `VPN Indicator`;
         _stateManager = null;
         _lastMenuBuild = null;
@@ -75,7 +79,8 @@ export default GObject.registerClass(
                     case `panel-styles`:
                     case `common-panel-style`:
                         this._panelIcon.updateStyle();
-                        if (this._lastStatus) this._panelIcon.update(this._lastStatus);
+                        this._updateUptimeClock();
+                        if (this._lastStatus) this._panelIcon.update(this._lastStatus, this._uptimeForPanel());
                         break;
                     case `favorite-countries`:
                         this._countryMenu.updateFavorite();
@@ -165,7 +170,9 @@ export default GObject.registerClass(
 
                 // Update the menu and panel based on the current state
                 this._updateMenu(status);
-                this._panelIcon.update(status);
+                this._syncUptime(status);
+                this._updateUptimeClock();
+                this._panelIcon.update(status, this._uptimeForPanel());
 
                 const prevBackoff = this._refreshBackoffSec;
                 this._refreshBackoffSec = 0;
@@ -231,7 +238,7 @@ export default GObject.registerClass(
                 menu.removeAll();
 
                 let hasItems = false;
-                let statusToDisplay = [`country`, `city`, `currentServer`, `serverIP`, `transfer`, `uptime`];
+                let statusToDisplay = [`country`, `city`, `currentServer`, `serverIp`, `transfer`, `uptime`];
                 statusToDisplay.forEach(key => {
                     if (status[key]) {
                         const label = key.replace(/([A-Z]+)/g, ` $1`).replace(/([A-Z][a-z])/g, ` $1`).replace(/^./, e => e.toUpperCase());
@@ -304,6 +311,63 @@ export default GObject.registerClass(
         async _logout() {
             await this._vpn.logoutVpn();
             if (!this._isDestroyed) this._overrideRefresh(Constants.status.logout);
+        }
+
+        // Local uptime clock. nordvpn reports uptime in whole seconds at each poll, so between polls
+        // the panel counts up from the last sync using the monotonic clock instead of spawning nordvpn.
+        _uptimeEstimateSec() {
+            return this._uptimeSyncSec + Math.floor((GLib.get_monotonic_time() - this._uptimeSyncAtUs) / 1_000_000);
+        }
+
+        _uptimeForPanel() {
+            return this._uptimeSyncSec === null ? undefined : this._uptimeEstimateSec();
+        }
+
+        _syncUptime(status) {
+            if (status.currentState?.stateName !== Constants.states.CONNECTED) {
+                this._stopUptimeClock(true);
+                return;
+            }
+            const polled = PanelText.parseUptimeSec(status.uptime);
+            if (polled === null) return;
+            // A sub-2s difference is rounding in the whole-second output; resyncing on it would make
+            // the display step backwards. Larger drift (suspend, uptime reset) is corrected here.
+            if (this._uptimeSyncSec === null || Math.abs(polled - this._uptimeEstimateSec()) >= 2) {
+                this._uptimeSyncSec = polled;
+                this._uptimeSyncAtUs = GLib.get_monotonic_time();
+            }
+        }
+
+        // Runs the 1s tick only while CONNECTED and the CONNECTED template shows a live uptime token.
+        _updateUptimeClock() {
+            if (this._isDestroyed) return;
+            if (this._lastStatus?.currentState?.stateName !== Constants.states.CONNECTED) {
+                this._stopUptimeClock(true);
+                return;
+            }
+            const template = this._panelIcon.getTemplate(Constants.states.CONNECTED);
+            if (this._uptimeSyncSec !== null && PanelText.usesLiveUptime(template)) this._startUptimeClock();
+            else this._stopUptimeClock(false);
+        }
+
+        _startUptimeClock() {
+            if (this._uptimeTimer) return;
+            this._uptimeTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+                if (this._isDestroyed || !this._panelIcon || this._uptimeSyncSec === null) {
+                    this._uptimeTimer = null; // the source is removed on return, don't remove it again
+                    return GLib.SOURCE_REMOVE;
+                }
+                this._panelIcon.update(this._lastStatus, this._uptimeEstimateSec());
+                return GLib.SOURCE_CONTINUE;
+            });
+        }
+
+        _stopUptimeClock(clearSync) {
+            if (this._uptimeTimer) {
+                GLib.Source.remove(this._uptimeTimer);
+                this._uptimeTimer = null;
+            }
+            if (clearSync) this._uptimeSyncSec = null;
         }
 
         _clearTimeout() {
@@ -477,6 +541,7 @@ export default GObject.registerClass(
         disable() {
             this._isDestroyed = true;
             this._clearTimeout();
+            this._stopUptimeClock(true);
             if (this._menuOpenChangedId) {
                 this.menu.disconnect(this._menuOpenChangedId);
                 this._menuOpenChangedId = null;

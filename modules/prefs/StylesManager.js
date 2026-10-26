@@ -41,7 +41,6 @@ export default class StylesManager {
                 'LOGGING_OUT': 'VPN LOGGING OUT',
             }
 
-            this._settings.set_boolean(`extra-large-button`, true);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -59,7 +58,6 @@ export default class StylesManager {
                 'LOGGING_OUT': 'LOGGING OUT',
             }
 
-            this._settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -78,7 +76,6 @@ export default class StylesManager {
 
             }
 
-            this._settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -96,7 +93,6 @@ export default class StylesManager {
                 'LOGGING_OUT': '.',
             }
 
-            this._settings.set_boolean(`extra-large-button`, false);
             this._loadGeneratedStyle(panelTexts, monoToggle, altToggle, commonCss, styleItems);
         });
 
@@ -150,7 +146,7 @@ export default class StylesManager {
         stylePage.attach(styleLarge, 3, 2, 1, 1);
 
         const styleExtraLarge = new Gtk.Button({label: `Extra Large default`, visible: true});
-        styleExtraLarge.set_tooltip_text('Extra Large will cause the panel to refresh every 1 second');
+        styleExtraLarge.set_tooltip_text('Uptime updates every second; other values update at the refresh interval');
         stylePage.attach(styleExtraLarge, 4, 2, 1, 1);
 
         return {stylePage, monoToggle, altToggle, styleSmall, styleMedium, styleLarge, styleExtraLarge};

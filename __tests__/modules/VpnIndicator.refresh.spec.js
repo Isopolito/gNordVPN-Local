@@ -40,7 +40,7 @@ function createIndicator({status = makeStatus(Constants.states.DISCONNECTED), lo
     const menuStub = () => ({tryBuild: jest.fn(async () => {}), showHide: jest.fn()});
     indicator._vpn = {getStatus: jest.fn(async () => ({...status}))};
     indicator._stateManager = new StateManager();
-    indicator._panelIcon = {update: jest.fn(), updateStyle: jest.fn()};
+    indicator._panelIcon = {update: jest.fn(), updateStyle: jest.fn(), getTemplate: jest.fn(() => '')};
     indicator._countryMenu = menuStub();
     indicator._cityMenu = menuStub();
     indicator._serverMenu = menuStub();
