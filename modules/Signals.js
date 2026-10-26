@@ -19,22 +19,23 @@ export default class Signals {
     }
     
     disconnect(ids) {
-        for (const id in ids) {
-            if (this._ids[id] && typeof this._ids[id] === 'function') {
-                try {
-                    this._ids[id]();
-                    this._ids[id] = null;
-                } catch (e) {
-                    this._log.error(`failure unregistering callback for ${id}`, e);
-                }
+        for (const id of Array.isArray(ids) ? ids : [ids]) {
+            const callback = this._ids[id];
+            if (typeof callback !== 'function') continue;
+            // Forget the entry first so a throwing callback is not retried by disconnectAll().
+            delete this._ids[id];
+            try {
+                callback();
+            } catch (e) {
+                this._log.error(`failure unregistering callback for ${id}`, e);
             }
         }
     }
     
     disconnectAll() {
-        for (const callback in this._ids) {
+        for (const callback of Object.values(this._ids)) {
             try {
-                typeof callback === 'function' && callback();
+                if (typeof callback === 'function') callback();
             } catch (e) {
                 this._log.error('disconnectAll failed executing callback', e);
             }

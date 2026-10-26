@@ -126,11 +126,6 @@ export default class StateManager {
 
         const resolved = {...vpnState};
 
-        this._log.debug('resolveState', {
-            input: status?.connectStatus ?? 'null',
-            resolved: resolved.stateName
-        });
-
         return resolved;
     }
 }

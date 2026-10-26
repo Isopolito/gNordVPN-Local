@@ -205,10 +205,7 @@ export default GObject.registerClass(
         }
 
         _throttledMenuBuild(status) {
-            if ((Date.now() - this._lastMenuBuild) <= 30_000) {
-                this._log.debug('throttledMenuBuild skipped (within 30s window)');
-                return;
-            }
+            if ((Date.now() - this._lastMenuBuild) <= 30_000) return;
             if (status.currentState.stateName === Constants.states[`ERROR`]) return;
             if (!status.running) return;
             this._lastMenuBuild = Date.now();
@@ -495,7 +492,6 @@ export default GObject.registerClass(
             // Never leave an earlier timer orphaned
             this._clearTimeout();
             const delay = Math.max(1, timeoutDuration + this._refreshBackoffSec);
-            this._log.debug('next refresh scheduled', {delaySec: delay});
             // Refresh after an interval
             this._timeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delay, () => {
                 this._timeout = null; // the source is removed on return, don't remove it again
