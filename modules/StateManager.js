@@ -8,9 +8,6 @@ export default class StateManager {
         this.stateOverride = undefined;
         this.stateOverrideCounter = 0;
 
-        this.quickRefresh = false;
-        this.QUICK_REFRESH_TIMEOUT = 1;
-
         this.STATE_OVERRIDE_DURATION = 10
 
         this.states = {};
@@ -19,7 +16,6 @@ export default class StateManager {
             "canConnect": false,     // Connect menu item enabled true/false
             "canDisconnect": true,   // Disconnect menu item enabled true/false
             "showLists": true,       // Show the reconnect list (country, city, ...)
-            "refreshTimeout": 30,    // Seconds to refresh when this is the status
             "overrideId": this.STATE_OVERRIDE_UNSET,
             "clearsOverrideId": 1    // Clears a status override with this ID
         };
@@ -28,7 +24,6 @@ export default class StateManager {
             "canConnect": false,
             "canDisconnect": true,
             "showLists": true,
-            "refreshTimeout": 1,
             "clearsOverrideId": this.STATE_OVERRIDE_UNSET,
             "overrideId": 1          // Allows an override of this state to be cleared by a state with clearsOverrideId of the same ID
         };
@@ -37,7 +32,6 @@ export default class StateManager {
             "canConnect": true,
             "canDisconnect": false,
             "showLists": true,
-            "refreshTimeout": 10,
             "overrideId": this.STATE_OVERRIDE_UNSET,
             "clearsOverrideId": 2
         };
@@ -47,7 +41,6 @@ export default class StateManager {
             "canDisconnect": false,
             "showLists": true,
             "clearsOverrideId": this.STATE_OVERRIDE_UNSET,
-            "refreshTimeout": 1,
             "overrideId": 2
         };
         this.states[Constants.states['RECONNECTING']] = {
@@ -57,7 +50,6 @@ export default class StateManager {
             "showLists": true,
             "clearsOverrideId": this.STATE_OVERRIDE_UNSET,
             "overrideId": this.STATE_OVERRIDE_UNSET,
-            "refreshTimeout": 2
         };
         this.states[Constants.states['RESTARTING']] = {
             "stateName": Constants.states['RESTARTING'],
@@ -66,7 +58,6 @@ export default class StateManager {
             "showLists": true,
             "clearsOverrideId": this.STATE_OVERRIDE_UNSET,
             "overrideId": this.STATE_OVERRIDE_UNSET,
-            "refreshTimeout": 10
         };
         this.states[Constants.states['ERROR']] = {
             "stateName": Constants.states['ERROR'],
@@ -75,14 +66,12 @@ export default class StateManager {
             "showLists": true,
             "clearsOverrideId": this.STATE_OVERRIDE_UNSET,
             "overrideId": this.STATE_OVERRIDE_UNSET,
-            "refreshTimeout": 5
         };
         this.states[Constants.states['LOGGED_OUT']] = {
             "stateName": Constants.states['LOGGED_OUT'],
             "canConnect": false,
             "canDisconnect": false,
             "showLists": false,
-            "refreshTimeout": 10,
             "overrideId": this.STATE_OVERRIDE_UNSET,
             "clearsOverrideId": 3,
         };
@@ -92,7 +81,6 @@ export default class StateManager {
             "canDisconnect": false,
             "showLists": false,
             "clearsOverrideId": this.STATE_OVERRIDE_UNSET,
-            "refreshTimeout": 1,
             "overrideId": 2,
         };
         this.states[Constants.states['LOGGING_OUT']] = {
@@ -101,13 +89,8 @@ export default class StateManager {
             "canDisconnect": false,
             "showLists": false,
             "clearsOverrideId": this.STATE_OVERRIDE_UNSET,
-            "refreshTimeout": 1,
             "overrideId": 3,
         };
-    }
-
-    setQuickRefresh(quick) {
-        this.quickRefresh = quick;
     }
 
     refreshOverride(state, overrideKeys) {
@@ -141,15 +124,11 @@ export default class StateManager {
             }
         }
 
-        const resolved = {
-            ...vpnState,
-            'refreshTimeout': this.quickRefresh ? this.QUICK_REFRESH_TIMEOUT : vpnState['refreshTimeout']
-        };
+        const resolved = {...vpnState};
 
         this._log.debug('resolveState', {
             input: status?.connectStatus ?? 'null',
-            resolved: resolved.stateName,
-            quickRefresh: this.quickRefresh
+            resolved: resolved.stateName
         });
 
         return resolved;

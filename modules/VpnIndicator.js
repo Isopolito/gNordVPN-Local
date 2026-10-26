@@ -15,6 +15,7 @@ import CommonFavorite from './CommonFavorite.js';
 import PanelIcon from './PanelIcon.js';
 import * as Constants from './constants.js';
 import Logger from './Logger.js';
+import * as RefreshPolicy from './RefreshPolicy.js';
 
 export default GObject.registerClass(
     class VpnIndicator extends PanelMenu.Button {
@@ -23,7 +24,11 @@ export default GObject.registerClass(
         _isRefreshing = false;
         _isDestroyed = false;
         _pendingLoginCheck = false;
-        _pendingLoginRefresh = false;
+        _pendingRefresh = false;
+        _menuOpen = false;
+        _menuOpenChangedId = null;
+        _transitionalSince = null;
+        _lastStatus = null;
         _indicatorName = `VPN Indicator`;
         _stateManager = null;
         _lastMenuBuild = null;
@@ -70,7 +75,7 @@ export default GObject.registerClass(
                     case `panel-styles`:
                     case `common-panel-style`:
                         this._panelIcon.updateStyle();
-                        this._refresh();
+                        if (this._lastStatus) this._panelIcon.update(this._lastStatus);
                         break;
                     case `favorite-countries`:
                         this._countryMenu.updateFavorite();
@@ -104,8 +109,8 @@ export default GObject.registerClass(
             });
         }
 
-        _setQuickRefresh(quick) {
-            this._stateManager.setQuickRefresh(quick);
+        _setQuickRefresh(open) {
+            this._menuOpen = open;
             this._refresh();
         }
 
@@ -114,12 +119,32 @@ export default GObject.registerClass(
             this._refresh();
         }
 
-        async _refresh() {
-            try {
-                if (this._isDestroyed || this._isRefreshing) return;
-                this._isRefreshing = true;
-                this._pendingLoginRefresh = false;
+        _nextDelaySec() {
+            return RefreshPolicy.nextDelaySec({
+                stateName: this._lastStatus?.currentState?.stateName,
+                menuOpen: this._menuOpen,
+                transitionalSinceMs: this._transitionalSince,
+                nowMs: Date.now(),
+                userIntervalSec: this._refreshTimeoutInSec
+            });
+        }
 
+        _trackTransitional(stateName) {
+            if (!RefreshPolicy.isTransitional(stateName)) this._transitionalSince = null;
+            else if (this._transitionalSince === null) this._transitionalSince = Date.now();
+        }
+
+        async _refresh() {
+            if (this._isDestroyed) return;
+            if (this._isRefreshing) {
+                // Re-run once the in-flight refresh ends so this request is not lost.
+                this._pendingRefresh = true;
+                return;
+            }
+            this._isRefreshing = true;
+            this._pendingRefresh = false;
+
+            try {
                 // Stop the refreshes
                 this._clearTimeout();
 
@@ -134,6 +159,8 @@ export default GObject.registerClass(
                     : this._stateManager.resolveState(null);
 
                 this._lastKnownRunning = status.running;
+                this._lastStatus = status;
+                this._trackTransitional(status.currentState.stateName);
                 this._throttledMenuBuild(status);
 
                 // Update the menu and panel based on the current state
@@ -148,7 +175,7 @@ export default GObject.registerClass(
                 this._log.endTimer(t, 'SPAN', {
                     operation: '_refresh',
                     state: status.currentState?.stateName,
-                    nextDelay: this._refreshTimeoutInSec
+                    nextDelay: this._nextDelaySec()
                 });
             } catch (e) {
                 const prev = this._refreshBackoffSec;
@@ -158,13 +185,13 @@ export default GObject.registerClass(
             } finally {
                 this._isRefreshing = false;
                 if (!this._isDestroyed) {
-                    // If checkLogin() completed while this refresh was in flight, run
-                    // an immediate follow-up so the UI reflects the real login state.
-                    if (this._pendingLoginRefresh) {
-                        this._pendingLoginRefresh = false;
+                    // A refresh requested while this one was in flight (login check, state
+                    // override) runs now so the UI reflects it without waiting for the timer.
+                    if (this._pendingRefresh) {
+                        this._pendingRefresh = false;
                         this._refresh();
                     } else {
-                        this._setTimeout(this._refreshTimeoutInSec);
+                        this._setTimeout(this._nextDelaySec());
                     }
                 }
             }
@@ -299,8 +326,8 @@ export default GObject.registerClass(
             const t = this._log.startTimer();
             try {
                 this._statusPopup = new PopupMenu.PopupSubMenuMenuItem(`Checking...`);
-                this._statusPopup.menu.connect(`open-state-changed`, (actor, event) => this._setQuickRefresh(event));
-                this.menu.addMenuItem(this._statusPopup);
+                                this.menu.addMenuItem(this._statusPopup);
+                this._menuOpenChangedId = this.menu.connect(`open-state-changed`, (menu, open) => this._setQuickRefresh(open));
 
                 this._statusLabel = new St.Label({text: `Checking...`, y_expand: false, style_class: `statuslabel`});
                 this.menu.box.add_child(this._statusLabel);
@@ -374,8 +401,7 @@ export default GObject.registerClass(
                             this._pendingLoginCheck = false;
                             if (this._isDestroyed) return;
                             this._isLoggedIn = loggedIn;
-                            if (this._isRefreshing) this._pendingLoginRefresh = true;
-                            else this._refresh();
+                            this._refresh();
                         }).catch(e => {
                             this._pendingLoginCheck = false;
                             this._log.error('checkLogin failed', e);
@@ -390,8 +416,7 @@ export default GObject.registerClass(
                     const wasLoggedIn = this._isLoggedIn;
                     this._isLoggedIn = loggedIn;
                     if (this._isLoggedIn !== wasLoggedIn) {
-                        if (this._isRefreshing) this._pendingLoginRefresh = true;
-                        else this._refresh();
+                        this._refresh();
                     }
                 }).catch(e => this._log.error('initial checkLogin failed', e));
                 this._log.endTimer(t, 'SPAN', {operation: '_buildIndicatorMenu'});
@@ -403,10 +428,13 @@ export default GObject.registerClass(
 
         _setTimeout(timeoutDuration) {
             if (this._isDestroyed) return;
+            // Never leave an earlier timer orphaned
+            this._clearTimeout();
             const delay = Math.max(1, timeoutDuration + this._refreshBackoffSec);
             this._log.debug('next refresh scheduled', {delaySec: delay});
             // Refresh after an interval
             this._timeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delay, () => {
+                this._timeout = null; // the source is removed on return, don't remove it again
                 if (this._isDestroyed) return GLib.SOURCE_REMOVE;
                 this._refresh().catch(e => this._log.error('unable to refresh', e));
                 return GLib.SOURCE_REMOVE; // Ensure the timeout is only run once
@@ -449,6 +477,10 @@ export default GObject.registerClass(
         disable() {
             this._isDestroyed = true;
             this._clearTimeout();
+            if (this._menuOpenChangedId) {
+                this.menu.disconnect(this._menuOpenChangedId);
+                this._menuOpenChangedId = null;
+            }
             // Reset so the next enable() gets an immediate throttledMenuBuild on first refresh
             this._lastMenuBuild = null;
 

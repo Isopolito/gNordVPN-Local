@@ -40,7 +40,7 @@ function createIndicator({status = makeStatus(Constants.states.DISCONNECTED), lo
     const menuStub = () => ({tryBuild: jest.fn(async () => {}), showHide: jest.fn()});
     indicator._vpn = {getStatus: jest.fn(async () => ({...status}))};
     indicator._stateManager = new StateManager();
-    indicator._panelIcon = {update: jest.fn()};
+    indicator._panelIcon = {update: jest.fn(), updateStyle: jest.fn()};
     indicator._countryMenu = menuStub();
     indicator._cityMenu = menuStub();
     indicator._serverMenu = menuStub();
@@ -81,28 +81,67 @@ describe('VpnIndicator._refresh', () => {
     });
 
     describe('scheduling the next poll', () => {
-        // PHASE 1A CHANGES THESE: today every state schedules the user's global refresh-timeout.
-        // Phase 1a switches to the per-state interval (e.g. CONNECTING = 2s), so the expected
-        // delays below will change to the per-state values.
         it.each([
-            Constants.states.CONNECTED,
-            Constants.states.CONNECTING,
-            Constants.states.DISCONNECTED,
-            Constants.states.DISCONNECTING,
-            Constants.states.RECONNECTING,
-        ])('always schedules refresh-timeout for %s (Phase 1a changes this)', async (connectStatus) => {
+            [Constants.states.CONNECTED, REFRESH_TIMEOUT],
+            [Constants.states.DISCONNECTED, REFRESH_TIMEOUT],
+            [Constants.states.CONNECTING, 2],
+            [Constants.states.DISCONNECTING, 2],
+            [Constants.states.RECONNECTING, 2],
+        ])('schedules the policy delay for %s', async (connectStatus, expected) => {
             const indicator = createIndicator({status: makeStatus(connectStatus)});
             await indicator._refresh();
-            expect(delays()).toEqual([REFRESH_TIMEOUT]);
+            expect(delays()).toEqual([expected]);
         });
 
-        it('ignores the quick-refresh state while the menu is open (Phase 1a changes this)', async () => {
+        it('keeps polling every 2s while Connecting for 30s, then uses the user interval', async () => {
+            jest.useFakeTimers({now: 1_000_000});
+            try {
+                const indicator = createIndicator({status: makeStatus(Constants.states.CONNECTING)});
+                await indicator._refresh();
+                expect(lastDelay()).toBe(2);
+                jest.setSystemTime(1_000_000 + 29_900);
+                await indicator._refresh();
+                expect(lastDelay()).toBe(2);
+                jest.setSystemTime(1_000_000 + 30_000);
+                await indicator._refresh();
+                expect(lastDelay()).toBe(REFRESH_TIMEOUT);
+            } finally {
+                jest.useRealTimers();
+            }
+        });
+
+        it('restarts the fast window when the state leaves and re-enters a transitional state', async () => {
+            jest.useFakeTimers({now: 1_000_000});
+            try {
+                const indicator = createIndicator({status: makeStatus(Constants.states.CONNECTING)});
+                await indicator._refresh();
+                jest.setSystemTime(1_000_000 + 40_000);
+                indicator._vpn.getStatus = jest.fn(async () => makeStatus(Constants.states.CONNECTED));
+                await indicator._refresh();
+                expect(indicator._transitionalSince).toBeNull();
+                indicator._vpn.getStatus = jest.fn(async () => makeStatus(Constants.states.CONNECTING));
+                await indicator._refresh();
+                expect(lastDelay()).toBe(2);
+            } finally {
+                jest.useRealTimers();
+            }
+        });
+
+        it('polls every 2s while the menu is open and returns to the user interval on close', async () => {
             const indicator = createIndicator({status: makeStatus(Constants.states.CONNECTED)});
             indicator._setQuickRefresh(true);
             await flush(); // let the un-awaited _refresh() inside _setQuickRefresh finish
-            expect(indicator._stateManager.quickRefresh).toBe(true);
-            // The resolved state asks for 1s but the indicator still schedules refresh-timeout.
+            expect(lastDelay()).toBe(2);
+            indicator._setQuickRefresh(false);
+            await flush();
             expect(lastDelay()).toBe(REFRESH_TIMEOUT);
+        });
+
+        it('reports the computed delay in the _refresh SPAN log', async () => {
+            const indicator = createIndicator({status: makeStatus(Constants.states.CONNECTING)});
+            const spy = jest.spyOn(indicator._log, 'endTimer');
+            await indicator._refresh();
+            expect(spy.mock.calls[0][2]).toMatchObject({operation: '_refresh', nextDelay: 2});
         });
 
         it('picks up a changed refresh-timeout setting for the next poll', async () => {
@@ -157,55 +196,83 @@ describe('VpnIndicator._refresh', () => {
     });
 
     describe('in-flight guard', () => {
-        // PHASE 1A CHANGES THIS: a refresh requested while one is running is dropped today.
-        // Phase 1a re-runs it once the in-flight refresh finishes.
-        it('drops a second _refresh while one is in flight (Phase 1a changes this)', async () => {
+        it('runs a second _refresh requested while one is in flight exactly once afterwards', async () => {
+            const indicator = createIndicator();
+            const releases = [];
+            indicator._vpn.getStatus = jest.fn(() => new Promise(res => { releases.push(() => res(makeStatus(Constants.states.DISCONNECTED))); }));
+
+            const first = indicator._refresh();
+            await indicator._refresh(); // deferred, not dropped
+            await indicator._refresh(); // coalesced with the one above
+            expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(1);
+            expect(indicator._isRefreshing).toBe(true);
+            expect(indicator._pendingRefresh).toBe(true);
+
+            releases[0]();
+            await first;
+            await flush();
+            expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(2);
+            releases[1]();
+            await flush();
+            expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(2);
+            expect(indicator._pendingRefresh).toBe(false);
+        });
+
+        it('a deferred call does not clear the in-flight flag or schedule a stray timer', async () => {
             const indicator = createIndicator();
             let release;
             indicator._vpn.getStatus = jest.fn(() => new Promise(res => { release = () => res(makeStatus(Constants.states.DISCONNECTED)); }));
 
             const first = indicator._refresh();
-            await indicator._refresh(); // dropped
-            expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(1);
+            await indicator._refresh();
+            expect(indicator._isRefreshing).toBe(true);
+            expect(timers.added).toHaveLength(0);
 
             release();
             await first;
-            expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(1);
+            await flush();
+            // Only the follow-up refresh (still pending here) has not scheduled yet: no timer leaks.
+            expect(timers.added.every(t => timers.removed.includes(t.id) || t.id === indicator._timeout)).toBe(true);
         });
 
-        // UNLISTED BUG, characterized as-is (not fixed here): the early `return` of the guard still
-        // runs the `finally` block, which resets _isRefreshing to false while the first refresh is
-        // still in flight and schedules an extra poll timer. The first refresh then schedules a
-        // second one, and the first timer id is overwritten in _timeout, so it is never removed.
-        it('the dropped call clears the in-flight flag and schedules a stray timer', async () => {
+        it('leaves exactly one live timer after overlapping refreshes settle', async () => {
             const indicator = createIndicator();
-            let release;
-            indicator._vpn.getStatus = jest.fn(() => new Promise(res => { release = () => res(makeStatus(Constants.states.DISCONNECTED)); }));
-
             const first = indicator._refresh();
-            await indicator._refresh(); // dropped by the guard
-            expect(indicator._isRefreshing).toBe(false); // while the first is still pending
-            expect(timers.added).toHaveLength(1); // stray timer from the dropped call
-
-            release();
+            indicator._refresh();
+            indicator._refresh();
             await first;
-            expect(timers.added).toHaveLength(2);
-            expect(indicator._timeout).toBe(101);
-            expect(timers.removed).not.toContain(100); // the stray timer is leaked
+            await flush();
+            await flush();
+            const live = timers.added.filter(t => !timers.removed.includes(t.id));
+            expect(live).toHaveLength(1);
+            expect(live[0].id).toBe(indicator._timeout);
         });
 
-        it('an _overrideRefresh during a refresh sets the override but its follow-up refresh is lost (Phase 1a changes this)', async () => {
+        it('_setTimeout removes an existing timer before scheduling a new one', () => {
             const indicator = createIndicator();
-            let release;
-            indicator._vpn.getStatus = jest.fn(() => new Promise(res => { release = () => res(makeStatus(Constants.states.DISCONNECTED)); }));
+            indicator._setTimeout(5);
+            const first = indicator._timeout;
+            indicator._setTimeout(5);
+            expect(timers.removed).toEqual([first]);
+            expect(indicator._timeout).not.toBe(first);
+        });
+
+        it('an _overrideRefresh during a refresh sets the override and its follow-up refresh runs', async () => {
+            const indicator = createIndicator();
+            const releases = [];
+            indicator._vpn.getStatus = jest.fn(() => new Promise(res => { releases.push(() => res(makeStatus(Constants.states.DISCONNECTED))); }));
 
             const first = indicator._refresh();
             indicator._overrideRefresh(Constants.status.connecting);
             expect(indicator._stateManager.stateOverride.stateName).toBe(Constants.states.CONNECTING);
 
-            release();
+            releases[0]();
             await first;
-            expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(1);
+            await flush();
+            expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(2);
+            releases[1]();
+            await flush();
+            expect(indicator._panelIcon.update.mock.calls.at(-1)[0].currentState.stateName).toBe(Constants.states.CONNECTING);
         });
 
         it('clears the in-flight flag after completion', async () => {
@@ -215,21 +282,51 @@ describe('VpnIndicator._refresh', () => {
         });
     });
 
-    describe('pending login refresh', () => {
+    describe('pending refresh', () => {
         it('runs an immediate follow-up refresh instead of scheduling a timer', async () => {
             const indicator = createIndicator();
             let calls = 0;
             indicator._vpn.getStatus = jest.fn(async () => {
                 calls++;
-                if (calls === 1) indicator._pendingLoginRefresh = true;
+                if (calls === 1) indicator._pendingRefresh = true;
                 return makeStatus(Constants.states.DISCONNECTED);
             });
             await indicator._refresh();
             await flush();
             expect(indicator._vpn.getStatus).toHaveBeenCalledTimes(2);
-            expect(indicator._pendingLoginRefresh).toBe(false);
+            expect(indicator._pendingRefresh).toBe(false);
             // Only the follow-up schedules the timer.
             expect(timers.added).toHaveLength(1);
+        });
+    });
+
+    describe('style changes', () => {
+        it('re-render from the cached status without calling getStatus', async () => {
+            const settingsHandlers = [];
+            const indicator = createIndicator({status: makeStatus(Constants.states.CONNECTED)});
+            indicator._extSettings = {connect: (_, cb) => { settingsHandlers.push(cb); return 1; }};
+            indicator._connectChanged();
+            await indicator._refresh();
+            indicator._vpn.getStatus.mockClear();
+            indicator._panelIcon.update.mockClear();
+
+            settingsHandlers[0]({}, 'panel-styles');
+            settingsHandlers[0]({}, 'common-panel-style');
+            expect(indicator._panelIcon.updateStyle).toHaveBeenCalledTimes(2);
+            expect(indicator._panelIcon.update).toHaveBeenCalledTimes(2);
+            expect(indicator._panelIcon.update.mock.calls[0][0]).toBe(indicator._lastStatus);
+            expect(indicator._vpn.getStatus).not.toHaveBeenCalled();
+        });
+
+        it('only restyle (no render) before the first status arrives', () => {
+            const settingsHandlers = [];
+            const indicator = createIndicator();
+            indicator._extSettings = {connect: (_, cb) => { settingsHandlers.push(cb); return 1; }};
+            indicator._connectChanged();
+            settingsHandlers[0]({}, 'panel-styles');
+            expect(indicator._panelIcon.updateStyle).toHaveBeenCalledTimes(1);
+            expect(indicator._panelIcon.update).not.toHaveBeenCalled();
+            expect(indicator._vpn.getStatus).not.toHaveBeenCalled();
         });
     });
 

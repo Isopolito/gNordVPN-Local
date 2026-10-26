@@ -12,14 +12,14 @@ describe('StateManager.resolveState', () => {
 
     describe('state mapping', () => {
         it.each([
-            [S.CONNECTED, {canConnect: false, canDisconnect: true, refreshTimeout: 30}],
-            [S.CONNECTING, {canConnect: false, canDisconnect: true, refreshTimeout: 1}],
-            [S.DISCONNECTED, {canConnect: true, canDisconnect: false, refreshTimeout: 10}],
-            [S.DISCONNECTING, {canConnect: true, canDisconnect: false, refreshTimeout: 1}],
-            [S.RECONNECTING, {canConnect: false, canDisconnect: true, refreshTimeout: 2}],
-            [S.RESTARTING, {canConnect: false, canDisconnect: true, refreshTimeout: 10}],
-            [S.LOGGING_IN, {canConnect: false, canDisconnect: false, showLists: false, refreshTimeout: 1}],
-            [S.LOGGING_OUT, {canConnect: false, canDisconnect: false, showLists: false, refreshTimeout: 1}],
+            [S.CONNECTED, {canConnect: false, canDisconnect: true}],
+            [S.CONNECTING, {canConnect: false, canDisconnect: true}],
+            [S.DISCONNECTED, {canConnect: true, canDisconnect: false}],
+            [S.DISCONNECTING, {canConnect: true, canDisconnect: false}],
+            [S.RECONNECTING, {canConnect: false, canDisconnect: true}],
+            [S.RESTARTING, {canConnect: false, canDisconnect: true}],
+            [S.LOGGING_IN, {canConnect: false, canDisconnect: false, showLists: false}],
+            [S.LOGGING_OUT, {canConnect: false, canDisconnect: false, showLists: false}],
         ])('maps connectStatus %p', (connectStatus, expected) => {
             const resolved = sm.resolveState(loggedIn(connectStatus));
             expect(resolved.stateName).toBe(connectStatus);
@@ -29,7 +29,7 @@ describe('StateManager.resolveState', () => {
         it('maps an unknown connectStatus to ERROR', () => {
             const resolved = sm.resolveState(loggedIn('N/A'));
             expect(resolved.stateName).toBe(S.ERROR);
-            expect(resolved).toMatchObject({canConnect: true, canDisconnect: true, refreshTimeout: 5});
+            expect(resolved).toMatchObject({canConnect: true, canDisconnect: true});
         });
 
         it('maps a null status (daemon not running) to ERROR', () => {
@@ -41,22 +41,15 @@ describe('StateManager.resolveState', () => {
         it('forces LOGGED OUT regardless of connectStatus', () => {
             const resolved = sm.resolveState({connectStatus: S.CONNECTED, loggedin: false});
             expect(resolved.stateName).toBe(S.LOGGED_OUT);
-            expect(resolved).toMatchObject({canConnect: false, canDisconnect: false, showLists: false, refreshTimeout: 10});
+            expect(resolved).toMatchObject({canConnect: false, canDisconnect: false, showLists: false});
         });
     });
 
-    describe('quick refresh', () => {
-        it('overrides refreshTimeout with 1 second while on', () => {
-            sm.setQuickRefresh(true);
-            expect(sm.resolveState(loggedIn(S.CONNECTED)).refreshTimeout).toBe(1);
-            sm.setQuickRefresh(false);
-            expect(sm.resolveState(loggedIn(S.CONNECTED)).refreshTimeout).toBe(30);
-        });
-
-        it('does not mutate the shared state table', () => {
-            sm.setQuickRefresh(true);
-            sm.resolveState(loggedIn(S.CONNECTED));
-            expect(sm.states[S.CONNECTED].refreshTimeout).toBe(30);
+    describe('refresh interval', () => {
+        it('no longer carries a per-state refreshTimeout', () => {
+            expect(sm.resolveState(loggedIn(S.CONNECTED))).not.toHaveProperty('refreshTimeout');
+            expect(sm.states[S.CONNECTED]).not.toHaveProperty('refreshTimeout');
+            expect(sm).not.toHaveProperty('quickRefresh');
         });
     });
 
