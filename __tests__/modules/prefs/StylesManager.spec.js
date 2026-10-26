@@ -610,7 +610,7 @@ describe('StylesManager', () => {
             manager.fillStylesPage(page);
             const row = profileRows()[0];
             const before = settings.get_string('panel-profiles');
-            click(buttonOf(row, 'Load'));
+            click(buttonOf(row, 'Edit'));
 
             expect(settings.writes.map(([k]) => k)).toEqual(['panel-original-look', 'panel-appearance', 'panel-styles', 'common-panel-style']);
             expect(JSON.parse(settings.get_string('panel-original-look'))).toEqual({panelStyles: liveFixture.panelStyles, commonCss: liveFixture.commonCss});
@@ -632,7 +632,7 @@ describe('StylesManager', () => {
             click(saveButton(byTitle));
             byTitle(Adw.ComboRow, 'Spacing').selected = 1;
             expect(manager._model).not.toEqual(normalize(liveModel));
-            click(buttonOf(profileRows()[0], 'Load'));
+            click(buttonOf(profileRows()[0], 'Edit'));
             expect(manager._model).toEqual(normalize(liveModel));
             expect(parseStored(settings.get_string('panel-appearance'))).toEqual(normalize(liveModel));
         });

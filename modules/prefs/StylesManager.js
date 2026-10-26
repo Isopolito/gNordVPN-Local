@@ -208,7 +208,7 @@ export default class StylesManager {
         });
         group.add(nameRow);
 
-        // Load selects a profile for editing; Update writes the current look back to it.
+        // Edit selects a profile; Save writes the current look back to it, Discard reloads it.
         let rows = [];
         let refresh = () => {};
         const rebuild = () => {
@@ -216,13 +216,16 @@ export default class StylesManager {
             const refreshers = [];
             rows = this._readProfiles().map(({name}) => {
                 const row = new Adw.ActionRow({title: name, use_markup: false});
-                const load = new Gtk.Button({label: 'Load', valign: Gtk.Align.CENTER});
-                load.connect('clicked', () => this._loadProfile(name));
-                const update = new Gtk.Button({label: 'Update', valign: Gtk.Align.CENTER, tooltip_text: 'Save the current look into this profile'});
-                update.connect('clicked', () => {
+                const edit = new Gtk.Button({label: 'Edit', valign: Gtk.Align.CENTER, tooltip_text: 'Load this profile and edit it'});
+                edit.connect('clicked', () => this._loadProfile(name));
+                const save = new Gtk.Button({label: 'Save', valign: Gtk.Align.CENTER, tooltip_text: 'Save your changes into this profile'});
+                save.add_css_class('suggested-action');
+                save.connect('clicked', () => {
                     this._updateActiveProfile();
                     this._syncUi();
                 });
+                const discard = new Gtk.Button({label: 'Discard', valign: Gtk.Align.CENTER, tooltip_text: 'Drop your changes and reload this profile'});
+                discard.connect('clicked', () => this._loadProfile(name));
                 const del = new Gtk.Button({label: 'Delete', valign: Gtk.Align.CENTER});
                 del.add_css_class('destructive-action');
                 del.connect('clicked', () => {
@@ -230,15 +233,20 @@ export default class StylesManager {
                     this._writeProfiles(deleteProfile(this._readProfiles(), name));
                     rebuild();
                 });
-                row.add_suffix(update);
-                row.add_suffix(load);
+                row.add_suffix(discard);
+                row.add_suffix(save);
+                row.add_suffix(edit);
                 row.add_suffix(del);
                 group.add(row);
                 refreshers.push(() => {
                     const active = this._activeProfile === name;
-                    update.visible = active;
-                    update.sensitive = active && this._profileHasChanges();
-                    row.subtitle = active ? (update.sensitive ? 'Editing (unsaved changes)' : 'Editing') : '';
+                    const changed = active && this._profileHasChanges();
+                    edit.visible = !active;
+                    save.visible = active;
+                    discard.visible = active;
+                    save.sensitive = changed;
+                    discard.sensitive = changed;
+                    row.subtitle = active ? (changed ? 'Editing: unsaved changes' : 'Editing') : '';
                 });
                 return row;
             });
