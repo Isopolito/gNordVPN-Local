@@ -1,0 +1,45 @@
+{
+  "panelStyles": {
+    "CONNECTED": {
+      "panelText": "{ctry}",
+      "css": "background-color: rgba(53, 132, 228, 1); color: rgba(255, 255, 255, 1);"
+    },
+    "CONNECTING": {
+      "panelText": ".",
+      "css": "background-color: rgba(53, 132, 228, 0.7); color: rgba(255, 255, 255, 1);"
+    },
+    "DISCONNECTED": {
+      "panelText": "∅",
+      "css": "background-color: rgba(0, 0, 0, 0.7); color: rgba(53, 132, 228, 1);"
+    },
+    "DISCONNECTING": {
+      "panelText": ".",
+      "css": "background-color: rgba(53, 132, 228, 0.7); color: rgba(255, 255, 255, 1);"
+    },
+    "RECONNECTING": {
+      "panelText": ".",
+      "css": "background-color: rgba(53, 132, 228, 0.7); color: rgba(255, 255, 255, 1);"
+    },
+    "RESTARTING": {
+      "panelText": ".",
+      "css": "background-color: rgba(53, 132, 228, 0.7); color: rgba(255, 255, 255, 1);"
+    },
+    "ERROR": {
+      "panelText": "⚠",
+      "css": "background-color: rgba(0, 0, 0, 0.7); color: rgba(53, 132, 228, 1);"
+    },
+    "LOGGED_OUT": {
+      "panelText": "?",
+      "css": "background-color: rgba(0, 0, 0, 0.7); color: rgba(53, 132, 228, 1);"
+    },
+    "LOGGING_IN": {
+      "panelText": ".",
+      "css": "background-color: rgba(53, 132, 228, 0.7); color: rgba(255, 255, 255, 1);"
+    },
+    "LOGGING_OUT": {
+      "panelText": ".",
+      "css": "background-color: rgba(53, 132, 228, 0.7); color: rgba(255, 255, 255, 1);"
+    }
+  },
+  "commonCss": "font-weight: bold; border-radius: 5px; padding: 0px 13px 0; margin: 3px 0px 3px 0px; border: 1px solid white;"
+}
