@@ -27,7 +27,7 @@ export default class ResetManager {
     _resetCitySetting(settings, cityTreeView, cityTreeIterMap) {
         this._resetSetting(settings, ['number-cities-per-countries', 'countries-selected-for-cities']);
 
-        let cityCountries = this.settings.get_value('countries-selected-for-cities').deep_unpack();
+        let cityCountries = settings.get_value('countries-selected-for-cities').deep_unpack();
 
         cityTreeView.get_selection().unselect_all();
         cityCountries.forEach(country => {
@@ -38,7 +38,7 @@ export default class ResetManager {
     resetServerSetting(settings, serverTreeView, serverTreeIterMap) {
         this._resetSetting(settings, ['number-servers-per-countries', 'countries-selected-for-servers']);
 
-        let serverCountries = this.settings.get_value('countries-selected-for-servers').deep_unpack();
+        let serverCountries = settings.get_value('countries-selected-for-servers').deep_unpack();
 
         serverTreeView.get_selection().unselect_all();
         serverCountries.forEach(server => {

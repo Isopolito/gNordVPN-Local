@@ -1,0 +1,9 @@
+Status: Connected
+Current server: us9876.nordvpn.com
+Country: United States
+City: New York
+Server IP: 198.51.100.7
+Current technology: OPENVPN
+Current protocol: TCP
+Transfer: 4.10 MiB received, 1.02 MiB sent
+Uptime: 12 minutes 40 seconds

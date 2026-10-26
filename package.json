@@ -19,7 +19,9 @@
       "^resource:///(.*)$": "<rootDir>/__mocks__/resource/$1"
     },
     "testPathIgnorePatterns": [
-      "/node_modules/"
+      "/node_modules/",
+      "/__tests__/helpers/",
+      "/__tests__/fixtures/"
     ]
   }
 }
