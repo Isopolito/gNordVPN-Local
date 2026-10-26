@@ -57,6 +57,8 @@ function parseCommonCss(css) {
     return {shape, extra};
 }
 
+const startsWithAll = (list, prefix) => prefix.length > 0 && prefix.every((piece, i) => list[i] === piece);
+
 const asCss = (pieces) => pieces.map(piece => `${piece};`).join(' ');
 
 // Builds an appearance model from the legacy `panel-styles` ({KEY: {panelText, css}}) and
@@ -65,6 +67,7 @@ export function parse(panelStyles, commonCss) {
     const base = defaultModel();
     const source = (panelStyles && typeof panelStyles === 'object') ? panelStyles : {};
 
+    const common = parseCommonCss(typeof commonCss === 'string' ? commonCss : '');
     const stateValues = {};
     const advancedStates = {};
     STATE_KEYS.forEach(key => {
@@ -77,11 +80,12 @@ export function parse(panelStyles, commonCss) {
             bg: typeof entry.css === 'string' ? (found.bg ?? '') : undefined,
             fg: typeof entry.css === 'string' ? (found.fg ?? '') : undefined,
         };
-        if (extra.length) advancedStates[key] = asCss(extra);
+        // compile() repeats advanced.common at the head of each state's advanced tail; drop that copy.
+        const own = startsWithAll(extra, common.extra) ? extra.slice(common.extra.length) : extra;
+        if (own.length) advancedStates[key] = asCss(own);
     });
     const {groups, overrides} = buildGroups(stateValues, base.groups);
 
-    const common = parseCommonCss(typeof commonCss === 'string' ? commonCss : '');
     const padding = common.shape.padding ?? base.shape.padding;
     const margin = common.shape.margin ?? base.shape.margin;
 

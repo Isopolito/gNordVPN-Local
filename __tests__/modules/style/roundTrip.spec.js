@@ -58,4 +58,12 @@ describe('legacy round trip', () => {
         const compiled = compile(model);
         expect(parse(compiled.panelStyles, compiled.commonCss)).toEqual(model);
     });
+
+    it('is stable with advanced common and state CSS (common copy is not re-read as state advanced)', () => {
+        const model = parse(legacyGenerate('extraLarge', 'outline').panelStyles, legacyGenerate('extraLarge', 'outline').commonCss);
+        model.advanced.common = 'color: black; opacity: 0.9;';
+        model.advanced.states.CONNECTED = 'letter-spacing: 1px;';
+        const compiled = compile(model);
+        expect(parse(compiled.panelStyles, compiled.commonCss)).toEqual(model);
+    });
 });

@@ -59,6 +59,27 @@ describe('compile', () => {
         expect(commonCss.endsWith('padding: 9px;')).toBe(true);
         expect(panelStyles.CONNECTED.css.endsWith('color: black;')).toBe(true);
     });
+
+    it('places advanced.common after the generated colors in every state css, before state advanced', () => {
+        const model = defaultModel();
+        model.advanced.common = 'color: black; background-color: red';
+        model.advanced.states.CONNECTED = 'letter-spacing: 1px;';
+        const {panelStyles, commonCss} = compile(model);
+        expect(commonCss).toContain('color: black; background-color: red;');
+        STATE_KEYS.forEach(key => {
+            const css = panelStyles[key].css;
+            expect(css.endsWith('color: black; background-color: red;' + (key === 'CONNECTED' ? ' letter-spacing: 1px;' : ''))).toBe(true);
+            // PanelIcon effective css is common + state; the last color declaration must be the user's.
+            const effective = `${commonCss} ${css}`;
+            expect(effective.lastIndexOf('color: black;')).toBeGreaterThan(effective.lastIndexOf('color: rgba'));
+            expect(effective.lastIndexOf('background-color: red;')).toBeGreaterThan(effective.lastIndexOf('background-color: rgba'));
+        });
+    });
+
+    it('omits the common tail when advanced.common is empty', () => {
+        const {panelStyles} = compile(defaultModel());
+        expect(panelStyles.CONNECTED.css).not.toContain('black');
+    });
 });
 
 describe('CSS helpers', () => {

@@ -75,6 +75,10 @@ export function compile(model) {
     STATE_KEYS.forEach(key => {
         const {text, bg, fg} = resolveState(model, key);
         const declarations = asDeclarations([['background-color', bg], ['color', fg]]);
+        // Repeated after the generated declarations so a user's common color/background wins over them
+        // (PanelIcon puts commonCss before state css). commonCss keeps it for non-state consumers.
+        const common = model.advanced.common.trim();
+        if (common !== '') declarations.push(terminated(common));
         const extra = model.advanced.states[key];
         if (extra && extra.trim() !== '') declarations.push(terminated(extra.trim()));
         panelStyles[key] = {panelText: text, css: declarations.join(' ')};
