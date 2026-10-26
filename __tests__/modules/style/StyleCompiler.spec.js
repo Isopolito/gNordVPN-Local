@@ -121,3 +121,15 @@ describe('unknown declarations survive compilation', () => {
         expect(out.panelStyles.ERROR.css).toContain('text-shadow: 0 0 2px rgba(0, 0, 0, 1);');
     });
 });
+
+describe('advanced CSS placement', () => {
+    it('is appended last and ends in ";" so the panel can concatenate common + state CSS', () => {
+        const model = defaultModel();
+        model.advanced.common = 'opacity: 0.9';
+        model.advanced.states.CONNECTED = 'letter-spacing: 1px';
+        const {panelStyles, commonCss} = compile(model);
+        expect(commonCss.endsWith(' opacity: 0.9;')).toBe(true);
+        expect(panelStyles.CONNECTED.css.endsWith(' letter-spacing: 1px;')).toBe(true);
+        expect(panelStyles.ERROR.css).not.toContain('letter-spacing');
+    });
+});

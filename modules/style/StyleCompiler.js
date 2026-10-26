@@ -49,6 +49,9 @@ function shortestSides(sides) {
     return `${top} ${right} ${bottom} ${left}`;
 }
 
+// Makes sure a hand-written declaration list ends in ';' so CSS appended after it still parses.
+const terminated = (css) => (css.endsWith(';') || css.endsWith('}') ? css : `${css};`);
+
 const asDeclarations = (pairs) => pairs.filter(([, value]) => value !== '' && value != null)
     .map(([prop, value]) => `${prop}: ${value};`);
 
@@ -62,7 +65,7 @@ export function compileCommon(model) {
         ['margin', shortestSides(shape.margin)],
         ['border', shape.border.enabled ? `1px solid ${shape.border.color}` : ''],
     ]);
-    if (advanced.common.trim() !== '') declarations.push(advanced.common.trim());
+    if (advanced.common.trim() !== '') declarations.push(terminated(advanced.common.trim()));
     return declarations.join(' ');
 }
 
@@ -73,7 +76,7 @@ export function compile(model) {
         const {text, bg, fg} = resolveState(model, key);
         const declarations = asDeclarations([['background-color', bg], ['color', fg]]);
         const extra = model.advanced.states[key];
-        if (extra && extra.trim() !== '') declarations.push(extra.trim());
+        if (extra && extra.trim() !== '') declarations.push(terminated(extra.trim()));
         panelStyles[key] = {panelText: text, css: declarations.join(' ')};
     });
     return {panelStyles, commonCss: compileCommon(model)};

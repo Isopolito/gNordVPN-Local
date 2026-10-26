@@ -2,10 +2,12 @@ import {createFakeProcCom} from '../../helpers/vpn.js';   // first: patches the 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import {FakeSettings} from '../../helpers/FakeSettings.js';
-import {fakes, resetRegistry, findAll, createWindow} from '../../helpers/fakeGtk.js';
+import {fakes, resetRegistry, findAll, createWindow, installedProviders} from '../../helpers/fakeGtk.js';
 import GnordVpnPrefs from '../../../modules/prefs/GnordVpnPrefs.js';
-import StylesManager, {TOKENS} from '../../../modules/prefs/StylesManager.js';
+import StylesManager, {TOKENS, SAMPLE_STATUS} from '../../../modules/prefs/StylesManager.js';
 import {STATE_KEYS, parseStored, resolveState, serialize} from '../../../modules/style/AppearanceModel.js';
+import {loadModel} from '../../../modules/style/ModelLoader.js';
+import {render} from '../../../modules/PanelText.js';
 import {compile, sameStyles} from '../../../modules/style/StyleCompiler.js';
 import {parse} from '../../../modules/style/LegacyStyleParser.js';
 import {SIZE_PRESETS, buildPreset} from '../../../modules/style/Presets.js';
@@ -53,10 +55,10 @@ const applyButton = (combo) => combo.children.find(c => c instanceof Gtk.Button)
 
 describe('StylesManager', () => {
     describe('opening the page', () => {
-        it('adds the presets, shape and state color groups', () => {
+        it('adds the preview, presets, shape, state color and advanced groups', () => {
             const {page} = openPage();
             const titles = page.children.map(g => g.title);
-            expect(titles).toEqual(['Presets', 'Shape', 'State colors']);
+            expect(titles).toEqual(['Preview', 'Presets', 'Shape', 'State colors', undefined]);
         });
 
         it('performs zero settings writes when panel-appearance is empty', () => {
@@ -268,6 +270,105 @@ describe('StylesManager', () => {
         it('only the Connected group has a token menu', () => {
             openPage();
             expect(findAll(Gtk.MenuButton)).toHaveLength(1);
+        });
+    });
+
+    describe('live preview', () => {
+        const previewLabel = () => findAll(Gtk.Label).find(l => l.cssClasses?.includes('gnordvpn-preview'));
+        const provider = () => findAll(Gtk.CssProvider)[0];
+        const previewState = (byTitle, index) => { byTitle(Adw.ComboRow, 'State').selected = index; };
+        const expected = (model, key) => {
+            const {panelStyles, commonCss} = compile(model);
+            const text = resolveState(model, key).text;
+            return {
+                text: key === 'CONNECTED' ? render(text, SAMPLE_STATUS) : text,
+                css: `${commonCss} ${panelStyles[key].css}`.trim(),
+                raw: panelStyles[key].panelText,
+            };
+        };
+
+        it('is the first group and says it is approximate', () => {
+            const {page} = openPage();
+            expect(page.children[0].title).toBe('Preview');
+            expect(page.children[0].description).toMatch(/approximate/i);
+        });
+
+        it.each(STATE_KEYS.map((key, i) => [key, i]))('%s preview text and CSS match StyleCompiler and PanelText', (key, index) => {
+            const {byTitle, settings} = openPage();
+            previewState(byTitle, index);
+            const want = expected(loadModel({appearanceJson: settings.get_string('panel-appearance'), panelStyles: settings.get_value('panel-styles').deep_unpack(), commonCss: settings.get_string('common-panel-style')}).model, key);
+            expect(previewLabel().text).toBe(want.text);
+            expect(provider().css).toContain(`.gnordvpn-preview { ${want.css} }`);
+        });
+
+        it('renders tokens with the fixed sample status for the connected state', () => {
+            const {byTitle} = openPage();
+            byTitle(Adw.ExpanderRow, 'Connected').children[0].set_text('{country} {number} {tech} {uptime}');
+            expect(previewLabel().text).toBe('United States 1234 NORDLYNX 1 hour 2 minutes 3 seconds');
+        });
+
+        it('re-renders on every model change and never writes a setting itself', () => {
+            const {byTitle, colorButton, settings} = openPage();
+            colorButton('Connected', 'Background color').rgba = colorOf('rgba(1,2,3,0.5)');
+            expect(provider().css).toContain('background-color: rgba(1,2,3,0.5);');
+            settings.writes.length = 0;
+            byTitle(Adw.ComboRow, 'State').selected = 3;
+            byTitle(Adw.ComboRow, 'State').selected = 0;
+            expect(settings.writes).toEqual([]);
+        });
+
+        it('adds the page-scoped provider on realize and removes it on unrealize and destroy', () => {
+            const {page} = openPage();
+            expect(installedProviders()).toEqual([]);
+            page.emit('realize');
+            page.emit('realize');
+            expect(installedProviders()).toEqual([provider()]);
+            page.emit('unrealize');
+            expect(installedProviders()).toEqual([]);
+            page.emit('realize');
+            page.emit('destroy');
+            expect(installedProviders()).toEqual([]);
+        });
+    });
+
+    describe('advanced CSS', () => {
+        const commonView = () => findAll(Gtk.TextView)[0];
+
+        it('is collapsed by default', () => {
+            const {byTitle} = openPage();
+            expect(byTitle(Adw.ExpanderRow, 'Custom CSS (advanced)').expanded).toBe(false);
+        });
+
+        it('shows stored advanced CSS without writing', () => {
+            const model = buildPreset('large', 'trafficLight');
+            model.advanced.common = 'opacity: 0.9;';
+            const {settings} = openPage({'panel-appearance': serialize(model), ...legacyArgs(compile(model))});
+            expect(commonView().get_buffer().text).toBe('opacity: 0.9;');
+            expect(settings.writes).toEqual([]);
+        });
+
+        it('common CSS edits are appended last in the compiled common CSS', () => {
+            const {compiled, stored} = openPage();
+            commonView().get_buffer().set_text('opacity: 0.9', -1);
+            expect(stored().advanced.common).toBe('opacity: 0.9');
+            expect(compiled().commonCss.endsWith('opacity: 0.9;')).toBe(true);
+            expect(compiled().commonCss.indexOf('border-radius')).toBeLessThan(compiled().commonCss.indexOf('opacity'));
+        });
+
+        it('per-state extra CSS is appended last in that state CSS only', () => {
+            const {byTitle, compiled, stored} = openPage();
+            rowOf(byTitle(Adw.ExpanderRow, 'Per-state extra CSS'), 'Connected extra CSS').set_text('letter-spacing: 1px');
+            expect(stored().advanced.states.CONNECTED).toBe('letter-spacing: 1px');
+            expect(compiled().panelStyles.CONNECTED.css.endsWith('letter-spacing: 1px;')).toBe(true);
+            expect(compiled().panelStyles.ERROR.css).not.toContain('letter-spacing');
+            rowOf(byTitle(Adw.ExpanderRow, 'Per-state extra CSS'), 'Connected extra CSS').set_text('');
+            expect(stored().advanced.states.CONNECTED).toBeUndefined();
+        });
+
+        it('advanced edits show up in the preview', () => {
+            const {byTitle} = openPage();
+            commonView().get_buffer().set_text('opacity: 0.9', -1);
+            expect(findAll(Gtk.CssProvider)[0].css).toContain('opacity: 0.9;');
         });
     });
 });

@@ -7,6 +7,7 @@ import {CORNERS, GROUPS, GROUP_OF, SPACING_PRESETS, STATE_KEYS, clone, serialize
 import {compile} from '../style/StyleCompiler.js';
 import {loadModel} from '../style/ModelLoader.js';
 import {SIZE_PRESETS, THEME_PRESETS, applySize, applyTheme} from '../style/Presets.js';
+import {render} from '../PanelText.js';
 
 // Tokens that render in the CONNECTED panel text.
 export const TOKENS = [
@@ -27,6 +28,23 @@ const SPACING_ITEMS = [['compact', 'Compact'], ['normal', 'Normal'], ['roomy', '
 const SIZE_KEYS = Object.keys(SIZE_PRESETS);
 const THEME_KEYS = Object.keys(THEME_PRESETS);
 
+// Fixed values the preview renders tokens with, shaped like the Vpn status the panel gets.
+export const SAMPLE_STATUS = {
+    currentServer: 'us1234.nordvpn.com',
+    country: 'United States',
+    city: 'New York',
+    serverNumber: '1234',
+    serverIp: '203.0.113.7',
+    currentTech: 'NORDLYNX',
+    currentProtocol: 'UDP',
+    transfer: '1.25 GiB received; 340.00 MiB sent',
+    uptime: '1 hour 2 minutes 3 seconds',
+};
+
+const PREVIEW_CLASS = 'gnordvpn-preview';
+const PREVIEW_STRIP_CLASS = 'gnordvpn-preview-strip';
+const PREVIEW_STRIP_CSS = `.${PREVIEW_STRIP_CLASS} { background-color: #241f31; padding: 12px; border-radius: 6px; }`;
+
 const stateTitle = (key) => key.charAt(0) + key.slice(1).toLowerCase().replace(/_(.)/g, (_, ch) => ` ${ch}`);
 const pxOf = (value) => parseFloat(value) || 0;
 
@@ -36,6 +54,10 @@ export default class StylesManager {
         this._model = null;
         this._syncing = 0;
         this._sync = [];
+        this._previewState = 'CONNECTED';
+        this._previewLabel = null;
+        this._provider = null;
+        this._providerDisplay = null;
     }
 
     // Adds the Styles groups to an Adw.PreferencesPage. Opening only reads settings; edits write.
@@ -46,9 +68,11 @@ export default class StylesManager {
             commonCss: this._settings.get_string('common-panel-style'),
         }).model;
 
+        page.add(this._createPreviewGroup(page));
         page.add(this._createPresetsGroup());
         page.add(this._createShapeGroup());
         page.add(this._createColorsGroup());
+        page.add(this._createAdvancedGroup());
         this._syncUi();
     }
 
@@ -175,6 +199,129 @@ export default class StylesManager {
             if (row.value !== next) row.value = next;
         });
         return row;
+    }
+
+    // ---- preview ----------------------------------------------------------------------------
+
+    // The text and CSS the panel would show for `key`, from the model alone. Never touches settings.
+    _previewOf(key) {
+        const {panelStyles, commonCss} = compile(this._model);
+        const {panelText, css} = panelStyles[key];
+        const text = GROUP_OF[key] === 'connected' ? render(panelText, SAMPLE_STATUS) : panelText;
+        return {text, css: `${commonCss} ${css}`.trim()};
+    }
+
+    _createPreviewGroup(page) {
+        const group = new Adw.PreferencesGroup({
+            title: 'Preview',
+            description: 'Approximate: GTK CSS and GNOME Shell CSS differ slightly.',
+        });
+
+        // Choosing the previewed state is not a model edit, so it never goes through _edit/_commit.
+        const stateRow = new Adw.ComboRow({
+            title: 'State',
+            model: new Gtk.StringList({strings: STATE_KEYS.map(stateTitle)}),
+        });
+        stateRow.selected = STATE_KEYS.indexOf(this._previewState);
+        stateRow.connect('notify::selected', () => {
+            this._previewState = STATE_KEYS[stateRow.selected] ?? this._previewState;
+            this._refreshPreview();
+        });
+        group.add(stateRow);
+
+        const strip = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, halign: Gtk.Align.CENTER});
+        strip.add_css_class(PREVIEW_STRIP_CLASS);
+        this._previewLabel = new Gtk.Label({halign: Gtk.Align.CENTER, valign: Gtk.Align.CENTER});
+        this._previewLabel.add_css_class(PREVIEW_CLASS);
+        strip.append(this._previewLabel);
+        const stripRow = new Adw.PreferencesRow({child: strip});
+        group.add(stripRow);
+
+        this._provider = new Gtk.CssProvider();
+        // GTK rejects some St-only CSS; that must not spam the prefs log.
+        this._provider.connect('parsing-error', () => {});
+        page.connect('realize', () => this._installProvider());
+        page.connect('unrealize', () => this._removeProvider());
+        page.connect('destroy', () => this._removeProvider());
+
+        this._sync.push(() => this._refreshPreview());
+        return group;
+    }
+
+    _refreshPreview() {
+        if (!this._previewLabel || !this._model) return;
+        const {text, css} = this._previewOf(this._previewState);
+        this._previewLabel.set_text(text);
+        this._provider.load_from_string(`${PREVIEW_STRIP_CSS}\n.${PREVIEW_CLASS} { ${css} }`);
+    }
+
+    _installProvider() {
+        if (this._providerDisplay) return;
+        const display = Gdk.Display.get_default();
+        if (!display) return;
+        Gtk.StyleContext.add_provider_for_display(display, this._provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        this._providerDisplay = display;
+    }
+
+    // Takes the page-scoped provider off the display so nothing outlives the page.
+    _removeProvider() {
+        if (!this._providerDisplay) return;
+        Gtk.StyleContext.remove_provider_for_display(this._providerDisplay, this._provider);
+        this._providerDisplay = null;
+    }
+
+    // ---- advanced ---------------------------------------------------------------------------
+
+    _createAdvancedGroup() {
+        const group = new Adw.PreferencesGroup();
+        const expander = new Adw.ExpanderRow({
+            title: 'Custom CSS (advanced)',
+            subtitle: 'Added after the generated CSS, so it wins.',
+            expanded: false,
+        });
+
+        const view = new Gtk.TextView({
+            wrap_mode: Gtk.WrapMode.WORD_CHAR,
+            monospace: true,
+            top_margin: 8,
+            bottom_margin: 8,
+            left_margin: 8,
+            right_margin: 8,
+        });
+        const buffer = view.get_buffer();
+        buffer.connect('changed', () => {
+            if (this._syncing) return;
+            const text = buffer.text;
+            this._edit(model => { model.advanced.common = text; });
+        });
+        this._sync.push(model => {
+            if (buffer.text !== model.advanced.common) buffer.set_text(model.advanced.common, -1);
+        });
+        const scroller = new Gtk.ScrolledWindow({
+            min_content_height: 96,
+            hscrollbar_policy: Gtk.PolicyType.NEVER,
+            child: view,
+        });
+        const box = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, spacing: 6, margin_top: 6, margin_bottom: 6, margin_start: 12, margin_end: 12});
+        const caption = new Gtk.Label({label: 'Applies to every state', xalign: 0});
+        caption.add_css_class('dim-label');
+        box.append(caption);
+        box.append(scroller);
+        expander.add_row(new Adw.PreferencesRow({child: box}));
+
+        const perState = new Adw.ExpanderRow({title: 'Per-state extra CSS', expanded: false});
+        STATE_KEYS.forEach(key => {
+            perState.add_row(this._createEntryRow(`${stateTitle(key)} extra CSS`,
+                model => model.advanced.states[key] ?? '',
+                (model, css) => {
+                    if (css.trim() === '') delete model.advanced.states[key];
+                    else model.advanced.states[key] = css;
+                }));
+        });
+        expander.add_row(perState);
+
+        group.add(expander);
+        return group;
     }
 
     // ---- presets ----------------------------------------------------------------------------

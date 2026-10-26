@@ -71,7 +71,7 @@ class Widget {
     add(c) { this.children.push(c); }
     add_row(c) { this.children.push(c); }
     add_suffix(c) { this.children.push(c); }
-    add_css_class() {}
+    add_css_class(name) { (this.cssClasses ??= []).push(name); }
 }
 
 class Label extends Widget {
@@ -250,18 +250,51 @@ class ColorDialogButton extends Widget {
     constructor(props) { super(props); if (!this.rgba) this.rgba = new RGBA(); }
 }
 
+class CssProvider extends Widget {
+    load_from_string(css) { this.css = css; }
+}
+
+// Gtk.StyleContext static provider registry, per display.
+const providers = [];
+const StyleContext = {
+    add_provider_for_display: (display, provider, priority) => { providers.push({display, provider, priority}); },
+    remove_provider_for_display: (display, provider) => {
+        const i = providers.findIndex(p => p.display === display && p.provider === provider);
+        if (i >= 0) providers.splice(i, 1);
+    },
+};
+export const installedProviders = () => providers.map(p => p.provider);
+
+class TextBuffer extends Widget {
+    constructor(props) { super(props); if (this.text === undefined) this.text = ''; }
+    set_text(t) {
+        if (this.text === t) return;
+        this.text = t;
+        this.emit('changed');
+    }
+}
+
+class TextView extends Widget {
+    get_buffer() {
+        if (!this._buffer) Object.defineProperty(this, '_buffer', {value: new TextBuffer(), enumerable: false});
+        return this._buffer;
+    }
+}
+
 class Window extends Widget {
     set_default_size() {}
 }
 
 const simple = (name) => ({[name]: class extends Widget {}})[name];
 
-export const fakes = {StringList, ComboRow, SwitchRow, SpinRow, EntryRow, ExpanderRow, ColorDialogButton, RGBA, Label, Grid, Button, Switch, Adjustment, SpinButton, ComboBoxText, ComboBox, ListStore, TreeStore, TreeSelection, TreeView, Entry, Window};
+export const fakes = {CssProvider, TextView, StringList, ComboRow, SwitchRow, SpinRow, EntryRow, ExpanderRow, ColorDialogButton, RGBA, Label, Grid, Button, Switch, Adjustment, SpinButton, ComboBoxText, ComboBox, ListStore, TreeStore, TreeSelection, TreeView, Entry, Window};
 
 Object.assign(Gtk, {
     Frame: simple('Frame'), Box: simple('Box'), ScrolledWindow: simple('ScrolledWindow'),
     ColorDialog: simple('ColorDialog'), Popover: class Popover extends Widget { popdown() { this.popped = false; } }, MenuButton: simple('MenuButton'),
-    StringList, ColorDialogButton,
+    StringList, ColorDialogButton, CssProvider, StyleContext, TextView,
+    STYLE_PROVIDER_PRIORITY_APPLICATION: 600,
+    WrapMode: {WORD_CHAR: 3},
     CellRendererText: simple('CellRendererText'), TreeViewColumn: simple('TreeViewColumn'),
     Label, Grid, Button, Switch, Adjustment, SpinButton, ComboBoxText, ComboBox, ListStore, TreeStore,
     TreeView, Entry,
@@ -272,7 +305,7 @@ Object.assign(Gtk, {
 });
 Object.assign(Adw, {
     PreferencesPage: simple('PreferencesPage'), PreferencesGroup: simple('PreferencesGroup'),
-    ComboRow, SwitchRow, SpinRow, EntryRow, ExpanderRow, ActionRow: simple('ActionRow'),
+    ComboRow, SwitchRow, SpinRow, EntryRow, ExpanderRow, ActionRow: simple('ActionRow'), PreferencesRow: simple('PreferencesRow'),
 });
 Gdk.RGBA = RGBA;
 Gdk.Display = {get_default: () => ({get_monitors: () => ({get_item: () => null})})};
