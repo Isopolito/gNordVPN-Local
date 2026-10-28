@@ -108,8 +108,9 @@ export default class StateManager {
         if (status && this.stateOverride) {
             this.stateOverrideCounter += 1;
 
+            // Vpn.getStatus() upper-cases the country, so compare it case-insensitively.
             let overrideFromKey = (this.stateOverride.overrideKeys && (
-                (this.stateOverride.overrideKeys[0] === 'countries' && this.stateOverride.overrideKeys[1].replace(/_/g, " ") === status.country) ||
+                (this.stateOverride.overrideKeys[0] === 'countries' && this.stateOverride.overrideKeys[1].replace(/_/g, " ").toUpperCase() === String(status.country).toUpperCase()) ||
                 (this.stateOverride.overrideKeys[0] === 'cities' && this.stateOverride.overrideKeys[1].replace(/_/g, " ") === status.city) ||
                 (this.stateOverride.overrideKeys[0] === 'servers' && this.stateOverride.overrideKeys[1] === status.currentServer.replace('.nordvpn.com', ''))))
 

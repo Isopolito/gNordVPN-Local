@@ -124,6 +124,12 @@ describe('StateManager.resolveState', () => {
             expect(sm.stateOverride).toBeUndefined();
         });
 
+        it('clears when the country matches, as Vpn.getStatus reports it upper-cased', () => {
+            sm.refreshOverride(S.RECONNECTING, ['countries', 'United_States']);
+            expect(sm.resolveState(loggedIn(S.CONNECTED, {country: 'UNITED STATES'})).stateName).toBe(S.CONNECTED);
+            expect(sm.stateOverride).toBeUndefined();
+        });
+
         it('clears when the connected city matches', () => {
             sm.refreshOverride(S.RECONNECTING, ['cities', 'New_York']);
             expect(sm.resolveState(loggedIn(S.CONNECTED, {city: 'Boston'})).stateName).toBe(S.RECONNECTING);
