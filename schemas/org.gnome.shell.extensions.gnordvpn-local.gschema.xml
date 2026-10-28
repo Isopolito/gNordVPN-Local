@@ -9,7 +9,22 @@
             <default>"right"</default>
         </key>
         <key name="common-panel-style" type="s">
-            <default>"font-weight: bold; border-radius: 100px; padding: 4px 10px 0; margin: 3px 0px 3px 0px;"</default>
+            <default>"font-weight: bold; border-radius: 100px; padding: 0px 10px 0; margin: 3px 0px 3px 0px;"</default>
+        </key>
+        <key name="panel-appearance" type="s">
+            <default>""</default>
+            <summary>Styles page model (JSON)</summary>
+            <description>JSON source of truth for the Styles page in preferences. Preferences compiles it into panel-styles and common-panel-style, which are what the panel renders. If those keys disagree with it, they win.</description>
+        </key>
+        <key name="panel-original-look" type="s">
+            <default>""</default>
+            <summary>Panel look from before the first Styles page edit (JSON)</summary>
+            <description>JSON snapshot of panel-styles and common-panel-style taken once, before the Styles page first writes. Used by Restore original look.</description>
+        </key>
+        <key name="panel-profiles" type="s">
+            <default>""</default>
+            <summary>Named style profiles (JSON)</summary>
+            <description>JSON object of named style profiles saved from the Styles page. Each value is a Styles page model.</description>
         </key>
         <key name="favorite-countries" type="s">
             <default>""</default>
@@ -69,15 +84,12 @@
             <default>"UDP"</default>
         </key>
         <key name="technology" type="s">
-            <default>"OpenVPN"</default>
+            <default>"OPENVPN"</default>
         </key>
         <key name="showlogin" type="b">
             <default>true</default>
         </key>
         <key name="showlogout" type="b">
-            <default>false</default>
-        </key>
-        <key name="extra-large-button" type="b">
             <default>false</default>
         </key>
     </schema>

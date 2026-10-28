@@ -1,0 +1,15 @@
+Protocol: NordLynx
+Firewall: enabled
+Firewall Mark: 0xe1f1
+Routing: enabled
+User Consent: enabled
+Kill Switch: disabled
+Real-time protection: disabled
+Notify: enabled
+Tray: enabled
+Auto-connect: enabled
+Meshnet: disabled
+DNS: disabled
+LAN Discovery: disabled
+Post-quantum VPN: disabled
+ARP Ignore: enabled

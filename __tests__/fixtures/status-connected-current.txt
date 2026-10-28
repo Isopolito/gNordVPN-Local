@@ -1,0 +1,11 @@
+Status: Connected
+Server: Germany #1234
+Hostname: de1234.nordvpn.com
+IP: 203.0.113.10
+Country: Germany
+City: Frankfurt
+Current technology: NORDLYNX
+Current protocol: UDP
+Post-quantum VPN: Disabled
+Transfer: 1.25 MiB received, 310.40 KiB sent
+Uptime: 1 hour 5 minutes 3 seconds

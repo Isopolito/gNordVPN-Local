@@ -21,7 +21,7 @@
 - ⭐ **Favorites**: Pin commonly used countries, cities, and servers for quicker access.
 - ⚙️ **Connection preferences**: Configure options such as auto-connect, protocol, and technology from the extension settings.
 - 🧭 **Panel customization**: Move the indicator to the left, center, or right side of the top bar.
-- 🎨 **Style overrides**: Complete customization of appearance using CSS for the different VPN states. Control colors, what's displayed, etc.
+- 🎨 **Style overrides**: A Styles page with a live preview, Size and Theme presets, Shape controls (corners, bold, border, spacing), and per-state colors and panel text. An Advanced CSS section is the fallback for anything the controls don't cover.
 
 ## Installation
 This extension uses the NordVPN command line client, which can be set up as follows.
@@ -46,11 +46,11 @@ If the extension shows an error state, make sure NordVPN CLI is functioning (`no
 
 ## Known Issues
 
-When this extension is used in conjunction with **Dash to Panel**, the gNordVpn panel icon is unusually large. This can be fixed by manually changing the css styling in the settings, here:
-![image](https://github.com/Isopolito/gNordVPN-Local/assets/13524742/81ac579f-a7e2-42a0-b951-cb894be2f5c0)
+When this extension is used with **Dash to Panel**, the gNordVpn panel icon can look unusually large. Fix it on the **Styles** page of the extension settings:
 
-
-As an example, one user who has Dash to Panel and gNordVpn used this css at the bottom in the **Common CSS** input: _font-weight: bold; border-radius: 20px; padding: 12px 11px 0; margin: 6px 0px 5px 05px;_
+1. Under **Shape**, set **Spacing** to **Compact**.
+2. If that isn't right, set **Spacing** to **Custom** and adjust the padding and margin values (px) until it fits.
+3. Only if the controls can't do what you need, open **Custom CSS (advanced)** and add CSS there. It applies to every state and is added after the generated CSS, so it wins. Per-state extra CSS is available there too.
 
 ## Bug Reports
 
@@ -64,6 +64,10 @@ Please raise an issue with the following data points:
 ## Development
 
 Contributions welcome! If you find any issues or think of any cool features, check to see if it's already documented under Issues, if not--raise it.
+
+### Running tests
+
+Run `npm ci && npm test`. Tests use Jest; `gi://...` and `resource:///...` imports are mapped by `moduleNameMapper` in `package.json` to stubs under `__mocks__/gi` and `__mocks__/resource`, so add a stub there when a module imports a new GNOME library. `deploy_local.sh` installs into your live GNOME session, so run it yourself; it is not part of the tests.
 
 ## Thanks
 
